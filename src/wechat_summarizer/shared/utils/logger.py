@@ -85,23 +85,26 @@ def setup_logger(
     # 移除默认处理器
     logger.remove()
 
-    if json_format:
-        # 结构化 JSON 日志（便于日志收集系统如 ELK）
-        logger.add(
-            sys.stderr,
-            level=level,
-            format="{message}",
-            serialize=True,
-        )
-    else:
-        # 人类可读格式（控制台）
-        # 在 Windows 终端中使用更好的颜色支持
-        logger.add(
-            sys.stderr,
-            level=level,
-            format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
-            colorize=True,
-        )
+    # PyInstaller 打包无控制台窗口时，sys.stderr 为 None
+    # 只有当 stderr 可用时才添加控制台日志
+    if sys.stderr is not None:
+        if json_format:
+            # 结构化 JSON 日志（便于日志收集系统如 ELK）
+            logger.add(
+                sys.stderr,
+                level=level,
+                format="{message}",
+                serialize=True,
+            )
+        else:
+            # 人类可读格式（控制台）
+            # 在 Windows 终端中使用更好的颜色支持
+            logger.add(
+                sys.stderr,
+                level=level,
+                format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+                colorize=True,
+            )
 
     # 文件输出
     if log_to_file:
