@@ -186,15 +186,22 @@ def batch(
             file_urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
             url_list.extend(file_urls)
 
-    # 从剪贴板读取
+    # 从剪贴板读取（跨平台）
     if from_clipboard:
         try:
+            import platform
             import subprocess
-            result = subprocess.run(
-                ["powershell", "-command", "Get-Clipboard"],
-                capture_output=True,
-                text=True,
-            )
+
+            system = platform.system()
+            if system == "Windows":
+                cmd = ["powershell", "-command", "Get-Clipboard"]
+            elif system == "Darwin":
+                cmd = ["pbpaste"]
+            else:
+                # Linux 优先使用 xclip，回退 xsel
+                cmd = ["xclip", "-selection", "clipboard", "-o"]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 clipboard_urls = [
                     line.strip() for line in result.stdout.split("\n")

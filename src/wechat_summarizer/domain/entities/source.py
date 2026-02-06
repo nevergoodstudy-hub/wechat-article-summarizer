@@ -1,7 +1,7 @@
 """来源实体"""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -32,7 +32,7 @@ class ArticleSource:
     feed_title: str | None = None
 
     # 抓取信息
-    scraped_at: datetime = field(default_factory=datetime.now)
+    scraped_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     scraper_name: str = "unknown"
 
     @classmethod

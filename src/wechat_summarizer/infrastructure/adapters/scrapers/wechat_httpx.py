@@ -26,6 +26,7 @@ class WechatHttpxScraper(BaseScraper):
     设计要点：
     - 仅对“网络层异常”（连接/超时等）进行重试
     - HTTP 状态码错误（如 404/403）不盲目重试，便于快速失败与定位
+    - 使用实例级 httpx.Client 复用连接池，避免每次请求重建 TCP 连接
     """
 
     def __init__(
@@ -39,6 +40,13 @@ class WechatHttpxScraper(BaseScraper):
         self._max_retries = max_retries
         self._proxy = proxy
         self._user_agent_rotation = user_agent_rotation
+
+        # 实例级 httpx.Client，复用连接池
+        self._client = httpx.Client(
+            timeout=self._timeout,
+            follow_redirects=True,
+            proxy=self._proxy,
+        )
 
         # 基于实例参数创建“可配置”的重试包装（解决装饰器无法使用 self._max_retries 的问题）
         self._get_with_retry = retry(
@@ -94,13 +102,12 @@ class WechatHttpxScraper(BaseScraper):
             return random.choice(USER_AGENTS)
         return USER_AGENTS[0]
 
+    def close(self) -> None:
+        """关闭底层 httpx.Client 连接池"""
+        self._client.close()
+
     def _get(self, url: str, headers: dict[str, str]) -> httpx.Response:
-        with httpx.Client(
-            timeout=self._timeout,
-            follow_redirects=True,
-            proxy=self._proxy,
-        ) as client:
-            return client.get(url, headers=headers)
+        return self._client.get(url, headers=headers)
 
     def _parse_html(self, html: str, url: ArticleURL) -> Article:
         """解析HTML内容"""

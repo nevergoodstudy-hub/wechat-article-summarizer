@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -39,6 +40,9 @@ class Container:
 
     settings: AppSettings = field(default_factory=get_settings)
 
+    # 线程安全锁（保护懒加载属性的初始化）
+    _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+
     # 适配器缓存
     _scrapers: list[ScraperPort] | None = field(default=None, init=False)
     _summarizers: dict[str, SummarizerPort] | None = field(default=None, init=False)
@@ -63,50 +67,64 @@ class Container:
     def scrapers(self) -> list[ScraperPort]:
         """获取抓取器列表"""
         if self._scrapers is None:
-            self._scrapers = self._create_scrapers()
+            with self._lock:
+                if self._scrapers is None:
+                    self._scrapers = self._create_scrapers()
         return self._scrapers
 
     @property
     def summarizers(self) -> dict[str, SummarizerPort]:
         """获取摘要器字典"""
         if self._summarizers is None:
-            self._summarizers = self._create_summarizers()
+            with self._lock:
+                if self._summarizers is None:
+                    self._summarizers = self._create_summarizers()
         return self._summarizers
 
     @property
     def exporters(self) -> dict[str, ExporterPort]:
         """获取导出器字典"""
         if self._exporters is None:
-            self._exporters = self._create_exporters()
+            with self._lock:
+                if self._exporters is None:
+                    self._exporters = self._create_exporters()
         return self._exporters
 
     @property
     def storage(self) -> StoragePort | None:
         """获取存储适配器（用于缓存，可选）"""
         if self._storage is None:
-            self._storage = self._create_storage()
+            with self._lock:
+                if self._storage is None:
+                    self._storage = self._create_storage()
         return self._storage
 
     @property
     def embedders(self) -> dict[str, EmbedderPort]:
         """获取向量嵌入器字典"""
         if self._embedders is None:
-            self._embedders = self._create_embedders()
+            with self._lock:
+                if self._embedders is None:
+                    self._embedders = self._create_embedders()
         return self._embedders
 
     @property
     def vector_stores(self) -> dict[str, VectorStorePort]:
         """获取向量存储字典"""
         if self._vector_stores is None:
-            self._vector_stores = self._create_vector_stores()
+            with self._lock:
+                if self._vector_stores is None:
+                    self._vector_stores = self._create_vector_stores()
         return self._vector_stores
 
     @property
     def plugin_loader(self) -> PluginLoader:
         """获取插件加载器"""
         if self._plugin_loader is None:
-            self._plugin_loader = PluginLoader()
-            self._plugin_loader.discover()
+            with self._lock:
+                if self._plugin_loader is None:
+                    self._plugin_loader = PluginLoader()
+                    self._plugin_loader.discover()
         return self._plugin_loader
 
     @property
@@ -132,32 +150,40 @@ class Container:
     def fetch_use_case(self) -> FetchArticleUseCase:
         """获取抓取文章用例"""
         if self._fetch_use_case is None:
-            self._fetch_use_case = FetchArticleUseCase(self.scrapers, storage=self.storage)
+            with self._lock:
+                if self._fetch_use_case is None:
+                    self._fetch_use_case = FetchArticleUseCase(self.scrapers, storage=self.storage)
         return self._fetch_use_case
 
     @property
     def summarize_use_case(self) -> SummarizeArticleUseCase:
         """获取摘要用例"""
         if self._summarize_use_case is None:
-            self._summarize_use_case = SummarizeArticleUseCase(self.summarizers)
+            with self._lock:
+                if self._summarize_use_case is None:
+                    self._summarize_use_case = SummarizeArticleUseCase(self.summarizers)
         return self._summarize_use_case
 
     @property
     def export_use_case(self) -> ExportArticleUseCase:
         """获取导出用例"""
         if self._export_use_case is None:
-            self._export_use_case = ExportArticleUseCase(self.exporters)
+            with self._lock:
+                if self._export_use_case is None:
+                    self._export_use_case = ExportArticleUseCase(self.exporters)
         return self._export_use_case
 
     @property
     def batch_use_case(self) -> BatchProcessUseCase:
         """获取批量处理用例"""
         if self._batch_use_case is None:
-            self._batch_use_case = BatchProcessUseCase(
-                fetch_use_case=self.fetch_use_case,
-                summarize_use_case=self.summarize_use_case,
-                export_use_case=self.export_use_case,
-            )
+            with self._lock:
+                if self._batch_use_case is None:
+                    self._batch_use_case = BatchProcessUseCase(
+                        fetch_use_case=self.fetch_use_case,
+                        summarize_use_case=self.summarize_use_case,
+                        export_use_case=self.export_use_case,
+                    )
         return self._batch_use_case
 
     def _create_scrapers(self) -> list[ScraperPort]:
@@ -241,37 +267,64 @@ class Container:
         Args:
             extra_api_keys: 额外的 API 密钥字典，优先级高于 settings（用于 GUI 配置的密钥）
         """
+        extra_api_keys = extra_api_keys or {}
+        summarizers: dict[str, SummarizerPort] = {}
+
+        # 1) 基础摘要器（simple / textrank / LLM）
+        self._create_base_summarizers(summarizers, extra_api_keys)
+
+        # 可用 LLM 名称列表（用于派生变体）
+        llm_names = ["openai", "anthropic", "zhipu", "deepseek", "ollama"]
+
+        # 2) MapReduce 变体
+        self._create_mapreduce_variants(summarizers, llm_names)
+
+        # 3) RAG / HyDE 变体
+        self._create_rag_variants(summarizers, llm_names)
+
+        # 4) GraphRAG 变体
+        self._create_graphrag_variants(summarizers, llm_names)
+
+        # 5) 第三方插件摘要器
+        try:
+            plugin_summarizers = self.plugin_loader.load_summarizers()
+            for s in plugin_summarizers:
+                if hasattr(s, "name"):
+                    summarizers[s.name] = s
+                    logger.debug(f"已加载插件摘要器: {s.name}")
+        except Exception as e:
+            logger.warning(f"加载插件摘要器失败: {e}")
+
+        logger.info(f"已加载 {len(summarizers)} 个摘要器")
+        return summarizers
+
+    # ---------- _create_summarizers 子方法 ----------
+
+    def _create_base_summarizers(
+        self,
+        summarizers: dict[str, SummarizerPort],
+        extra_api_keys: dict[str, str],
+    ) -> None:
+        """创建基础摘要器（简单 / TextRank / 各 LLM）"""
         from ..adapters.summarizers import (
             AnthropicSummarizer,
             DeepSeekSummarizer,
-            GraphRAGSummarizer,
-            HyDEEnhancedSummarizer,
-            MapReduceSummarizer,
             OllamaSummarizer,
             OpenAISummarizer,
-            RAGEnhancedSummarizer,
             SimpleSummarizer,
             TextRankSummarizer,
             ZhipuSummarizer,
         )
 
-        extra_api_keys = extra_api_keys or {}
-        summarizers: dict[str, SummarizerPort] = {}
-
-        # 简单摘要器（始终可用）
         summarizers["simple"] = SimpleSummarizer()
-
-        # TextRank摘要器（始终可用，基于图算法的抽取式摘要）
         summarizers["textrank"] = TextRankSummarizer()
 
-        # Ollama摘要器
         summarizers["ollama"] = OllamaSummarizer(
             host=self.settings.ollama.host,
             model=self.settings.ollama.model,
             timeout=self.settings.ollama.timeout,
         )
 
-        # OpenAI摘要器（可选依赖）
         openai_key = extra_api_keys.get("openai") or self.settings.openai.api_key.get_secret_value()
         if openai_key:
             try:
@@ -283,7 +336,6 @@ class Container:
             except Exception as e:
                 logger.warning(f"OpenAI摘要器不可用（可能未安装 openai 依赖）: {e}")
 
-        # DeepSeek摘要器（国产高性能模型）
         deepseek_key = extra_api_keys.get("deepseek") or self.settings.deepseek.api_key.get_secret_value()
         if deepseek_key:
             try:
@@ -294,7 +346,6 @@ class Container:
             except Exception as e:
                 logger.warning(f"DeepSeek摘要器不可用: {e}")
 
-        # Anthropic摘要器（可选依赖）
         anthropic_key = extra_api_keys.get("anthropic") or self.settings.anthropic.api_key.get_secret_value()
         if anthropic_key:
             try:
@@ -305,7 +356,6 @@ class Container:
             except Exception as e:
                 logger.warning(f"Anthropic摘要器不可用（可能未安装 anthropic 依赖）: {e}")
 
-        # 智谱摘要器（HTTP API）
         zhipu_key = extra_api_keys.get("zhipu") or self.settings.zhipu.api_key.get_secret_value()
         if zhipu_key:
             summarizers["zhipu"] = ZhipuSummarizer(
@@ -313,10 +363,15 @@ class Container:
                 model=self.settings.zhipu.model,
             )
 
-        # MapReduce 摘要器（用于超长文本）
-        # 为每个可用的 LLM 摘要器创建对应的 MapReduce 版本
-        llm_summarizer_names = ["openai", "anthropic", "zhipu", "deepseek", "ollama"]
-        for name in llm_summarizer_names:
+    def _create_mapreduce_variants(
+        self,
+        summarizers: dict[str, SummarizerPort],
+        llm_names: list[str],
+    ) -> None:
+        """为可用 LLM 创建 MapReduce 变体"""
+        from ..adapters.summarizers import MapReduceSummarizer
+
+        for name in llm_names:
             if name in summarizers and summarizers[name].is_available():
                 try:
                     mr_name = f"mapreduce-{name}"
@@ -330,19 +385,40 @@ class Container:
                 except Exception as e:
                     logger.warning(f"MapReduce 摘要器 {name} 创建失败: {e}")
 
-        # RAG 增强摘要器（为每个可用的 LLM 创建 RAG 版本）
+    def _create_rag_variants(
+        self,
+        summarizers: dict[str, SummarizerPort],
+        llm_names: list[str],
+    ) -> None:
+        """为可用 LLM 创建 RAG / HyDE 变体"""
+        from ..adapters.summarizers import HyDEEnhancedSummarizer, RAGEnhancedSummarizer
+
         embedders = self.embedders
         vector_stores = self.vector_stores
         default_embedder = embedders.get("openai") or embedders.get("local") or embedders.get("simple")
         default_store = vector_stores.get("chromadb") or vector_stores.get("memory")
 
-        if default_embedder and default_store:
-            for name in llm_summarizer_names:
-                if name in summarizers and summarizers[name].is_available():
-                    try:
-                        # 标准 RAG 摘要器
-                        rag_name = f"rag-{name}"
-                        summarizers[rag_name] = RAGEnhancedSummarizer(
+        if not (default_embedder and default_store):
+            logger.info("RAG 组件不可用，跳过 RAG 摘要器创建")
+            return
+
+        for name in llm_names:
+            if name in summarizers and summarizers[name].is_available():
+                try:
+                    rag_name = f"rag-{name}"
+                    summarizers[rag_name] = RAGEnhancedSummarizer(
+                        base_summarizer=summarizers[name],
+                        embedder=default_embedder,
+                        vector_store=default_store,
+                        chunk_size=512,
+                        chunk_overlap=50,
+                        top_k=5,
+                    )
+                    logger.debug(f"RAG 摘要器已创建: {rag_name}")
+
+                    if name in ["openai", "anthropic", "deepseek"]:
+                        hyde_name = f"hyde-{name}"
+                        summarizers[hyde_name] = HyDEEnhancedSummarizer(
                             base_summarizer=summarizers[name],
                             embedder=default_embedder,
                             vector_store=default_store,
@@ -350,27 +426,19 @@ class Container:
                             chunk_overlap=50,
                             top_k=5,
                         )
-                        logger.debug(f"RAG 摘要器已创建: {rag_name}")
+                        logger.debug(f"HyDE 摘要器已创建: {hyde_name}")
+                except Exception as e:
+                    logger.warning(f"RAG 摘要器 {name} 创建失败: {e}")
 
-                        # HyDE 增强摘要器（仅为 OpenAI 和 Anthropic 创建）
-                        if name in ["openai", "anthropic", "deepseek"]:
-                            hyde_name = f"hyde-{name}"
-                            summarizers[hyde_name] = HyDEEnhancedSummarizer(
-                                base_summarizer=summarizers[name],
-                                embedder=default_embedder,
-                                vector_store=default_store,
-                                chunk_size=512,
-                                chunk_overlap=50,
-                                top_k=5,
-                            )
-                            logger.debug(f"HyDE 摘要器已创建: {hyde_name}")
-                    except Exception as e:
-                        logger.warning(f"RAG 摘要器 {name} 创建失败: {e}")
-        else:
-            logger.info("RAG 组件不可用，跳过 RAG 摘要器创建")
+    def _create_graphrag_variants(
+        self,
+        summarizers: dict[str, SummarizerPort],
+        llm_names: list[str],
+    ) -> None:
+        """为可用 LLM 创建 GraphRAG 变体"""
+        from ..adapters.summarizers import GraphRAGSummarizer
 
-        # GraphRAG 摘要器（基于知识图谱的全局摘要）
-        for name in llm_summarizer_names:
+        for name in llm_names:
             if name in summarizers and summarizers[name].is_available():
                 try:
                     graphrag_name = f"graphrag-{name}"
@@ -383,18 +451,25 @@ class Container:
                 except Exception as e:
                     logger.warning(f"GraphRAG 摘要器 {name} 创建失败: {e}")
 
-        # 加载第三方插件摘要器
-        try:
-            plugin_summarizers = self.plugin_loader.load_summarizers()
-            for s in plugin_summarizers:
-                if hasattr(s, "name"):
-                    summarizers[s.name] = s
-                    logger.debug(f"已加载插件摘要器: {s.name}")
-        except Exception as e:
-            logger.warning(f"加载插件摘要器失败: {e}")
+    def close(self) -> None:
+        """关闭容器持有的资源（httpx 客户端、向量存储等）"""
+        for scraper in (self._scrapers or []):
+            close_fn = getattr(scraper, "close", None)
+            if callable(close_fn):
+                try:
+                    close_fn()
+                except Exception as e:
+                    logger.debug(f"关闭 scraper 失败: {e}")
 
-        logger.info(f"已加载 {len(summarizers)} 个摘要器")
-        return summarizers
+        for summarizer in (self._summarizers or {}).values():
+            close_fn = getattr(summarizer, "close", None)
+            if callable(close_fn):
+                try:
+                    close_fn()
+                except Exception as e:
+                    logger.debug(f"关闭 summarizer 失败: {e}")
+
+        logger.debug("容器资源已关闭")
 
     def reload_summarizers(self, api_keys: dict[str, str]) -> None:
         """重新加载摘要器（用于 GUI 保存 API 密钥后刷新）
@@ -448,6 +523,47 @@ class Container:
         exporters["zip"] = ZipExporter(
             output_dir=self.settings.export.default_output_dir,
         )
+
+        # Obsidian 导出器（需要配置 vault 路径）
+        if self.settings.export.obsidian_vault_path:
+            try:
+                from ..adapters.exporters.obsidian import ObsidianExporter
+
+                exporters["obsidian"] = ObsidianExporter(
+                    vault_path=self.settings.export.obsidian_vault_path,
+                )
+                logger.debug("Obsidian 导出器已创建")
+            except Exception as e:
+                logger.warning(f"Obsidian 导出器不可用: {e}")
+
+        # Notion 导出器（需要 API key + database ID）
+        notion_key = self.settings.export.notion_api_key.get_secret_value()
+        if notion_key and self.settings.export.notion_database_id:
+            try:
+                from ..adapters.exporters.notion import NotionExporter
+
+                exporters["notion"] = NotionExporter(
+                    api_key=notion_key,
+                    database_id=self.settings.export.notion_database_id,
+                )
+                logger.debug("Notion 导出器已创建")
+            except Exception as e:
+                logger.warning(f"Notion 导出器不可用: {e}")
+
+        # OneNote 导出器（需要 Azure App 配置 + 已授权）
+        if self.settings.export.onenote_client_id:
+            try:
+                from ..adapters.exporters.onenote import OneNoteExporter
+
+                exporters["onenote"] = OneNoteExporter(
+                    client_id=self.settings.export.onenote_client_id,
+                    tenant=self.settings.export.onenote_tenant,
+                    notebook=self.settings.export.onenote_notebook,
+                    section=self.settings.export.onenote_section,
+                )
+                logger.debug("OneNote 导出器已创建")
+            except Exception as e:
+                logger.warning(f"OneNote 导出器不可用: {e}")
 
         # 加载第三方插件导出器
         try:
@@ -535,4 +651,6 @@ def get_container() -> Container:
 def reset_container() -> None:
     """重置容器（用于测试）"""
     global _container
+    if _container is not None:
+        _container.close()
     _container = None

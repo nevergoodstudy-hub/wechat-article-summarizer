@@ -339,5 +339,91 @@ class WindowsIntegration:
             return None
 
 
+class Windows11StyleHelper:
+    """应用 Windows 11 原生窗口样式
+
+    使用 pywinstyles 库实现标题栏颜色和边框样式的原生适配。
+    在非 Windows 11 或 pywinstyles 不可用时静默跳过。
+    """
+
+    _pywinstyles = None
+    _checked: bool = False
+
+    @classmethod
+    def _ensure_pywinstyles(cls):
+        """延迟导入 pywinstyles"""
+        if not cls._checked:
+            cls._checked = True
+            try:
+                import pywinstyles
+                cls._pywinstyles = pywinstyles
+            except ImportError:
+                cls._pywinstyles = None
+
+    @classmethod
+    def is_windows_11(cls) -> bool:
+        """检测是否为 Windows 11"""
+        cls._ensure_pywinstyles()
+        if cls._pywinstyles is None:
+            return False
+        try:
+            version = sys.getwindowsversion()
+            return version.major == 10 and version.build >= 22000
+        except Exception:
+            return False
+
+    @classmethod
+    def apply_window_style(cls, root, appearance_mode: str = 'dark'):
+        """应用 Windows 11 窗口样式
+
+        Args:
+            root: CTk 根窗口
+            appearance_mode: 'dark' 或 'light'
+        """
+        if not cls.is_windows_11():
+            logger.debug('当前系统不是 Windows 11, 跳过样式应用')
+            return
+
+        try:
+            from ..styles.colors import ModernColors
+
+            pw = cls._pywinstyles
+            if appearance_mode == 'dark':
+                pw.change_header_color(root, ModernColors.DARK_BG)
+                pw.change_border_color(root, ModernColors.DARK_BORDER)
+            else:
+                pw.change_header_color(root, ModernColors.LIGHT_BG)
+                pw.change_border_color(root, ModernColors.LIGHT_BORDER)
+
+            logger.info('✨ 已应用 Windows 11 窗口样式')
+        except Exception as e:
+            logger.debug(f'Windows 11 样式应用失败: {e}')
+
+    @classmethod
+    def update_titlebar_color(cls, root, appearance_mode: str):
+        """更新标题栏颜色
+
+        Args:
+            root: CTk 根窗口
+            appearance_mode: 'dark' 或 'light'
+        """
+        if not cls.is_windows_11():
+            return
+
+        try:
+            from ..styles.colors import ModernColors
+
+            pw = cls._pywinstyles
+            if appearance_mode == 'dark':
+                pw.change_header_color(root, ModernColors.DARK_BG)
+                pw.change_border_color(root, ModernColors.DARK_BORDER)
+            else:
+                pw.change_header_color(root, ModernColors.LIGHT_BG)
+                pw.change_border_color(root, ModernColors.LIGHT_BORDER)
+            logger.debug(f'标题栏颜色已更新: {appearance_mode}')
+        except Exception as e:
+            logger.debug(f'标题栏颜色更新失败: {e}')
+
+
 # 全局实例
 windows = WindowsIntegration()

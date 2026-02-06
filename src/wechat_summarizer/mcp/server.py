@@ -69,7 +69,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         
         try:
             container = get_container()
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
             
             return {
                 "success": True,
@@ -111,10 +111,11 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
             container = get_container()
             
             # 抓取文章
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
             
             # 生成摘要
-            summary = container.summarize_use_case.execute(
+            summary = await asyncio.to_thread(
+                container.summarize_use_case.execute,
                 article, 
                 method=method,
                 max_length=max_length,
@@ -156,7 +157,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         
         try:
             container = get_container()
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
             
             # 提取前几段作为预览
             preview = article.content_text[:500]
@@ -203,8 +204,9 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         
         for url in urls[:10]:  # 限制最多 10 篇
             try:
-                article = container.fetch_use_case.execute(url)
-                summary = container.summarize_use_case.execute(
+                article = await asyncio.to_thread(container.fetch_use_case.execute, url)
+                summary = await asyncio.to_thread(
+                    container.summarize_use_case.execute,
                     article,
                     method=method,
                     max_length=max_length,
@@ -276,7 +278,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
 
         try:
             container = get_container()
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
             # 尝试使用 GraphRAG 摘要器
             graphrag_summarizers = [
@@ -297,9 +299,9 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 detector = SimpleCommunityDetector()
 
                 content = ArticleContent(text=article.content_text)
-                extraction = extractor.extract(content.text)
-                kg = builder.build([extraction])
-                communities = detector.detect(kg)
+                extraction = await asyncio.to_thread(extractor.extract, content.text)
+                kg = await asyncio.to_thread(builder.build, [extraction])
+                communities = await asyncio.to_thread(detector.detect, kg)
 
                 for comm in communities:
                     kg.add_community(comm)
@@ -307,7 +309,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 # 使用 GraphRAG 摘要器
                 summarizer = container.summarizers[graphrag_summarizers[0]]
                 content = ArticleContent(text=article.content_text)
-                summarizer.summarize(content)
+                await asyncio.to_thread(summarizer.summarize, content)
                 kg = summarizer.get_knowledge_graph()
 
             return {
@@ -380,12 +382,13 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
 
         try:
             for url in urls:
-                article = container.fetch_use_case.execute(url)
-                extraction = extractor.extract(article.content_text)
+                article = await asyncio.to_thread(container.fetch_use_case.execute, url)
+                extraction = await asyncio.to_thread(extractor.extract, article.content_text)
 
                 # 生成简短摘要
-                summary = container.summarize_use_case.execute(
-                    article, method="simple", max_length=200
+                summary = await asyncio.to_thread(
+                    container.summarize_use_case.execute,
+                    article, method="simple", max_length=200,
                 )
 
                 articles_data.append({
@@ -456,7 +459,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         try:
             for url in urls[:10]:  # 限制最多 10 篇
                 try:
-                    article = container.fetch_use_case.execute(url)
+                    article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
                     # 统计主题出现次数
                     content = article.content_text.lower()
@@ -530,12 +533,13 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
 
         try:
             container = get_container()
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
             # 如果没有提供摘要，先生成一个
             if not summary_text:
-                summary = container.summarize_use_case.execute(
-                    article, method=method, max_length=500
+                summary = await asyncio.to_thread(
+                    container.summarize_use_case.execute,
+                    article, method=method, max_length=500,
                 )
                 summary_text = summary.content
 
@@ -669,7 +673,7 @@ def _register_resources(mcp_instance: "FastMCP") -> None:
         
         try:
             container = get_container()
-            article = container.fetch_use_case.execute(url)
+            article = await asyncio.to_thread(container.fetch_use_case.execute, url)
             
             # 格式化为 Markdown
             content = f"""# {article.title}

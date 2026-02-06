@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from loguru import logger
 
@@ -114,7 +114,7 @@ class ProgressTracker:
         self,
         total: int,
         smoothing_factor: float = 0.3,
-        callback: Optional[Callable[[ProgressInfo], None]] = None,
+        callback: Callable[[ProgressInfo], None] | None = None,
         log_interval: int = 1,
     ):
         """初始化进度跟踪器
@@ -167,7 +167,7 @@ class ProgressTracker:
         """是否已完成"""
         return self._current >= self._total
     
-    def reset(self, total: Optional[int] = None):
+    def reset(self, total: int | None = None):
         """重置进度跟踪器
         
         Args:

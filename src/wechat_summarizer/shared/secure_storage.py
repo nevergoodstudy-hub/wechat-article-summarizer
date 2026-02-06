@@ -1,11 +1,13 @@
-"""安全存储工具
+"""安全存储工具（已废弃）
 
-提供API密钥和敏感数据的加密存储功能。
-依据 GB/T 22239-2019 信息安全等级保护基本要求。
+.. deprecated:: 2.4.0
+    此模块使用 XOR 混淆，安全性不足。
+    请使用 ``shared.utils.security`` 模块中基于 Fernet 的实现：
+    ``from wechat_summarizer.shared.utils.security import encrypt_credential, decrypt_credential``
 
-实现策略：
+旧实现策略：
 1. 优先使用 Windows DPAPI (仅 Windows)
-2. 降级使用基于机器指纹的混淆编码
+2. 降级使用基于机器指纹的 XOR 混淆（非真正加密）
 """
 
 from __future__ import annotations
@@ -15,9 +17,17 @@ import hashlib
 import os
 import platform
 import secrets
+import warnings
 from pathlib import Path
 
 from loguru import logger
+
+warnings.warn(
+    "shared.secure_storage 已废弃，请迁移到 shared.utils.security（基于 Fernet 加密）。"
+    " 此模块将在 v3.0 中移除。",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class SecureStorage:

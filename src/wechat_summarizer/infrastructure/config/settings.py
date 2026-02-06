@@ -339,6 +339,11 @@ def get_settings() -> AppSettings:
     return settings
 
 
+def reset_settings() -> None:
+    """重置配置缓存（清除 lru_cache，下次调用 get_settings() 时重新加载）"""
+    get_settings.cache_clear()
+
+
 def get_config_path() -> Path:
     """获取配置文件路径"""
     return Path.home() / CONFIG_DIR_NAME / CONFIG_FILE_NAME

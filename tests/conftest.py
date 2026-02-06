@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock
 from uuid import uuid4
 
+from wechat_summarizer.shared.utils import utc_now
+
 import pytest
 
 from wechat_summarizer.domain.entities import Article, Summary
@@ -58,8 +60,8 @@ def sample_article(sample_wechat_url: ArticleURL, sample_content: ArticleContent
         account_name="测试公众号",
         publish_time=datetime(2024, 1, 15, 10, 30, 0),
         content=sample_content,
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
+        created_at=utc_now(),
+        updated_at=utc_now(),
     )
 
 
@@ -78,7 +80,7 @@ def sample_summary() -> Summary:
         model_name="simple",
         input_tokens=0,
         output_tokens=0,
-        created_at=datetime.now(),
+        created_at=utc_now(),
     )
 
 

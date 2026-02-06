@@ -6,7 +6,7 @@
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterator
 
 
@@ -51,10 +51,10 @@ class ArticleListItem:
 
     @property
     def publish_datetime(self) -> datetime:
-        """获取发布时间（datetime对象）"""
+        """获取发布时间（datetime对象，timezone-aware）"""
         if self.update_time:
-            return datetime.fromtimestamp(self.update_time)
-        return datetime.now()
+            return datetime.fromtimestamp(self.update_time, tz=timezone.utc)
+        return datetime.now(timezone.utc)
 
     @property
     def publish_date_str(self) -> str:
@@ -139,7 +139,10 @@ class ArticleList:
     account_name: str
     items: list[ArticleListItem] = field(default_factory=list)
     total_count: int = 0
-    fetched_at: datetime = field(default_factory=datetime.now)
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # 内部去重索引（基于 link 的 O(1) 查重）
+    _link_index: set[str] = field(default_factory=set, init=False, repr=False)
 
     @property
     def count(self) -> int:
@@ -161,10 +164,16 @@ class ArticleList:
         """获取所有文章标题"""
         return [item.title for item in self.items]
 
+    def __post_init__(self) -> None:
+        """初始化去重索引"""
+        for item in self.items:
+            self._link_index.add(item.link)
+
     def add_item(self, item: ArticleListItem) -> None:
-        """添加文章项（去重）"""
-        if item not in self.items:
+        """添加文章项（O(1) 去重）"""
+        if item.link not in self._link_index:
             self.items.append(item)
+            self._link_index.add(item.link)
 
     def add_items(self, items: list[ArticleListItem]) -> int:
         """批量添加文章项
@@ -174,8 +183,9 @@ class ArticleList:
         """
         added = 0
         for item in items:
-            if item not in self.items:
+            if item.link not in self._link_index:
                 self.items.append(item)
+                self._link_index.add(item.link)
                 added += 1
         return added
 

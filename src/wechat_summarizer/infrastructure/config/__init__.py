@@ -8,11 +8,12 @@ from .paths import (
     get_log_dir,
     migrate_legacy_config,
 )
-from .settings import AppSettings, get_settings
+from .settings import AppSettings, get_settings, reset_settings
 
 __all__ = [
     "AppSettings",
     "get_settings",
+    "reset_settings",
     "Container",
     "get_container",
     "reset_container",

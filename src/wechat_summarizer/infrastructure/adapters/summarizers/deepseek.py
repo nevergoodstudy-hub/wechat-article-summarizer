@@ -14,7 +14,8 @@ from loguru import logger
 
 from ....domain.entities import Summary, SummaryMethod, SummaryStyle
 from ....domain.value_objects import ArticleContent
-from ....shared.constants import SUMMARY_PROMPT_TEMPLATE, DEFAULT_DEEPSEEK_BASE_URL
+from ....shared.constants import DEFAULT_DEEPSEEK_BASE_URL
+from ....shared.prompts import SUMMARY_PROMPT_TEMPLATE
 from ....shared.exceptions import SummarizerAPIError, SummarizerError
 from .base import BaseSummarizer
 

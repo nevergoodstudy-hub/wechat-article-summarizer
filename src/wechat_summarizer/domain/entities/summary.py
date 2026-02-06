@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
+from ...shared.utils import utc_now
+
 
 class SummaryMethod(str, Enum):
     """摘要生成方法"""
@@ -55,7 +57,7 @@ class Summary:
     output_tokens: int = 0
 
     # 时间戳
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=utc_now)
 
     @property
     def total_tokens(self) -> int:

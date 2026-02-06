@@ -7,9 +7,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from ...shared.utils import utc_now
+
 if TYPE_CHECKING:
     from ..value_objects import ArticleContent, ArticleURL
     from .source import ArticleSource
+    from .summary import Summary
 
 
 @dataclass
@@ -38,8 +41,8 @@ class Article:
     source: ArticleSource | None = None
 
     # 元数据
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
     # 摘要 (可选，处理后添加)
     summary: Summary | None = None
@@ -73,12 +76,12 @@ class Article:
     def attach_summary(self, summary: Summary) -> None:
         """附加摘要到文章"""
         self.summary = summary
-        self.updated_at = datetime.now()
+        self.updated_at = utc_now()
 
     def update_content(self, content: ArticleContent) -> None:
         """更新文章内容"""
         self.content = content
-        self.updated_at = datetime.now()
+        self.updated_at = utc_now()
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -87,7 +90,3 @@ class Article:
         if not isinstance(other, Article):
             return False
         return self.id == other.id
-
-
-# 避免循环导入
-from .summary import Summary  # noqa: E402

@@ -140,6 +140,26 @@ class ModernColors:
     GRADIENT_GLASS_LIGHT = ("linear", ["#fffffff2", "#ffffffbf"], 180)  # 0.95/0.75 alpha
     GRADIENT_GLASS_LIGHT_SOLID = ("linear", ["#ffffff", "#f5f5f5"], 180)  # Tkinter兼容
 
+    # ========== 简单渐变色值 (Tkinter兼容) ==========
+    GRADIENT_START = '#6366f1'
+    GRADIENT_MID = '#8b5cf6'
+    GRADIENT_END = '#a855f7'
+
+    # ========== 特殊效果色 (Tkinter兼容) ==========
+    NEON_CYAN = '#06b6d4'
+    NEON_PINK = '#ec4899'
+    NEON_GREEN = '#22c55e'
+    SHIMMER_LIGHT = '#ffffff1a'   # rgba(255, 255, 255, 0.1)
+    GLOW_PURPLE = '#8b5cf64d'    # rgba(139, 92, 246, 0.3)
+    GLOW_BLUE = '#6366f14d'      # rgba(99, 102, 241, 0.3)
+
+    # ========== 阴影 (CSS格式参考，Tkinter不直接支持) ==========
+    SHADOW_SM = '0 1px 2px rgba(0, 0, 0, 0.05)'
+    SHADOW_MD = '0 4px 6px rgba(0, 0, 0, 0.1)'
+    SHADOW_LG = '0 10px 15px rgba(0, 0, 0, 0.15)'
+    SHADOW_XL = '0 20px 25px rgba(0, 0, 0, 0.2)'
+    SHADOW_GLOW = '0 0 30px rgba(139, 92, 246, 0.4)'
+
 
 # ========== 预设主题配色方案 ==========
 THEME_DARK = {

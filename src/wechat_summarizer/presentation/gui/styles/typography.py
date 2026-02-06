@@ -333,8 +333,50 @@ def get_text_style(style: Tuple[FontSize, FontWeight], monospace: bool = False) 
     return get_font(size, weight, monospace)
 
 
+class ChineseFonts:
+    """中文字体配置 - 支持Windows系统
+
+    提供 Windows 环境下最佳中文字体检测和回退机制。
+    与 FontFamily.CJK / Typography 互补：
+    - ChineseFonts 通过 tkinter.font.families() 实时检测可用字体
+    - Typography 提供跨平台的字体家族字符串
+    """
+    CHINESE_FONT_FAMILIES = [
+        'Microsoft YaHei UI', 'Microsoft YaHei', 'SimHei',
+        'SimSun', 'NSimSun', 'KaiTi', 'FangSong', 'Arial',
+    ]
+    SIZE_TITLE = 24
+    SIZE_HEADING = 18
+    SIZE_SUBHEADING = 16
+    SIZE_NORMAL = 14
+    SIZE_SMALL = 12
+    SIZE_TINY = 11
+    _detected_font = None
+
+    @classmethod
+    def get_best_font(cls) -> str:
+        """检测并返回最佳可用中文字体"""
+        if cls._detected_font:
+            return cls._detected_font
+        try:
+            import tkinter as tk
+            from tkinter import font as tkfont
+            temp_root = tk.Tk()
+            temp_root.withdraw()
+            available_fonts = set(tkfont.families())
+            temp_root.destroy()
+            for font_name in cls.CHINESE_FONT_FAMILIES:
+                if font_name in available_fonts:
+                    cls._detected_font = font_name
+                    return font_name
+        except Exception:
+            pass
+        cls._detected_font = 'Microsoft YaHei UI'
+        return cls._detected_font
+
+
 # 使用示例文档字符串
-"""
+"""使r
 使用示例:
 
 from .typography import (

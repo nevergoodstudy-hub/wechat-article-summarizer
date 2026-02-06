@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -300,10 +300,10 @@ class LocalJsonStorage:
         publish_dt = datetime.fromisoformat(publish_time) if publish_time else None
 
         created_at = data.get("created_at")
-        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now()
+        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now(timezone.utc)
 
         updated_at = data.get("updated_at")
-        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now(timezone.utc)
 
         c = data.get("content") or {}
         content = ArticleContent(

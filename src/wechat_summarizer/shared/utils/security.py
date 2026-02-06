@@ -11,8 +11,6 @@ import hashlib
 import os
 import secrets
 from pathlib import Path
-from typing import Optional
-
 from cryptography.fernet import Fernet, InvalidToken
 from loguru import logger
 
@@ -185,7 +183,7 @@ def secure_compare(a: str, b: str) -> bool:
     return secrets.compare_digest(a, b)
 
 
-def sanitize_error_message(error_msg: str, sensitive_keys: Optional[list[str]] = None) -> str:
+def sanitize_error_message(error_msg: str, sensitive_keys: list[str] | None = None) -> str:
     """清理错误消息中的敏感信息
     
     Args:
