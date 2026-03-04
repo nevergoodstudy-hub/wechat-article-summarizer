@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wechat-summarizer"
-version = "2.4.0"
+version = "2.4.1"
 description = "微信公众号文章总结器 - 企业级架构 (Hexagonal + DDD)"
 readme = "README.md"
 license = {text = "MIT"}
