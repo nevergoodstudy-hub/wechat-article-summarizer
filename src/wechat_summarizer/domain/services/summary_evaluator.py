@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 if TYPE_CHECKING:
     from ...application.ports.outbound import SummarizerPort
+
+from ..value_objects import ArticleContent
 
 # 检查 rouge-score 是否可用
 _rouge_available = False
@@ -124,7 +126,8 @@ class EvaluationResult:
 
         # LLM 评估 (40%)
         llm_scores = [
-            s / 10.0 for s in [self.coverage, self.coherence, self.conciseness, self.accuracy]
+            s / 10.0
+            for s in [self.coverage, self.coherence, self.conciseness, self.accuracy]
             if s is not None
         ]
         if llm_scores:
@@ -136,7 +139,7 @@ class EvaluationResult:
 
         # 归一化权重
         total_weight = sum(weights)
-        weighted_score = sum(s * w / total_weight for s, w in zip(scores, weights))
+        weighted_score = sum(s * w / total_weight for s, w in zip(scores, weights, strict=False))
 
         # 应用幻觉惩罚
         return max(0.0, weighted_score - hallucination_penalty)
@@ -161,9 +164,7 @@ class EvaluationResult:
             return True
         if self.accuracy is not None and self.accuracy < 5:
             return True
-        if self.overall < 0.4:
-            return True
-        return False
+        return self.overall < 0.4
 
 
 class SummaryEvaluator:
@@ -205,16 +206,16 @@ class SummaryEvaluator:
 
     # 中文实体正则（用于幻觉检测）
     _ENTITY_PATTERNS = [
-        r'[一-龥]{2,4}公司',  # 公司名
-        r'[一-龥]{2,3}(?:市|省|区|县)',  # 地名
-        r'[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*',  # 英文人名/专有名词
-        r'\d{4}年\d{1,2}月\d{1,2}日',  # 日期
-        r'\d+(?:\.\d+)?(?:%|万|亿|元)',  # 数字+单位
+        r"[一-龥]{2,4}公司",  # 公司名
+        r"[一-龥]{2,3}(?:市|省|区|县)",  # 地名
+        r"[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*",  # 英文人名/专有名词
+        r"\d{4}年\d{1,2}月\d{1,2}日",  # 日期
+        r"\d+(?:\.\d+)?(?:%|万|亿|元)",  # 数字+单位
     ]
 
     def __init__(
         self,
-        summarizer: "SummarizerPort | None" = None,
+        summarizer: SummarizerPort | None = None,
         use_rouge: bool = True,
         use_bert_score: bool = False,
         use_hallucination_detection: bool = True,
@@ -323,7 +324,9 @@ class SummaryEvaluator:
 
             logger.debug(
                 f"信息密度: compression={result.compression_ratio:.1f}x, "
-                f"keyword_coverage={result.keyword_coverage:.2%}" if result.keyword_coverage else ""
+                f"keyword_coverage={result.keyword_coverage:.2%}"
+                if result.keyword_coverage
+                else ""
             )
         except Exception as e:
             logger.warning(f"信息密度计算失败: {e}")
@@ -366,17 +369,16 @@ class SummaryEvaluator:
             summary_truncated = summary[:max_len]
 
             # 计算 BERTScore
-            P, R, F1 = bert_score_fn(
+            p, r, f1 = bert_score_fn(
                 [summary_truncated],
                 [original_truncated],
                 model_type=self._bert_model,
                 lang="zh",
                 verbose=False,
             )
-
-            result.bert_precision = float(P[0])
-            result.bert_recall = float(R[0])
-            result.bert_f1 = float(F1[0])
+            result.bert_precision = float(p[0])
+            result.bert_recall = float(r[0])
+            result.bert_f1 = float(f1[0])
 
             logger.debug(
                 f"BERTScore: P={result.bert_precision:.3f}, R={result.bert_recall:.3f}, F1={result.bert_f1:.3f}"
@@ -403,31 +405,31 @@ class SummaryEvaluator:
                 original_entities.update(re.findall(pattern, original))
 
             # 提取原文中的数字
-            original_numbers = set(re.findall(r'\d+(?:\.\d+)?', original))
+            original_numbers = set(re.findall(r"\d+(?:\.\d+)?", original))
 
             # 检查摘要中的实体
             for pattern in self._ENTITY_PATTERNS:
                 summary_entities = re.findall(pattern, summary)
                 for entity in summary_entities:
                     # 检查实体是否在原文中出现
-                    if entity not in original and entity not in original_entities:
-                        # 模糊匹配：检查是否部分匹配
-                        if not any(entity in e or e in entity for e in original_entities):
-                            suspicious_entities.append(entity)
+                    if (
+                        entity not in original
+                        and entity not in original_entities
+                        and not any(entity in e or e in entity for e in original_entities)
+                    ):
+                        suspicious_entities.append(entity)
 
             # 检查摘要中的数字
-            summary_numbers = re.findall(r'\d+(?:\.\d+)?', summary)
+            summary_numbers = re.findall(r"\d+(?:\.\d+)?", summary)
             for num in summary_numbers:
                 if num not in original_numbers and len(num) > 1:  # 忽略单个数字
                     suspicious_numbers.append(num)
 
             # 计算幻觉比例
-            total_entities = len(re.findall(r'[\u4e00-\u9fa5]{2,}', summary)) + len(summary_numbers)
+            total_entities = len(re.findall(r"[\u4e00-\u9fa5]{2,}", summary)) + len(summary_numbers)
             hallucination_count = len(suspicious_entities) + len(suspicious_numbers)
 
-            hallucination_ratio = (
-                hallucination_count / max(total_entities, 1)
-            )
+            hallucination_ratio = hallucination_count / max(total_entities, 1)
 
             result.hallucination = HallucinationInfo(
                 has_hallucination=len(suspicious_entities) > 0 or len(suspicious_numbers) > 0,
@@ -455,6 +457,10 @@ class SummaryEvaluator:
         """LLM 评估"""
         import json
 
+        # 空值检查
+        if self._summarizer is None:
+            return result
+
         try:
             # 截断原文（避免超出 token 限制）
             max_original_len = 3000
@@ -467,9 +473,11 @@ class SummaryEvaluator:
                 summary=summary,
             )
 
-            # 使用摘要器生成评估
-            llm_result = self._summarizer.summarize(prompt)
-            response_text = llm_result.content if hasattr(llm_result, "content") else str(llm_result)
+            # 使用摘要器生成评估，将 prompt 包装为 ArticleContent
+            llm_result = self._summarizer.summarize(ArticleContent.from_text(prompt))
+            response_text = (
+                llm_result.content if hasattr(llm_result, "content") else str(llm_result)
+            )
 
             # 解析 JSON 响应
             # 尝试提取 JSON
@@ -514,9 +522,7 @@ class SummaryEvaluator:
 
         # 幻觉检测相关
         if result.hallucination and result.hallucination.has_hallucination:
-            suggestions.append(
-                f"⚠️ 检测到可能的幻觉内容，请核实以下信息："
-            )
+            suggestions.append("⚠️ 检测到可能的幻觉内容，请核实以下信息：")
             if result.hallucination.suspicious_entities:
                 suggestions.append(
                     f"  - 可疑实体: {', '.join(result.hallucination.suspicious_entities[:5])}"
@@ -557,7 +563,7 @@ def evaluate_summary(
     original: str,
     summary: str,
     use_llm: bool = False,
-    summarizer: "SummarizerPort | None" = None,
+    summarizer: SummarizerPort | None = None,
 ) -> EvaluationResult:
     """快捷评估函数"""
     evaluator = SummaryEvaluator(summarizer=summarizer, use_llm=use_llm)

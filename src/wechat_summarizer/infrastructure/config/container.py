@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import platform
 import threading
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from loguru import logger
 
@@ -15,7 +17,7 @@ from ...application.use_cases import (
     SummarizeArticleUseCase,
 )
 from ...domain.services.summary_evaluator import SummaryEvaluator
-from ..plugins import PluginLoader, PluginType
+from ..plugins import PluginLoader
 from .settings import AppSettings, get_settings
 
 if TYPE_CHECKING:
@@ -41,7 +43,7 @@ class Container:
     settings: AppSettings = field(default_factory=get_settings)
 
     # 线程安全锁（保护懒加载属性的初始化）
-    _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
     # 适配器缓存
     _scrapers: list[ScraperPort] | None = field(default=None, init=False)
@@ -62,6 +64,30 @@ class Container:
     _summarize_use_case: SummarizeArticleUseCase | None = field(default=None, init=False)
     _export_use_case: ExportArticleUseCase | None = field(default=None, init=False)
     _batch_use_case: BatchProcessUseCase | None = field(default=None, init=False)
+
+    @classmethod
+    def create_minimal(cls) -> Container:
+        """创建最小化容器（用于测试环境）
+
+        不连接外部服务、不加载大型模型，避免测试套件挂起。
+        返回一个预配置的 Container 实例，仅包含基础组件。
+        """
+        instance = cls.__new__(cls)
+        instance.settings = get_settings()
+        instance._lock = threading.RLock()
+        instance._scrapers = []
+        instance._summarizers = {}
+        instance._exporters = {}
+        instance._storage = None
+        instance._embedders = {}
+        instance._vector_stores = {}
+        instance._plugin_loader = None
+        instance._evaluator = None
+        instance._fetch_use_case = None
+        instance._summarize_use_case = None
+        instance._export_use_case = None
+        instance._batch_use_case = None
+        return instance
 
     @property
     def scrapers(self) -> list[ScraperPort]:
@@ -131,19 +157,21 @@ class Container:
     def evaluator(self) -> SummaryEvaluator:
         """获取摘要质量评估器"""
         if self._evaluator is None:
-            # 默认使用第一个可用的 LLM 摘要器进行评估
-            llm_summarizer = None
-            for name in ["openai", "anthropic", "zhipu", "ollama"]:
-                if name in self.summarizers and self.summarizers[name].is_available():
-                    llm_summarizer = self.summarizers[name]
-                    break
+            with self._lock:
+                if self._evaluator is None:
+                    # 默认使用第一个可用的 LLM 摘要器进行评估
+                    llm_summarizer = None
+                    for name in ["openai", "anthropic", "zhipu", "ollama"]:
+                        if name in self.summarizers and self.summarizers[name].is_available():
+                            llm_summarizer = self.summarizers[name]
+                            break
 
-            self._evaluator = SummaryEvaluator(
-                summarizer=llm_summarizer,
-                use_rouge=True,
-                use_hallucination_detection=True,
-                use_llm=llm_summarizer is not None,
-            )
+                    self._evaluator = SummaryEvaluator(
+                        summarizer=llm_summarizer,
+                        use_rouge=True,
+                        use_hallucination_detection=True,
+                        use_llm=llm_summarizer is not None,
+                    )
         return self._evaluator
 
     @property
@@ -208,9 +236,15 @@ class Container:
 
         playwright_scraper: ScraperPort | None = None
         try:
-            playwright_scraper = WechatPlaywrightScraper(
-                timeout=self.settings.scraper.timeout,
-            )
+            if WechatPlaywrightScraper.runtime_available():
+                playwright_scraper = WechatPlaywrightScraper(
+                    timeout=self.settings.scraper.timeout,
+                )
+            else:
+                logger.warning(
+                    "Playwright抓取器不可用: 未检测到 Chromium 浏览器，可运行 "
+                    "`python -m playwright install chromium` 启用"
+                )
         except Exception as e:
             logger.warning(f"Playwright抓取器不可用: {e}")
 
@@ -261,9 +295,11 @@ class Container:
         logger.info(f"已加载 {len(scrapers)} 个抓取器")
         return scrapers
 
-    def _create_summarizers(self, extra_api_keys: dict[str, str] | None = None) -> dict[str, SummarizerPort]:
+    def _create_summarizers(
+        self, extra_api_keys: dict[str, str] | None = None
+    ) -> dict[str, SummarizerPort]:
         """创建摘要器字典
-        
+
         Args:
             extra_api_keys: 额外的 API 密钥字典，优先级高于 settings（用于 GUI 配置的密钥）
         """
@@ -336,7 +372,9 @@ class Container:
             except Exception as e:
                 logger.warning(f"OpenAI摘要器不可用（可能未安装 openai 依赖）: {e}")
 
-        deepseek_key = extra_api_keys.get("deepseek") or self.settings.deepseek.api_key.get_secret_value()
+        deepseek_key = (
+            extra_api_keys.get("deepseek") or self.settings.deepseek.api_key.get_secret_value()
+        )
         if deepseek_key:
             try:
                 summarizers["deepseek"] = DeepSeekSummarizer(
@@ -346,7 +384,9 @@ class Container:
             except Exception as e:
                 logger.warning(f"DeepSeek摘要器不可用: {e}")
 
-        anthropic_key = extra_api_keys.get("anthropic") or self.settings.anthropic.api_key.get_secret_value()
+        anthropic_key = (
+            extra_api_keys.get("anthropic") or self.settings.anthropic.api_key.get_secret_value()
+        )
         if anthropic_key:
             try:
                 summarizers["anthropic"] = AnthropicSummarizer(
@@ -376,7 +416,7 @@ class Container:
                 try:
                     mr_name = f"mapreduce-{name}"
                     summarizers[mr_name] = MapReduceSummarizer(
-                        base_summarizer=summarizers[name],
+                        base_summarizer=cast(Any, summarizers[name]),
                         chunk_size=4000,
                         overlap=200,
                         max_chunks=20,
@@ -395,7 +435,9 @@ class Container:
 
         embedders = self.embedders
         vector_stores = self.vector_stores
-        default_embedder = embedders.get("openai") or embedders.get("local") or embedders.get("simple")
+        default_embedder = (
+            embedders.get("openai") or embedders.get("local") or embedders.get("simple")
+        )
         default_store = vector_stores.get("chromadb") or vector_stores.get("memory")
 
         if not (default_embedder and default_store):
@@ -407,7 +449,7 @@ class Container:
                 try:
                     rag_name = f"rag-{name}"
                     summarizers[rag_name] = RAGEnhancedSummarizer(
-                        base_summarizer=summarizers[name],
+                        base_summarizer=cast(Any, summarizers[name]),
                         embedder=default_embedder,
                         vector_store=default_store,
                         chunk_size=512,
@@ -419,7 +461,7 @@ class Container:
                     if name in ["openai", "anthropic", "deepseek"]:
                         hyde_name = f"hyde-{name}"
                         summarizers[hyde_name] = HyDEEnhancedSummarizer(
-                            base_summarizer=summarizers[name],
+                            base_summarizer=cast(Any, summarizers[name]),
                             embedder=default_embedder,
                             vector_store=default_store,
                             chunk_size=512,
@@ -451,9 +493,51 @@ class Container:
                 except Exception as e:
                     logger.warning(f"GraphRAG 摘要器 {name} 创建失败: {e}")
 
+    # ==================== 生命周期管理 ====================
+
+    async def __aenter__(self) -> Self:
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """异步上下文管理器出口，自动清理资源"""
+        await self.async_close()
+
+    async def async_close(self) -> None:
+        """异步关闭容器持有的所有资源
+
+        遍历所有适配器，调用其 aclose/close 方法。
+        支持同步和异步关闭方法。
+        """
+        all_resources: list[Any] = []
+        # 收集所有需要关闭的资源
+        all_resources.extend(self._scrapers or [])
+        all_resources.extend((self._summarizers or {}).values())
+        all_resources.extend((self._exporters or {}).values())
+        all_resources.extend((self._embedders or {}).values())
+        all_resources.extend((self._vector_stores or {}).values())
+        if self._storage is not None:
+            all_resources.append(self._storage)
+
+        for resource in all_resources:
+            try:
+                aclose_fn = getattr(resource, "aclose", None)
+                if callable(aclose_fn):
+                    await aclose_fn()
+                else:
+                    close_fn = getattr(resource, "close", None)
+                    if callable(close_fn):
+                        result = close_fn()
+                        if asyncio.iscoroutine(result):
+                            await result
+            except Exception as e:
+                logger.debug(f"关闭资源 {type(resource).__name__} 失败: {e}")
+
+        logger.debug("容器异步资源已关闭")
+
     def close(self) -> None:
-        """关闭容器持有的资源（httpx 客户端、向量存储等）"""
-        for scraper in (self._scrapers or []):
+        """同步关闭容器持有的资源（httpx 客户端、向量存储等）"""
+        for scraper in self._scrapers or []:
             close_fn = getattr(scraper, "close", None)
             if callable(close_fn):
                 try:
@@ -473,7 +557,7 @@ class Container:
 
     def reload_summarizers(self, api_keys: dict[str, str]) -> None:
         """重新加载摘要器（用于 GUI 保存 API 密钥后刷新）
-        
+
         Args:
             api_keys: API 密钥字典 {"openai": "sk-...", "deepseek": "sk-...", ...}
         """
@@ -568,10 +652,10 @@ class Container:
         # 加载第三方插件导出器
         try:
             plugin_exporters = self.plugin_loader.load_exporters()
-            for e in plugin_exporters:
-                if hasattr(e, "name"):
-                    exporters[e.name] = e
-                    logger.debug(f"已加载插件导出器: {e.name}")
+            for exporter in plugin_exporters:
+                if hasattr(exporter, "name"):
+                    exporters[exporter.name] = exporter
+                    logger.debug(f"已加载插件导出器: {exporter.name}")
         except Exception as e:
             logger.warning(f"加载插件导出器失败: {e}")
 
@@ -604,6 +688,7 @@ class Container:
         try:
             embedders["local"] = LocalEmbedder(
                 model_name="sentence-transformers/all-MiniLM-L6-v2",
+                local_files_only=True,
             )
             logger.debug("本地嵌入器已创建")
         except Exception as e:
@@ -614,7 +699,7 @@ class Container:
 
     def _create_vector_stores(self) -> dict[str, VectorStorePort]:
         """创建向量存储字典"""
-        from ..adapters.vector_stores import ChromaDBStore, MemoryVectorStore
+        from ..adapters.vector_stores.memory_store import MemoryVectorStore
 
         stores: dict[str, VectorStorePort] = {}
 
@@ -623,14 +708,20 @@ class Container:
         logger.debug("内存向量存储已创建")
 
         # ChromaDB 持久化存储
-        try:
-            stores["chromadb"] = ChromaDBStore(
-                collection_name="wechat_summarizer",
-                persist_directory=".chromadb",
-            )
-            logger.debug("ChromaDB 向量存储已创建")
-        except Exception as e:
-            logger.debug(f"ChromaDB 存储不可用（需要安装 chromadb）: {e}")
+        py_major, py_minor = (int(v) for v in platform.python_version_tuple()[:2])
+        if (py_major, py_minor) >= (3, 14):
+            logger.debug("Python 3.14+ 暂不启用 ChromaDB（上游兼容性限制）")
+        else:
+            try:
+                from ..adapters.vector_stores.chromadb_store import ChromaDBStore
+
+                stores["chromadb"] = ChromaDBStore(
+                    collection_name="wechat_summarizer",
+                    persist_directory=".chromadb",
+                )
+                logger.debug("ChromaDB 向量存储已创建")
+            except Exception as e:
+                logger.debug(f"ChromaDB 存储不可用（需要安装并兼容 chromadb）: {e}")
 
         logger.info(f"已加载 {len(stores)} 个向量存储")
         return stores

@@ -25,14 +25,14 @@ _request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 def mask_sensitive(value: str, visible_chars: int = 4) -> str:
     """
     脱敏处理敏感信息
-    
+
     Args:
         value: 需要脱敏的字符串
         visible_chars: 前后可见字符数
-    
+
     Returns:
         脱敏后的字符串，如 "sk-a***xyz"
-    
+
     Examples:
         >>> mask_sensitive("sk-abcdefghijklmnop")
         'sk-a***mnop'
@@ -49,10 +49,10 @@ def mask_sensitive(value: str, visible_chars: int = 4) -> str:
 def mask_api_key(api_key: str) -> str:
     """
     专门用于API密钥的脱敏处理
-    
+
     Args:
         api_key: API密钥字符串
-    
+
     Returns:
         脱敏后的字符串
     """
@@ -112,6 +112,7 @@ def setup_logger(
             # 使用 Windows 标准路径 (AppData/Local/WechatSummarizer/logs)
             try:
                 from ...infrastructure.config.paths import get_log_dir
+
                 log_dir = get_log_dir()
             except ImportError:
                 # 回退到用户目录
@@ -138,6 +139,7 @@ def get_logger(name: str = __name__):
 
 # -------------------- Request ID 追踪 --------------------
 
+
 def generate_request_id() -> str:
     """生成新的请求 ID"""
     return str(uuid.uuid4())[:8]
@@ -162,6 +164,7 @@ def clear_request_id() -> None:
 
 
 # -------------------- 结构化日志记录 --------------------
+
 
 def log_event(
     event: str,
@@ -193,6 +196,31 @@ def log_event(
     )
 
 
+def _sanitize_url_for_log(url: str, max_length: int = 100) -> str:
+    """对 URL 进行日志脱敏：移除敏感查询参数，截断过长 URL"""
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+
+    sensitive_keys = {"key", "token", "secret", "api_key", "apikey", "access_token", "password"}
+    try:
+        parsed = urlparse(url)
+        if parsed.query:
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            sanitized_params = {}
+            for k, v in params.items():
+                if any(sk in k.lower() for sk in sensitive_keys):
+                    sanitized_params[k] = ["***REDACTED***"]
+                else:
+                    sanitized_params[k] = v
+            # rebuild with single values
+            flat = {k: vs[0] for k, vs in sanitized_params.items()}
+            new_query = urlencode(flat)
+            parsed = parsed._replace(query=new_query)
+            url = urlunparse(parsed)
+    except Exception:
+        pass
+    return url[:max_length]
+
+
 def log_article_fetch(
     url: str,
     scraper: str,
@@ -205,7 +233,7 @@ def log_article_fetch(
     log_event(
         "article_fetched",
         level=level,
-        url=url[:100],  # 截断过长 URL
+        url=_sanitize_url_for_log(url),
         scraper=scraper,
         duration_ms=duration_ms,
         success=success,
@@ -253,17 +281,17 @@ def log_export(
 
 # 导出主logger
 __all__ = [
-    "logger",
-    "setup_logger",
-    "get_logger",
-    "mask_sensitive",
-    "mask_api_key",
-    "generate_request_id",
-    "set_request_id",
-    "get_request_id",
     "clear_request_id",
-    "log_event",
+    "generate_request_id",
+    "get_logger",
+    "get_request_id",
     "log_article_fetch",
-    "log_summary_generated",
+    "log_event",
     "log_export",
+    "log_summary_generated",
+    "logger",
+    "mask_api_key",
+    "mask_sensitive",
+    "set_request_id",
+    "setup_logger",
 ]

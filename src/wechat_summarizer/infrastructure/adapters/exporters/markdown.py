@@ -27,6 +27,7 @@ def _escape_yaml_value(value: str) -> str:
     value = value.replace("\r", " ")
     return value
 
+
 # 延迟导入markdownify
 _markdownify_available = True
 try:
@@ -112,7 +113,7 @@ class MarkdownExporter(BaseExporter):
                 frontmatter_lines.append(f'author: "{_escape_yaml_value(article.author)}"')
             if article.publish_time:
                 frontmatter_lines.append(f"date: {article.publish_time_str}")
-            frontmatter_lines.append(f'url: "{str(article.url)}"')
+            frontmatter_lines.append(f'url: "{article.url!s}"')
             frontmatter_lines.append(f"word_count: {article.word_count}")
 
             if article.summary and article.summary.tags:

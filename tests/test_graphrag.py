@@ -88,12 +88,8 @@ class TestKnowledgeGraph:
         kg.add_entity(Entity(id="e3", name="深度学习", type="技术"))
 
         # 添加关系
-        kg.add_relationship(
-            Relationship(id="r1", source_id="e2", target_id="e1", type="属于")
-        )
-        kg.add_relationship(
-            Relationship(id="r2", source_id="e3", target_id="e2", type="属于")
-        )
+        kg.add_relationship(Relationship(id="r1", source_id="e2", target_id="e1", type="属于"))
+        kg.add_relationship(Relationship(id="r2", source_id="e3", target_id="e2", type="属于"))
 
         return kg
 
@@ -229,9 +225,7 @@ class TestSimpleCommunityDetector:
         assert detector.name == "simple-detector"
 
     @pytest.mark.unit
-    def test_detect_connected_components(
-        self, detector: SimpleCommunityDetector
-    ) -> None:
+    def test_detect_connected_components(self, detector: SimpleCommunityDetector) -> None:
         """测试检测连通分量"""
         kg = KnowledgeGraph()
 
@@ -268,16 +262,12 @@ class TestSimpleCommunitySummarizer:
         return SimpleCommunitySummarizer()
 
     @pytest.mark.unit
-    def test_summarizer_properties(
-        self, summarizer: SimpleCommunitySummarizer
-    ) -> None:
+    def test_summarizer_properties(self, summarizer: SimpleCommunitySummarizer) -> None:
         """测试摘要器属性"""
         assert summarizer.name == "simple-community-summarizer"
 
     @pytest.mark.unit
-    def test_summarize_community(
-        self, summarizer: SimpleCommunitySummarizer
-    ) -> None:
+    def test_summarize_community(self, summarizer: SimpleCommunitySummarizer) -> None:
         """测试社区摘要"""
         community = Community(
             id="c1",
@@ -310,9 +300,7 @@ class TestGraphRAGSummarizer:
         return SimpleSummarizer()
 
     @pytest.fixture
-    def graphrag_summarizer(
-        self, base_summarizer: SimpleSummarizer
-    ) -> GraphRAGSummarizer:
+    def graphrag_summarizer(self, base_summarizer: SimpleSummarizer) -> GraphRAGSummarizer:
         """创建 GraphRAG 摘要器"""
         return GraphRAGSummarizer(
             base_summarizer=base_summarizer,
@@ -321,17 +309,13 @@ class TestGraphRAGSummarizer:
         )
 
     @pytest.mark.unit
-    def test_summarizer_properties(
-        self, graphrag_summarizer: GraphRAGSummarizer
-    ) -> None:
+    def test_summarizer_properties(self, graphrag_summarizer: GraphRAGSummarizer) -> None:
         """测试摘要器属性"""
         assert graphrag_summarizer.name == "graphrag-simple"
         assert graphrag_summarizer.method == SummaryMethod.GRAPHRAG
 
     @pytest.mark.unit
-    def test_summarize_short_text(
-        self, graphrag_summarizer: GraphRAGSummarizer
-    ) -> None:
+    def test_summarize_short_text(self, graphrag_summarizer: GraphRAGSummarizer) -> None:
         """测试短文本摘要"""
         content = ArticleContent(
             text="人工智能是计算机科学的一个重要分支。机器学习是人工智能的核心技术。"
@@ -344,9 +328,7 @@ class TestGraphRAGSummarizer:
         assert summary.method == SummaryMethod.GRAPHRAG
 
     @pytest.mark.unit
-    def test_summarize_with_entities(
-        self, graphrag_summarizer: GraphRAGSummarizer
-    ) -> None:
+    def test_summarize_with_entities(self, graphrag_summarizer: GraphRAGSummarizer) -> None:
         """测试带实体的摘要"""
         content = ArticleContent(
             text="""
@@ -363,9 +345,7 @@ class TestGraphRAGSummarizer:
         assert len(summary.tags) >= 0
 
     @pytest.mark.unit
-    def test_get_knowledge_graph(
-        self, graphrag_summarizer: GraphRAGSummarizer
-    ) -> None:
+    def test_get_knowledge_graph(self, graphrag_summarizer: GraphRAGSummarizer) -> None:
         """测试获取知识图谱"""
         content = ArticleContent(text="测试文本。测试实体提取和图谱构建。")
 
@@ -389,7 +369,7 @@ class TestGraphRAGIntegration:
         summarizers = container.summarizers
 
         # 检查是否尝试创建 GraphRAG 摘要器
-        graphrag_names = [name for name in summarizers if name.startswith("graphrag-")]
+        [name for name in summarizers if name.startswith("graphrag-")]
 
         # GraphRAG 摘要器需要可用的 LLM
         # 如果没有配置 LLM，可能不会创建 GraphRAG 摘要器

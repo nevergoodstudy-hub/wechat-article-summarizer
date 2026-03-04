@@ -1,11 +1,11 @@
 """来源实体"""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """来源类型"""
 
     WECHAT = "wechat"  # 微信公众号
@@ -32,11 +32,11 @@ class ArticleSource:
     feed_title: str | None = None
 
     # 抓取信息
-    scraped_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    scraped_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     scraper_name: str = "unknown"
 
     @classmethod
-    def wechat(cls, account_name: str, account_id: str | None = None) -> "ArticleSource":
+    def wechat(cls, account_name: str, account_id: str | None = None) -> ArticleSource:
         """创建微信公众号来源"""
         return cls(
             type=SourceType.WECHAT,
@@ -47,7 +47,7 @@ class ArticleSource:
         )
 
     @classmethod
-    def rss(cls, feed_url: str, feed_title: str | None = None) -> "ArticleSource":
+    def rss(cls, feed_url: str, feed_title: str | None = None) -> ArticleSource:
         """创建RSS来源"""
         return cls(
             type=SourceType.RSS,
@@ -58,7 +58,7 @@ class ArticleSource:
         )
 
     @classmethod
-    def web(cls, platform: str = "网页") -> "ArticleSource":
+    def web(cls, platform: str = "网页") -> ArticleSource:
         """创建普通网页来源"""
         return cls(
             type=SourceType.WEB,

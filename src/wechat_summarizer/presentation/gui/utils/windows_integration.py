@@ -9,10 +9,10 @@
 
 from __future__ import annotations
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -57,7 +57,6 @@ class WindowsIntegration:
         try:
             # 延迟导入 Windows 特定模块
             import ctypes
-            from ctypes import wintypes
 
             # 获取窗口句柄
             if hwnd is None:
@@ -70,8 +69,7 @@ class WindowsIntegration:
                 return
 
             # ITaskbarList3 接口
-            CLSID_TaskbarList = "{56FDF344-FD6D-11d0-958A-006097C9A090}"
-            IID_ITaskbarList3 = "{EA1AFB91-9E28-4B86-90E9-9E9F8A5EEFAF}"
+            clsid_taskbar_list = "{56FDF344-FD6D-11d0-958A-006097C9A090}"
 
             # 使用 comtypes 如果可用
             try:
@@ -79,7 +77,7 @@ class WindowsIntegration:
 
                 if self._taskbar_list is None:
                     self._taskbar_list = cc.CreateObject(
-                        CLSID_TaskbarList,
+                        clsid_taskbar_list,
                         interface=None,
                     )
 
@@ -285,11 +283,9 @@ class WindowsIntegration:
                 import ctypes
                 from ctypes import wintypes
 
-                CSIDL_PERSONAL = 0x0005
+                csidl_personal = 0x0005
                 buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-                ctypes.windll.shell32.SHGetFolderPathW(
-                    None, CSIDL_PERSONAL, None, 0, buf
-                )
+                ctypes.windll.shell32.SHGetFolderPathW(None, csidl_personal, None, 0, buf)
                 return Path(buf.value)
             except Exception:
                 pass
@@ -303,10 +299,10 @@ class WindowsIntegration:
                 import ctypes
                 from ctypes import wintypes
 
-                CSIDL_DESKTOPDIRECTORY = 0x0010
+                csidl_desktopdirectory = 0x0010
                 buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
                 ctypes.windll.shell32.SHGetFolderPathW(
-                    None, CSIDL_DESKTOPDIRECTORY, None, 0, buf
+                    None, csidl_desktopdirectory, None, 0, buf
                 )
                 return Path(buf.value)
             except Exception:
@@ -346,16 +342,17 @@ class Windows11StyleHelper:
     在非 Windows 11 或 pywinstyles 不可用时静默跳过。
     """
 
-    _pywinstyles = None
+    _pywinstyles: Any | None = None
     _checked: bool = False
 
     @classmethod
-    def _ensure_pywinstyles(cls):
+    def _ensure_pywinstyles(cls) -> None:
         """延迟导入 pywinstyles"""
         if not cls._checked:
             cls._checked = True
             try:
                 import pywinstyles
+
                 cls._pywinstyles = pywinstyles
             except ImportError:
                 cls._pywinstyles = None
@@ -373,7 +370,7 @@ class Windows11StyleHelper:
             return False
 
     @classmethod
-    def apply_window_style(cls, root, appearance_mode: str = 'dark'):
+    def apply_window_style(cls, root, appearance_mode: str = "dark") -> None:
         """应用 Windows 11 窗口样式
 
         Args:
@@ -381,26 +378,28 @@ class Windows11StyleHelper:
             appearance_mode: 'dark' 或 'light'
         """
         if not cls.is_windows_11():
-            logger.debug('当前系统不是 Windows 11, 跳过样式应用')
+            logger.debug("当前系统不是 Windows 11, 跳过样式应用")
             return
 
         try:
             from ..styles.colors import ModernColors
 
             pw = cls._pywinstyles
-            if appearance_mode == 'dark':
+            if pw is None:
+                return
+            if appearance_mode == "dark":
                 pw.change_header_color(root, ModernColors.DARK_BG)
                 pw.change_border_color(root, ModernColors.DARK_BORDER)
             else:
                 pw.change_header_color(root, ModernColors.LIGHT_BG)
                 pw.change_border_color(root, ModernColors.LIGHT_BORDER)
 
-            logger.info('✨ 已应用 Windows 11 窗口样式')
+            logger.info("✨ 已应用 Windows 11 窗口样式")
         except Exception as e:
-            logger.debug(f'Windows 11 样式应用失败: {e}')
+            logger.debug(f"Windows 11 样式应用失败: {e}")
 
     @classmethod
-    def update_titlebar_color(cls, root, appearance_mode: str):
+    def update_titlebar_color(cls, root, appearance_mode: str) -> None:
         """更新标题栏颜色
 
         Args:
@@ -414,15 +413,17 @@ class Windows11StyleHelper:
             from ..styles.colors import ModernColors
 
             pw = cls._pywinstyles
-            if appearance_mode == 'dark':
+            if pw is None:
+                return
+            if appearance_mode == "dark":
                 pw.change_header_color(root, ModernColors.DARK_BG)
                 pw.change_border_color(root, ModernColors.DARK_BORDER)
             else:
                 pw.change_header_color(root, ModernColors.LIGHT_BG)
                 pw.change_border_color(root, ModernColors.LIGHT_BORDER)
-            logger.debug(f'标题栏颜色已更新: {appearance_mode}')
+            logger.debug(f"标题栏颜色已更新: {appearance_mode}")
         except Exception as e:
-            logger.debug(f'标题栏颜色更新失败: {e}')
+            logger.debug(f"标题栏颜色更新失败: {e}")
 
 
 # 全局实例

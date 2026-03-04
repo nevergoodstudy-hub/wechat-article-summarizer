@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -148,10 +148,10 @@ class _DeviceCodeAuth:
                 err: dict[str, Any]
                 try:
                     err = token_resp.json()
-                except Exception:
+                except Exception as exc:
                     raise ExporterAuthError(
                         f"OneNote token 轮询失败 (HTTP {token_resp.status_code}): {token_resp.text}"
-                    )
+                    ) from exc
 
                 code = (err.get("error") or "").lower()
                 desc = err.get("error_description") or ""
@@ -461,7 +461,7 @@ class OneNoteExporter(BaseExporter):
         account = escape(article.account_name or "未知")
         author = escape(article.author or "")
         publish_time = escape(article.publish_time_str)
-        created = escape(datetime.utcnow().isoformat())
+        created = escape(datetime.now(UTC).isoformat())
 
         # Summary
         summary_html = ""

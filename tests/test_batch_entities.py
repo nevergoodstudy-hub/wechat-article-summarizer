@@ -1,15 +1,16 @@
 """批量获取相关实体和值对象的单元测试"""
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 
+import pytest
+
+from src.wechat_summarizer.domain.entities.article_list import (
+    ArticleList,
+    ArticleListItem,
+)
 from src.wechat_summarizer.domain.entities.official_account import (
     OfficialAccount,
     ServiceType,
-)
-from src.wechat_summarizer.domain.entities.article_list import (
-    ArticleListItem,
-    ArticleList,
 )
 from src.wechat_summarizer.domain.value_objects.article_filter import ArticleFilter
 from src.wechat_summarizer.domain.value_objects.batch_export_options import (
@@ -30,7 +31,7 @@ class TestOfficialAccount:
             alias="test_account",
             service_type=ServiceType.SUBSCRIPTION,
         )
-        
+
         assert account.fakeid == "MzI1234567890"
         assert account.nickname == "测试公众号"
         assert account.alias == "test_account"
@@ -57,7 +58,7 @@ class TestOfficialAccount:
         """测试服务类型名称"""
         sub = OfficialAccount(fakeid="1", nickname="订阅号", service_type=ServiceType.SUBSCRIPTION)
         svc = OfficialAccount(fakeid="2", nickname="服务号", service_type=ServiceType.SERVICE)
-        
+
         assert sub.service_type_name == "订阅号"
         assert svc.service_type_name == "服务号"
 
@@ -70,9 +71,9 @@ class TestOfficialAccount:
             "service_type": 0,
             "signature": "分享Python技术",
         }
-        
+
         account = OfficialAccount.from_api_response(data)
-        
+
         assert account.fakeid == "MzI1234567890"
         assert account.nickname == "Python之禅"
         assert account.alias == "VTalk"
@@ -83,9 +84,9 @@ class TestOfficialAccount:
             fakeid="test",
             nickname="测试",
         )
-        
+
         d = account.to_dict()
-        
+
         assert d["fakeid"] == "test"
         assert d["nickname"] == "测试"
         assert "searched_at" in d
@@ -95,7 +96,7 @@ class TestOfficialAccount:
         a1 = OfficialAccount(fakeid="same", nickname="名称1")
         a2 = OfficialAccount(fakeid="same", nickname="名称2")
         a3 = OfficialAccount(fakeid="diff", nickname="名称1")
-        
+
         assert a1 == a2
         assert a1 != a3
 
@@ -103,7 +104,7 @@ class TestOfficialAccount:
         """测试哈希（用于集合和字典）"""
         a1 = OfficialAccount(fakeid="test", nickname="测试")
         a2 = OfficialAccount(fakeid="test", nickname="测试")
-        
+
         s = {a1, a2}
         assert len(s) == 1
 
@@ -130,7 +131,7 @@ class TestArticleListItem:
             digest="这是摘要",
             update_time=1704067200,  # 2024-01-01
         )
-        
+
         assert item.aid == "123"
         assert item.title == "测试文章"
         assert item.link == "https://mp.weixin.qq.com/s/test"
@@ -144,7 +145,7 @@ class TestArticleListItem:
             link="http://test",
             update_time=1704067200,
         )
-        
+
         dt = item.publish_datetime
         assert dt.year == 2024
         assert dt.month == 1
@@ -158,7 +159,7 @@ class TestArticleListItem:
             link="http://test",
             update_time=1704067200,
         )
-        
+
         assert item.publish_date_str == "2024-01-01"
 
     def test_from_api_response(self):
@@ -172,9 +173,9 @@ class TestArticleListItem:
             "update_time": 1704067200,
             "is_original": 1,
         }
-        
+
         item = ArticleListItem.from_api_response(data)
-        
+
         assert item.aid == "123456"
         assert item.title == "Python 3.12新特性"
         assert item.is_original is True
@@ -186,9 +187,9 @@ class TestArticleListItem:
             title="测试",
             link="http://test",
         )
-        
+
         d = item.to_dict()
-        
+
         assert d["aid"] == "1"
         assert d["title"] == "测试"
         assert "publish_date" in d
@@ -198,7 +199,7 @@ class TestArticleListItem:
         i1 = ArticleListItem(aid="1", title="标题1", link="http://same")
         i2 = ArticleListItem(aid="2", title="标题2", link="http://same")
         i3 = ArticleListItem(aid="1", title="标题1", link="http://diff")
-        
+
         assert i1 == i2
         assert i1 != i3
 
@@ -223,7 +224,7 @@ class TestArticleList:
             account_name="测试公众号",
             total_count=100,
         )
-        
+
         assert article_list.fakeid == "test"
         assert article_list.account_name == "测试公众号"
         assert article_list.total_count == 100
@@ -233,9 +234,9 @@ class TestArticleList:
         """测试添加文章"""
         article_list = ArticleList(fakeid="test", account_name="测试")
         item = ArticleListItem(aid="1", title="文章1", link="http://1")
-        
+
         article_list.add_item(item)
-        
+
         assert article_list.count == 1
         assert article_list[0] == item
 
@@ -243,10 +244,10 @@ class TestArticleList:
         """测试添加文章去重"""
         article_list = ArticleList(fakeid="test", account_name="测试")
         item = ArticleListItem(aid="1", title="文章1", link="http://same")
-        
+
         article_list.add_item(item)
         article_list.add_item(item)
-        
+
         assert article_list.count == 1
 
     def test_add_items_batch(self):
@@ -257,9 +258,9 @@ class TestArticleList:
             ArticleListItem(aid="2", title="文章2", link="http://2"),
             ArticleListItem(aid="3", title="文章3", link="http://3"),
         ]
-        
+
         added = article_list.add_items(items)
-        
+
         assert added == 3
         assert article_list.count == 3
 
@@ -268,9 +269,9 @@ class TestArticleList:
         article_list = ArticleList(fakeid="test", account_name="测试")
         article_list.add_item(ArticleListItem(aid="1", title="文章1", link="http://1"))
         article_list.add_item(ArticleListItem(aid="2", title="文章2", link="http://2"))
-        
+
         links = article_list.links
-        
+
         assert links == ["http://1", "http://2"]
 
     def test_get_by_keyword(self):
@@ -279,20 +280,26 @@ class TestArticleList:
         article_list.add_item(ArticleListItem(aid="1", title="Python教程", link="http://1"))
         article_list.add_item(ArticleListItem(aid="2", title="Java教程", link="http://2"))
         article_list.add_item(ArticleListItem(aid="3", title="Python进阶", link="http://3"))
-        
+
         results = article_list.get_by_keyword("Python")
-        
+
         assert len(results) == 2
 
     def test_get_original_only(self):
         """测试获取原创文章"""
         article_list = ArticleList(fakeid="test", account_name="测试")
-        article_list.add_item(ArticleListItem(aid="1", title="原创1", link="http://1", is_original=True))
-        article_list.add_item(ArticleListItem(aid="2", title="转载", link="http://2", is_original=False))
-        article_list.add_item(ArticleListItem(aid="3", title="原创2", link="http://3", is_original=True))
-        
+        article_list.add_item(
+            ArticleListItem(aid="1", title="原创1", link="http://1", is_original=True)
+        )
+        article_list.add_item(
+            ArticleListItem(aid="2", title="转载", link="http://2", is_original=False)
+        )
+        article_list.add_item(
+            ArticleListItem(aid="3", title="原创2", link="http://3", is_original=True)
+        )
+
         originals = article_list.get_original_only()
-        
+
         assert len(originals) == 2
 
     def test_iterator(self):
@@ -300,19 +307,19 @@ class TestArticleList:
         article_list = ArticleList(fakeid="test", account_name="测试")
         article_list.add_item(ArticleListItem(aid="1", title="文章1", link="http://1"))
         article_list.add_item(ArticleListItem(aid="2", title="文章2", link="http://2"))
-        
+
         titles = [item.title for item in article_list]
-        
+
         assert titles == ["文章1", "文章2"]
 
     def test_to_dict_and_from_dict(self):
         """测试序列化和反序列化"""
         article_list = ArticleList(fakeid="test", account_name="测试", total_count=10)
         article_list.add_item(ArticleListItem(aid="1", title="文章1", link="http://1"))
-        
+
         d = article_list.to_dict()
         restored = ArticleList.from_dict(d)
-        
+
         assert restored.fakeid == "test"
         assert restored.account_name == "测试"
         assert restored.count == 1
@@ -329,7 +336,7 @@ class TestArticleFilter:
     def test_keyword_filter(self):
         """测试关键词筛选"""
         f = ArticleFilter.by_keyword("Python")
-        
+
         assert f.keyword == "Python"
         assert f.is_empty is False
 
@@ -337,33 +344,33 @@ class TestArticleFilter:
         """测试日期范围筛选"""
         start = datetime(2024, 1, 1)
         end = datetime(2024, 12, 31)
-        
+
         f = ArticleFilter.by_date_range(start, end)
-        
+
         assert f.start_date == start
         assert f.end_date == end
 
     def test_recent_days_filter(self):
         """测试最近N天筛选"""
         f = ArticleFilter.recent_days(7)
-        
+
         assert f.start_date is not None
         assert f.end_date is not None
 
     def test_top_n_filter(self):
         """测试前N篇筛选"""
         f = ArticleFilter.top_n(10)
-        
+
         assert f.max_count == 10
 
     def test_matches_keyword(self):
         """测试关键词匹配"""
         f = ArticleFilter(keyword="Python")
-        
+
         item1 = ArticleListItem(aid="1", title="Python教程", link="http://1")
         item2 = ArticleListItem(aid="2", title="Java教程", link="http://2")
         item3 = ArticleListItem(aid="3", title="学习", link="http://3", digest="Python进阶")
-        
+
         assert f.matches(item1) is True
         assert f.matches(item2) is False
         assert f.matches(item3) is True  # 匹配摘要
@@ -371,35 +378,35 @@ class TestArticleFilter:
     def test_matches_original_only(self):
         """测试原创筛选"""
         f = ArticleFilter(original_only=True)
-        
+
         item1 = ArticleListItem(aid="1", title="原创", link="http://1", is_original=True)
         item2 = ArticleListItem(aid="2", title="转载", link="http://2", is_original=False)
-        
+
         assert f.matches(item1) is True
         assert f.matches(item2) is False
 
     def test_apply_filter(self):
         """测试应用筛选条件"""
         f = ArticleFilter(keyword="Python", max_count=2)
-        
+
         items = [
             ArticleListItem(aid="1", title="Python基础", link="http://1"),
             ArticleListItem(aid="2", title="Java入门", link="http://2"),
             ArticleListItem(aid="3", title="Python进阶", link="http://3"),
             ArticleListItem(aid="4", title="Python高级", link="http://4"),
         ]
-        
+
         filtered = f.apply(items)
-        
+
         assert len(filtered) == 2  # max_count限制
         assert all("Python" in item.title for item in filtered)
 
     def test_description(self):
         """测试筛选条件描述"""
         f = ArticleFilter(keyword="Python", original_only=True, max_count=10)
-        
+
         desc = f.description
-        
+
         assert "Python" in desc
         assert "仅原创" in desc
         assert "最多" in desc
@@ -419,7 +426,7 @@ class TestBatchExportOptions:
     def test_default_options(self):
         """测试默认选项"""
         opts = BatchExportOptions()
-        
+
         assert opts.export_format == ExportFormat.TXT
         assert opts.link_format == LinkFormat.RAW
         assert opts.deduplicate is True
@@ -427,14 +434,14 @@ class TestBatchExportOptions:
     def test_simple_txt(self):
         """测试简单TXT导出"""
         opts = BatchExportOptions.simple_txt()
-        
+
         assert opts.export_format == ExportFormat.TXT
         assert opts.include_metadata is False
 
     def test_markdown_with_titles(self):
         """测试Markdown导出"""
         opts = BatchExportOptions.markdown_with_titles()
-        
+
         assert opts.export_format == ExportFormat.MARKDOWN
         assert opts.link_format == LinkFormat.MARKDOWN
         assert opts.include_digest is True
@@ -442,14 +449,14 @@ class TestBatchExportOptions:
     def test_full_json(self):
         """测试完整JSON导出"""
         opts = BatchExportOptions.full_json()
-        
+
         assert opts.export_format == ExportFormat.JSON
         assert opts.include_metadata is True
 
     def test_csv_for_analysis(self):
         """测试分析用CSV导出"""
         opts = BatchExportOptions.csv_for_analysis()
-        
+
         assert opts.export_format == ExportFormat.CSV
         assert opts.group_by_account is True
 
@@ -463,9 +470,9 @@ class TestBatchExportOptions:
     def test_generate_filename(self):
         """测试生成文件名"""
         opts = BatchExportOptions(timestamp_filename=False)
-        
+
         filename = opts.generate_filename(account_name="测试号")
-        
+
         assert filename.startswith("wechat_articles")
         assert "测试号" in filename
         assert filename.endswith(".txt")
@@ -473,9 +480,9 @@ class TestBatchExportOptions:
     def test_generate_filename_with_timestamp(self):
         """测试生成带时间戳的文件名"""
         opts = BatchExportOptions(timestamp_filename=True)
-        
+
         filename = opts.generate_filename()
-        
+
         assert "20" in filename  # 年份
 
     def test_to_dict_and_from_dict(self):
@@ -485,10 +492,10 @@ class TestBatchExportOptions:
             link_format=LinkFormat.MARKDOWN,
             group_by_account=True,
         )
-        
+
         d = opts.to_dict()
         restored = BatchExportOptions.from_dict(d)
-        
+
         assert restored.export_format == ExportFormat.JSON
         assert restored.link_format == LinkFormat.MARKDOWN
         assert restored.group_by_account is True

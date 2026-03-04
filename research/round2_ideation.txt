@@ -1,0 +1,31 @@
+Round 2 Ideation — Alternative ‘system versions’ beyond native Tk
+
+Objective
+Offer additional editions that run well on Windows/macOS/Linux without deep GUI toolkit dependencies.
+
+Candidates
+- WebView Edition (pywebview):
+  - Pros: Native window with embedded Chromium/WebKit; single Python process; pack with PyInstaller on all OS.
+  - Approach: Wrap existing presentation layer with a thin local HTTP UI or direct pywebview HTML/JS bridge.
+  - Status: Mature, used widely; supports menus, dialogs, file pickers.
+- Browser Edition (FastAPI/Starlette + HTMX/Tailwind):
+  - Pros: Zero desktop dependencies; use default browser; easy remote/headless usage.
+  - Cons: Distribution as a server binary; local network permissions.
+- Electron + Python backend:
+  - Pros: Rich UI; auto-update ecosystem.
+  - Cons: Heavy footprint; dual toolchains (Node + Python); more maintenance.
+- CLI/Daemon Edition (already partly present):
+  - Pros: Scriptable; easy CI; headless servers.
+  - To add: Long-running task queue, REST/WebSocket control plane.
+- Kivy / Qt (PySide6):
+  - Pros: GPU-accelerated (Kivy) or native widgets (Qt); cross-platform installers.
+  - Cons: Significant refactor and larger runtime; not needed if CTk suffices.
+
+Recommended path (cost/benefit)
+1) Add WebView Edition first (pywebview) by reusing ViewModels/UseCases; expose actions via a thin controller.
+2) Add Browser Edition for headless/server scenarios (FastAPI + Jinja).
+3) Keep Electron/Qt/Kivy as optional future tracks.
+
+Packaging
+- PyInstaller for both editions (windowed on macOS, console hidden on Windows).
+- macOS app signing/notarization remains the same; Linux optionally offer AppImage.

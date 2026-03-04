@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -74,13 +75,13 @@ class RssScraper:
             subscriptions_file: 订阅存储文件路径
         """
         if not _feedparser_available:
-            raise ImportError(
-                "feedparser 未安装，请运行: pip install wechat-summarizer[rss]"
-            )
+            raise ImportError("feedparser 未安装，请运行: pip install wechat-summarizer[rss]")
 
         self._generic_scraper = generic_scraper
-        self._subscriptions_file = Path(subscriptions_file) if subscriptions_file else (
-            Path.home() / CONFIG_DIR_NAME / "subscriptions.json"
+        self._subscriptions_file = (
+            Path(subscriptions_file)
+            if subscriptions_file
+            else (Path.home() / CONFIG_DIR_NAME / "subscriptions.json")
         )
         self._subscriptions: dict[str, Subscription] = self._load_subscriptions()
 
@@ -124,10 +125,8 @@ class RssScraper:
             # 提取发布时间
             published = None
             if hasattr(entry, "published_parsed") and entry.published_parsed:
-                try:
+                with contextlib.suppress(Exception):
                     published = datetime(*entry.published_parsed[:6])
-                except Exception:
-                    pass
 
             entries.append(
                 FeedEntry(
@@ -178,8 +177,10 @@ class RssScraper:
 
         # 降级：使用 feed 中的摘要
         url = ArticleURL.from_string(entry.link)
-        content = ArticleContent.from_html(entry.summary) if entry.summary else ArticleContent(
-            html="", text="", images=()
+        content = (
+            ArticleContent.from_html(entry.summary)
+            if entry.summary
+            else ArticleContent(html="", text="", images=())
         )
 
         source = ArticleSource(
@@ -257,10 +258,7 @@ class RssScraper:
         entries = self.parse_feed(feed_url)
 
         # 过滤已处理的条目
-        new_entries = [
-            e for e in entries
-            if e.id not in subscription.processed_ids
-        ][:limit]
+        new_entries = [e for e in entries if e.id not in subscription.processed_ids][:limit]
 
         # 更新已处理 ID
         for entry in new_entries:
@@ -306,8 +304,12 @@ class RssScraper:
                 subscriptions[url] = Subscription(
                     url=url,
                     title=info.get("title", ""),
-                    added_at=datetime.fromisoformat(info["added_at"]) if info.get("added_at") else datetime.now(),
-                    last_sync=datetime.fromisoformat(info["last_sync"]) if info.get("last_sync") else None,
+                    added_at=datetime.fromisoformat(info["added_at"])
+                    if info.get("added_at")
+                    else datetime.now(),
+                    last_sync=datetime.fromisoformat(info["last_sync"])
+                    if info.get("last_sync")
+                    else None,
                     processed_ids=set(info.get("processed_ids", [])),
                 )
             return subscriptions

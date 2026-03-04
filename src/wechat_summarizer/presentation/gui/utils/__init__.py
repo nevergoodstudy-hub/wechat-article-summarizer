@@ -1,24 +1,24 @@
 """GUI 工具模块"""
 
-from .windows_integration import WindowsIntegration, Windows11StyleHelper
-from .display import DisplayHelper
-from .theme_manager import ThemeManager
 from .clipboard_detector import (
     AutoLinkDetector,
-    WeChatLinkDetector,
-    ClipboardManager,
     BrowserDetector,
+    ClipboardManager,
     DetectionResult,
+    WeChatLinkDetector,
 )
+from .display import DisplayHelper
+from .theme_manager import ThemeManager
+from .windows_integration import Windows11StyleHelper, WindowsIntegration
 
 __all__ = [
-    "WindowsIntegration",
-    "Windows11StyleHelper",
+    "AutoLinkDetector",
+    "BrowserDetector",
+    "ClipboardManager",
+    "DetectionResult",
     "DisplayHelper",
     "ThemeManager",
-    "AutoLinkDetector",
     "WeChatLinkDetector",
-    "ClipboardManager",
-    "BrowserDetector",
-    "DetectionResult",
+    "Windows11StyleHelper",
+    "WindowsIntegration",
 ]

@@ -124,9 +124,7 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
             seen_relationships.add(rel_key)
             kg.add_relationship(rel)
 
-        logger.info(
-            f"图构建完成: {kg.entity_count} 实体, {kg.relationship_count} 关系"
-        )
+        logger.info(f"图构建完成: {kg.entity_count} 实体, {kg.relationship_count} 关系")
 
         return kg
 
@@ -157,9 +155,7 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
 
         return merged
 
-    def _merge_similar_entities(
-        self, entities: dict[str, Entity]
-    ) -> dict[str, Entity]:
+    def _merge_similar_entities(self, entities: dict[str, Entity]) -> dict[str, Entity]:
         """合并相似实体（基于名称相似度）"""
         # 按名称分组
         name_to_entities: dict[str, list[Entity]] = defaultdict(list)
@@ -170,7 +166,7 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
 
         # 合并同名实体
         merged: dict[str, Entity] = {}
-        for name, ent_list in name_to_entities.items():
+        for _name, ent_list in name_to_entities.items():
             if len(ent_list) == 1:
                 merged[ent_list[0].id] = ent_list[0]
             else:
@@ -192,16 +188,16 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
 
         return merged
 
-    def to_networkx(self, kg: KnowledgeGraph) -> "nx.Graph":
+    def to_networkx(self, kg: KnowledgeGraph) -> nx.Graph:
         """将知识图谱转换为 NetworkX 图"""
         if not _nx_available:
             raise RuntimeError("networkx 未安装")
 
-        G = nx.Graph()
+        graph = nx.Graph()
 
         # 添加节点
         for entity in kg.entities.values():
-            G.add_node(
+            graph.add_node(
                 entity.id,
                 name=entity.name,
                 type=entity.type,
@@ -211,7 +207,7 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
 
         # 添加边
         for rel in kg.relationships.values():
-            G.add_edge(
+            graph.add_edge(
                 rel.source_id,
                 rel.target_id,
                 id=rel.id,
@@ -220,30 +216,27 @@ class NetworkXGraphBuilder(BaseGraphBuilder):
                 weight=rel.weight,
                 **rel.attributes,
             )
+        return graph
 
-        return G
-
-    def from_networkx(self, G: "nx.Graph") -> KnowledgeGraph:
+    def from_networkx(self, graph: nx.Graph) -> KnowledgeGraph:
         """从 NetworkX 图创建知识图谱"""
         kg = KnowledgeGraph()
 
         # 添加实体
-        for node_id, attrs in G.nodes(data=True):
+        for node_id, attrs in graph.nodes(data=True):
             entity = Entity(
                 id=str(node_id),
                 name=attrs.get("name", str(node_id)),
                 type=attrs.get("type", "概念"),
                 description=attrs.get("description", ""),
                 attributes={
-                    k: v
-                    for k, v in attrs.items()
-                    if k not in {"name", "type", "description"}
+                    k: v for k, v in attrs.items() if k not in {"name", "type", "description"}
                 },
             )
             kg.add_entity(entity)
 
         # 添加关系
-        for source, target, attrs in G.edges(data=True):
+        for source, target, attrs in graph.edges(data=True):
             rel = Relationship(
                 id=attrs.get("id", f"{source}-{target}"),
                 source_id=str(source),
@@ -287,14 +280,14 @@ class SimpleGraphBuilder(BaseGraphBuilder):
                     kg.add_entity(entity)
 
             for rel in extraction.relationships:
-                if rel.id not in kg.relationships:
-                    # 确保源和目标实体存在
-                    if rel.source_id in kg.entities and rel.target_id in kg.entities:
-                        kg.add_relationship(rel)
+                if (
+                    rel.id not in kg.relationships
+                    and rel.source_id in kg.entities
+                    and rel.target_id in kg.entities
+                ):
+                    kg.add_relationship(rel)
 
-        logger.debug(
-            f"简单图构建完成: {kg.entity_count} 实体, {kg.relationship_count} 关系"
-        )
+        logger.debug(f"简单图构建完成: {kg.entity_count} 实体, {kg.relationship_count} 关系")
 
         return kg
 

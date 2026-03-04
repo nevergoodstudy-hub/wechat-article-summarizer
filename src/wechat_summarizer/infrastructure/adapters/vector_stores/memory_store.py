@@ -11,7 +11,7 @@ from .base import BaseVectorStore
 class MemoryVectorStore(BaseVectorStore):
     """
     内存向量存储
-    
+
     将向量存储在内存中，适用于：
     - 单元测试
     - 小规模数据（< 10000 条）
@@ -21,7 +21,7 @@ class MemoryVectorStore(BaseVectorStore):
     def __init__(self, dimension: int = 384):
         """
         初始化内存存储
-        
+
         Args:
             dimension: 向量维度
         """
@@ -40,9 +40,7 @@ class MemoryVectorStore(BaseVectorStore):
         """添加文档"""
         for doc in documents:
             if len(doc.vector) != self._dimension:
-                raise ValueError(
-                    f"向量维度不匹配: 期望 {self._dimension}, 实际 {len(doc.vector)}"
-                )
+                raise ValueError(f"向量维度不匹配: 期望 {self._dimension}, 实际 {len(doc.vector)}")
             self._documents[doc.id] = doc
         logger.debug(f"已添加 {len(documents)} 个文档，当前总数: {len(self._documents)}")
 
@@ -57,22 +55,21 @@ class MemoryVectorStore(BaseVectorStore):
             raise ValueError(
                 f"查询向量维度不匹配: 期望 {self._dimension}, 实际 {len(query_vector)}"
             )
-        
+
         results: list[tuple[str, float, VectorDocument]] = []
-        
+
         for doc_id, doc in self._documents.items():
             # 元数据过滤
-            if filter_metadata:
-                if not self._match_metadata(doc.metadata, filter_metadata):
-                    continue
-            
+            if filter_metadata and not self._match_metadata(doc.metadata, filter_metadata):
+                continue
+
             # 计算相似度
             score = self._cosine_similarity(query_vector, doc.vector)
             results.append((doc_id, score, doc))
-        
+
         # 按相似度降序排序
         results.sort(key=lambda x: x[1], reverse=True)
-        
+
         # 返回 top_k 结果
         return [
             SearchResult(

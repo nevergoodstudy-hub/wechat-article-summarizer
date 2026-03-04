@@ -5,7 +5,7 @@ from .batch_service import BatchProgress, BatchServicePort, ProgressCallback
 
 __all__ = [
     "ArticleServicePort",
-    "BatchServicePort",
     "BatchProgress",
+    "BatchServicePort",
     "ProgressCallback",
 ]

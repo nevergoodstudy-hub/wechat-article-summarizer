@@ -1,22 +1,30 @@
 """本地向量嵌入器 - 使用 sentence-transformers"""
 
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any, cast
+
 from loguru import logger
 
 from .base import BaseEmbedder
 
 # sentence-transformers 是可选依赖
 _st_available = True
+SentenceTransformerClass: Any | None = None
 try:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer as _SentenceTransformer
+
+    SentenceTransformerClass = _SentenceTransformer
 except ImportError:
     _st_available = False
-    SentenceTransformer = None
 
 
 class LocalEmbedder(BaseEmbedder):
     """
     本地向量嵌入器
-    
+
     使用 sentence-transformers 库加载本地模型，无需 API 调用。
     支持中英文的推荐模型：
     - paraphrase-multilingual-MiniLM-L12-v2 (384维，多语言)
@@ -40,25 +48,28 @@ class LocalEmbedder(BaseEmbedder):
         device: str | None = None,
         batch_size: int = 32,
         normalize: bool = True,
+        local_files_only: bool = True,
     ):
         """
         初始化本地嵌入器
-        
+
         Args:
             model_name: 模型名称或路径
             device: 设备（cpu/cuda/mps）
             batch_size: 批量处理大小
             normalize: 是否归一化向量
+            local_files_only: 是否仅使用本地模型文件（避免启动时联网下载）
         """
         self._model_name = model_name
         self._device = device
         self._batch_size = batch_size
         self._normalize = normalize
-        
+        self._local_files_only = local_files_only
+
         # 确定向量维度
         self._dimension = self.MODEL_DIMENSIONS.get(model_name, 384)
-        
-        self._model: "SentenceTransformer | None" = None
+
+        self._model: Any | None = None
         self._init_model()
 
     def _init_model(self) -> None:
@@ -66,18 +77,45 @@ class LocalEmbedder(BaseEmbedder):
         if not _st_available:
             logger.warning("sentence-transformers 库未安装，本地嵌入器不可用")
             return
-        
+        if self._local_files_only and not self._has_local_model_files():
+            logger.info(f"本地嵌入模型未缓存，跳过加载: {self._model_name}")
+            return
+
         try:
-            self._model = SentenceTransformer(
+            model_cls = SentenceTransformerClass
+            if model_cls is None:
+                logger.warning("sentence-transformers 库未安装，本地嵌入器不可用")
+                return
+
+            self._model = model_cls(
                 self._model_name,
                 device=self._device,
+                local_files_only=self._local_files_only,
             )
             # 更新实际维度
-            self._dimension = self._model.get_sentence_embedding_dimension()
+            actual_dimension = self._model.get_sentence_embedding_dimension()
+            if actual_dimension is not None:
+                self._dimension = int(actual_dimension)
             logger.info(f"本地嵌入模型已加载: {self._model_name} (维度: {self._dimension})")
         except Exception as e:
             logger.error(f"加载本地嵌入模型失败: {e}")
             self._model = None
+
+    def _has_local_model_files(self) -> bool:
+        """检查模型是否已存在于本地路径或 HuggingFace 缓存。"""
+        direct_path = Path(self._model_name)
+        if direct_path.exists():
+            return True
+
+        hf_home = Path(os.getenv("HF_HOME", Path.home() / ".cache" / "huggingface"))
+        hub_dir = hf_home / "hub"
+        repo_dir = hub_dir / f"models--{self._model_name.replace('/', '--')}"
+        snapshots_dir = repo_dir / "snapshots"
+
+        if not snapshots_dir.exists():
+            return False
+
+        return any(child.is_dir() for child in snapshots_dir.iterdir())
 
     @property
     def name(self) -> str:
@@ -92,23 +130,24 @@ class LocalEmbedder(BaseEmbedder):
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         """批量嵌入文本"""
-        if not self.is_available():
+        model = self._model
+        if model is None:
             raise RuntimeError("本地嵌入器不可用")
-        
+
         if not texts:
             return []
-        
+
         # 预处理文本
         processed_texts = [self._preprocess_text(t) for t in texts]
-        
+
         try:
-            embeddings = self._model.encode(
+            embeddings = model.encode(
                 processed_texts,
                 batch_size=self._batch_size,
                 normalize_embeddings=self._normalize,
                 show_progress_bar=False,
             )
-            return embeddings.tolist()
+            return cast(list[list[float]], embeddings.tolist())
         except Exception as e:
             logger.error(f"本地嵌入失败: {e}")
             raise RuntimeError(f"嵌入失败: {e}") from e
@@ -117,7 +156,7 @@ class LocalEmbedder(BaseEmbedder):
 class SimpleHashEmbedder(BaseEmbedder):
     """
     简单哈希嵌入器（用于测试和降级）
-    
+
     使用简单的哈希函数生成固定维度的向量，不依赖任何外部库。
     注意：此嵌入器不具备语义理解能力，仅用于测试或无法使用其他嵌入器时的降级方案。
     """
@@ -125,7 +164,7 @@ class SimpleHashEmbedder(BaseEmbedder):
     def __init__(self, dimension: int = 384):
         """
         初始化简单哈希嵌入器
-        
+
         Args:
             dimension: 向量维度
         """
@@ -149,10 +188,10 @@ class SimpleHashEmbedder(BaseEmbedder):
     def _hash_text(self, text: str) -> list[float]:
         """使用哈希函数生成伪向量"""
         import hashlib
-        
+
         # 预处理
         text = self._preprocess_text(text)
-        
+
         # 生成多个哈希值以填充向量
         vector = []
         for i in range(self._dimension):
@@ -164,10 +203,10 @@ class SimpleHashEmbedder(BaseEmbedder):
             # 归一化到 [-1, 1]
             normalized = (value / (2**31)) - 1
             vector.append(normalized)
-        
+
         # 归一化向量长度
         norm = sum(v**2 for v in vector) ** 0.5
         if norm > 0:
             vector = [v / norm for v in vector]
-        
+
         return vector

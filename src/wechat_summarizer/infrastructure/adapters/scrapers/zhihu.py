@@ -10,7 +10,7 @@ import asyncio
 import random
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from bs4 import BeautifulSoup
@@ -61,9 +61,7 @@ class ZhihuScraper(BaseScraper):
     def can_handle(self, url: ArticleURL) -> bool:
         """判断是否能处理该 URL"""
         url_str = str(url)
-        return bool(
-            self.ZHUANLAN_PATTERN.search(url_str) or self.ANSWER_PATTERN.search(url_str)
-        )
+        return bool(self.ZHUANLAN_PATTERN.search(url_str) or self.ANSWER_PATTERN.search(url_str))
 
     def _get_headers(self) -> dict[str, str]:
         """获取请求头"""
@@ -259,7 +257,11 @@ class ZhihuScraper(BaseScraper):
         ]
 
         for tag, attrs in selectors:
-            elem = soup.find(tag, attrs=attrs) if attrs else soup.find(tag)
+            elem = (
+                soup.find(tag, attrs=cast(dict[str, Any] | None, attrs))
+                if attrs
+                else soup.find(tag)
+            )
             if elem:
                 if tag == "meta":
                     content = elem.get("content")

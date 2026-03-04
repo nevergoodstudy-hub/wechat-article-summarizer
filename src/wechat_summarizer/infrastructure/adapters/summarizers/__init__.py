@@ -13,16 +13,16 @@ from .textrank import TextRankSummarizer
 from .zhipu import ZhipuSummarizer
 
 __all__ = [
+    "AnthropicSummarizer",
     "BaseSummarizer",
-    "SimpleSummarizer",
-    "TextRankSummarizer",
+    "DeepSeekSummarizer",
+    "GraphRAGSummarizer",
+    "HyDEEnhancedSummarizer",
     "MapReduceSummarizer",
     "OllamaSummarizer",
     "OpenAISummarizer",
-    "DeepSeekSummarizer",
-    "AnthropicSummarizer",
-    "ZhipuSummarizer",
     "RAGEnhancedSummarizer",
-    "HyDEEnhancedSummarizer",
-    "GraphRAGSummarizer",
+    "SimpleSummarizer",
+    "TextRankSummarizer",
+    "ZhipuSummarizer",
 ]

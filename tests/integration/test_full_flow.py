@@ -4,15 +4,14 @@
 使用Mock HTTP响应模拟微信文章。
 """
 
-from pathlib import Path
-from unittest.mock import Mock, patch
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
-from wechat_summarizer.infrastructure.config.container import Container, reset_container
 from wechat_summarizer.domain.entities import Article
-from wechat_summarizer.domain.value_objects import ArticleURL, ArticleContent
+from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
+from wechat_summarizer.infrastructure.config.container import Container, reset_container
 
 
 @pytest.fixture
@@ -55,9 +54,7 @@ def cleanup():
 class TestFullProcessingFlow:
     """端到端集成测试"""
 
-    def test_simple_summarize_export_flow(
-        self, mock_wechat_html: str, tmp_path: Path
-    ) -> None:
+    def test_simple_summarize_export_flow(self, mock_wechat_html: str, tmp_path: Path) -> None:
         """测试完整的抓取->简单摘要->导出流程（使用Mock）"""
         # 创建模拟文章
         article = Article(
@@ -103,9 +100,7 @@ class TestFullProcessingFlow:
         assert "集成测试文章标题" in content
         assert summary.content in content or "摘要" in content
 
-    def test_markdown_export_flow(
-        self, mock_wechat_html: str, tmp_path: Path
-    ) -> None:
+    def test_markdown_export_flow(self, mock_wechat_html: str, tmp_path: Path) -> None:
         """测试Markdown导出流程"""
         article = Article(
             url=ArticleURL.from_string("https://mp.weixin.qq.com/s/test456"),

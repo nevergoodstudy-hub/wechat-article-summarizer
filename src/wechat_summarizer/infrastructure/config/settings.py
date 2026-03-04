@@ -12,7 +12,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from loguru import logger as _logger
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ...shared.constants import (
@@ -56,7 +57,7 @@ class OpenAISettings(BaseSettings):
 
 class DeepSeekSettings(BaseSettings):
     """DeepSeek配置
-    
+
     DeepSeek 是国产高性能大语言模型，提供与 OpenAI 兼容的 API 接口。
     支持 deepseek-chat (DeepSeek V3) 和 deepseek-coder 等模型。
     """
@@ -82,7 +83,7 @@ class ZhipuSettings(BaseSettings):
 
 class BatchSettings(BaseSettings):
     """批量获取配置
-    
+
     配置公众号文章批量获取相关的参数。
     """
 
@@ -95,7 +96,7 @@ class BatchSettings(BaseSettings):
         default=20,
         description="每分钟最大请求数",
     )
-    
+
     # 文章获取限制
     max_articles_per_account: int = Field(
         default=500,
@@ -105,7 +106,7 @@ class BatchSettings(BaseSettings):
         default=10,
         description="每页文章数（API限制最大10）",
     )
-    
+
     # 缓存配置
     cache_enabled: bool = Field(
         default=True,
@@ -119,7 +120,7 @@ class BatchSettings(BaseSettings):
         default=".cache/wechat_batch",
         description="缓存目录",
     )
-    
+
     # 认证配置
     credentials_file: str = Field(
         default=".wechat_credentials.json",
@@ -129,7 +130,7 @@ class BatchSettings(BaseSettings):
         default=True,
         description="是否自动刷新过期凭据",
     )
-    
+
     # 重试配置
     max_retries: int = Field(
         default=3,
@@ -188,9 +189,11 @@ class AppSettings(BaseSettings):
     )
 
     # 默认摘要方法
-    default_summary_method: str = Field(
+    default_summary_method: Literal[
+        "simple", "textrank", "ollama", "openai", "deepseek", "anthropic", "zhipu"
+    ] = Field(
         default="simple",
-        description="默认摘要方法 (simple, ollama, openai, deepseek, anthropic, zhipu)",
+        description="默认摘要方法",
     )
 
     # 子配置
@@ -202,6 +205,25 @@ class AppSettings(BaseSettings):
     zhipu: ZhipuSettings = Field(default_factory=ZhipuSettings)
     export: ExportSettings = Field(default_factory=ExportSettings)
     batch: BatchSettings = Field(default_factory=BatchSettings)
+
+    @model_validator(mode="after")
+    def _validate_settings(self) -> AppSettings:
+        """Settings 整体校验"""
+        # 检查 API key 配置状态（警告级别）
+        llm_methods = {"openai", "deepseek", "anthropic", "zhipu"}
+        if self.default_summary_method in llm_methods:
+            key_map = {
+                "openai": self.openai.api_key,
+                "deepseek": self.deepseek.api_key,
+                "anthropic": self.anthropic.api_key,
+                "zhipu": self.zhipu.api_key,
+            }
+            key = key_map.get(self.default_summary_method)
+            if key and not key.get_secret_value():
+                _logger.warning(
+                    f"默认摘要方法为 '{self.default_summary_method}' 但未配置对应 API Key"
+                )
+        return self
 
 
 def _parse_dotenv_file(path: Path) -> dict[str, str]:

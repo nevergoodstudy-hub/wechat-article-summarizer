@@ -1,6 +1,6 @@
 """导出器出站端口 - 定义导出器适配器必须实现的接口"""
 
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from ....domain.entities import Article
 
@@ -36,7 +36,7 @@ class ExporterPort(Protocol):
         self,
         article: Article,
         path: str | None = None,
-        **options,
+        **options: Any,
     ) -> str:
         """
         导出文章
@@ -76,7 +76,7 @@ class AsyncExporterPort(Protocol):
         self,
         article: Article,
         path: str | None = None,
-        **options,
+        **options: Any,
     ) -> str:
         """异步导出文章"""
         ...

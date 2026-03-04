@@ -5,7 +5,7 @@
 
 import pytest
 
-from wechat_summarizer.application.ports.outbound import VectorDocument, SearchResult
+from wechat_summarizer.application.ports.outbound import SearchResult, VectorDocument
 from wechat_summarizer.infrastructure.adapters.embedders import SimpleHashEmbedder
 from wechat_summarizer.infrastructure.adapters.vector_stores import MemoryVectorStore
 
@@ -173,9 +173,7 @@ class TestMemoryVectorStore:
 
         # 使用过滤器搜索
         query_embedding = embedder.embed_single("文档内容")
-        results = store.search(
-            query_embedding, top_k=10, filter_metadata={"category": "tech"}
-        )
+        results = store.search(query_embedding, top_k=10, filter_metadata={"category": "tech"})
 
         assert len(results) == 1
         assert results[0].metadata["category"] == "tech"

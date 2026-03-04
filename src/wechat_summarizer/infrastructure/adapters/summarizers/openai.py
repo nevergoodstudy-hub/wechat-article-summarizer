@@ -8,8 +8,8 @@ from loguru import logger
 
 from ....domain.entities import Summary, SummaryMethod, SummaryStyle
 from ....domain.value_objects import ArticleContent
-from ....shared.prompts import SUMMARY_PROMPT_TEMPLATE
 from ....shared.exceptions import SummarizerAPIError, SummarizerError
+from ....shared.prompts import SUMMARY_PROMPT_TEMPLATE
 from .base import BaseSummarizer
 
 # 延迟导入 OpenAI（作为可选依赖）
@@ -56,10 +56,10 @@ class OpenAISummarizer(BaseSummarizer):
     def _get_client(self) -> OpenAI:
         """获取OpenAI客户端"""
         if self._client is None:
-            kwargs = {"api_key": self._api_key}
             if self._base_url:
-                kwargs["base_url"] = self._base_url
-            self._client = OpenAI(**kwargs)
+                self._client = OpenAI(api_key=self._api_key, base_url=self._base_url)
+            else:
+                self._client = OpenAI(api_key=self._api_key)
         return self._client
 
     def summarize(
@@ -107,7 +107,7 @@ class OpenAISummarizer(BaseSummarizer):
             content=text,
         )
 
-    def _call_api(self, prompt: str) -> tuple[str, dict]:
+    def _call_api(self, prompt: str) -> tuple[str, dict[str, int]]:
         """调用OpenAI API"""
         client = self._get_client()
 
@@ -123,7 +123,7 @@ class OpenAISummarizer(BaseSummarizer):
         )
 
         content = response.choices[0].message.content or ""
-        tokens = {
+        tokens: dict[str, int] = {
             "input": response.usage.prompt_tokens if response.usage else 0,
             "output": response.usage.completion_tokens if response.usage else 0,
         }

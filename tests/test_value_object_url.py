@@ -1,4 +1,5 @@
 import pytest
+
 from wechat_summarizer.domain.value_objects import ArticleURL
 from wechat_summarizer.shared.exceptions import InvalidURLError
 

@@ -146,7 +146,7 @@ class LeidenCommunityDetector(BaseCommunityDetector):
 
         return communities
 
-    def _to_igraph(self, kg: KnowledgeGraph) -> "ig.Graph":
+    def _to_igraph(self, kg: KnowledgeGraph) -> ig.Graph:
         """将知识图谱转换为 igraph 图"""
         # 创建节点 ID 映射
         entity_ids = list(kg.entities.keys())
@@ -166,7 +166,7 @@ class LeidenCommunityDetector(BaseCommunityDetector):
     def _generate_community_id(self, level: int, idx: int) -> str:
         """生成社区 ID"""
         key = f"community-{level}-{idx}"
-        return hashlib.md5(key.encode()).hexdigest()[:12]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
 
 class SimpleCommunityDetector(BaseCommunityDetector):

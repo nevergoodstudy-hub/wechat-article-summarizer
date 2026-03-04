@@ -6,15 +6,17 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
+from datetime import datetime
+from enum import StrEnum
 from functools import wraps
 from pathlib import Path
 from threading import Lock
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar, cast
 
 from loguru import logger
 from platformdirs import user_data_dir
@@ -22,7 +24,7 @@ from platformdirs import user_data_dir
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class PermissionLevel(str, Enum):
+class PermissionLevel(StrEnum):
     """权限级别"""
 
     READ = "read"  # 只读（查询、获取信息）
@@ -70,6 +72,12 @@ class AuditLogger:
             # 按日期分文件
             date_str = datetime.now().strftime("%Y-%m-%d")
             log_file = self.log_dir / f"mcp_audit_{date_str}.jsonl"
+            safe_error_message: str | None = None
+            if entry.error_message is not None:
+                from ..shared.utils.security import sanitize_error_message
+
+                safe_error_message = sanitize_error_message(entry.error_message)
+                safe_error_message = self._sanitize_value(safe_error_message)
 
             try:
                 with open(log_file, "a", encoding="utf-8") as f:
@@ -81,7 +89,7 @@ class AuditLogger:
                             "caller": entry.caller,
                             "arguments": self._sanitize_args(entry.arguments),
                             "result": entry.result,
-                            "error_message": entry.error_message,
+                            "error_message": safe_error_message,
                             "execution_time_ms": entry.execution_time_ms,
                         },
                         f,
@@ -90,6 +98,18 @@ class AuditLogger:
                     f.write("\n")
             except Exception as e:
                 logger.error(f"写入审计日志失败: {e}")
+
+    # Maximum string length before truncation
+    MAX_STRING_LENGTH = 200
+
+    # Patterns that look like API keys or secrets in values
+    API_KEY_PATTERNS = [
+        re.compile(r"^sk-[a-zA-Z0-9]{20,}$"),  # OpenAI-style keys
+        re.compile(r"^key-[a-zA-Z0-9]{20,}$"),  # Generic key- prefix
+        re.compile(r"^Bearer\s+[a-zA-Z0-9._-]{20,}$"),  # Bearer tokens
+        re.compile(r"^[a-zA-Z0-9+/]{40,}={0,2}$"),  # Base64-like long strings (potential secrets)
+        re.compile(r"^[a-f0-9]{32,}$", re.IGNORECASE),  # Hex strings (API keys, hashes)
+    ]
 
     def _sanitize_args(self, args: dict[str, Any]) -> dict[str, Any]:
         """清洗参数（移除敏感信息）
@@ -100,18 +120,73 @@ class AuditLogger:
         Returns:
             清洗后的参数
         """
-        sanitized = {}
-        sensitive_keys = {"api_key", "token", "password", "secret"}
+        return cast(dict[str, Any], self._sanitize_value(args, is_root=True))
 
-        for key, value in args.items():
-            if any(sk in key.lower() for sk in sensitive_keys):
-                sanitized[key] = "***REDACTED***"
-            elif isinstance(value, (str, int, float, bool, type(None))):
-                sanitized[key] = value
-            else:
-                sanitized[key] = str(type(value).__name__)
+    def _sanitize_value(self, value: Any, is_root: bool = False) -> Any:
+        """递归清洗值（移除敏感信息）
 
-        return sanitized
+        Args:
+            value: 原始值
+            is_root: 是否为根级字典（用于键名检查）
+
+        Returns:
+            清洗后的值
+        """
+        sensitive_keys = {
+            "api_key",
+            "token",
+            "password",
+            "secret",
+            "credential",
+            "auth",
+            "authorization",
+            "access_token",
+            "refresh_token",
+            "cookie",
+            "session",
+            "sessionid",
+        }
+
+        if isinstance(value, dict):
+            sanitized = {}
+            for k, v in value.items():
+                # Check key names for sensitive words
+                if any(sk in str(k).lower() for sk in sensitive_keys):
+                    sanitized[k] = "***REDACTED***"
+                else:
+                    sanitized[k] = self._sanitize_value(v, is_root=False)
+            return sanitized
+
+        elif isinstance(value, list):
+            return [self._sanitize_value(item, is_root=False) for item in value]
+
+        elif isinstance(value, str):
+            # Check if string looks like an API key pattern
+            if self._looks_like_secret(value):
+                return "***REDACTED***"
+            # Truncate long strings
+            if len(value) > self.MAX_STRING_LENGTH:
+                return value[: self.MAX_STRING_LENGTH] + "...[truncated]"
+            return value
+
+        elif isinstance(value, (int, float, bool, type(None))):
+            return value
+
+        else:
+            # For other types, just return the type name
+            return str(type(value).__name__)
+
+    def _looks_like_secret(self, value: str) -> bool:
+        """检查字符串是否看起来像是敏感信息
+
+        Args:
+            value: 待检查的字符串
+
+        Returns:
+            是否可能是敏感信息
+        """
+        # Check against known API key patterns
+        return any(pattern.match(value) for pattern in self.API_KEY_PATTERNS)
 
     def get_recent_logs(self, limit: int = 100) -> list[dict[str, Any]]:
         """获取最近的审计日志
@@ -122,7 +197,7 @@ class AuditLogger:
         Returns:
             审计日志列表
         """
-        logs = []
+        logs: list[dict[str, Any]] = []
         date_str = datetime.now().strftime("%Y-%m-%d")
         log_file = self.log_dir / f"mcp_audit_{date_str}.jsonl"
 
@@ -166,9 +241,7 @@ class RateLimiter:
             elapsed = now - self._last_refill
 
             # 补充令牌
-            self._tokens = min(
-                self.max_tokens, self._tokens + elapsed * self.refill_rate
-            )
+            self._tokens = min(self.max_tokens, self._tokens + elapsed * self.refill_rate)
             self._last_refill = now
 
             # 尝试消费
@@ -192,6 +265,8 @@ class RateLimiter:
                 return 0.0
 
             needed = tokens - self._tokens
+            if self.refill_rate <= 0:
+                return float("inf")
             return needed / self.refill_rate
 
 
@@ -225,9 +300,7 @@ class SecurityManager:
         # 工具权限映射
         self.tool_permissions: dict[str, PermissionLevel] = {}
 
-    def register_tool_permission(
-        self, tool_name: str, permission: PermissionLevel
-    ) -> None:
+    def register_tool_permission(self, tool_name: str, permission: PermissionLevel) -> None:
         """注册工具权限
 
         Args:
@@ -236,9 +309,7 @@ class SecurityManager:
         """
         self.tool_permissions[tool_name] = permission
 
-    def check_permission(
-        self, tool_name: str, required_permission: PermissionLevel
-    ) -> bool:
+    def check_permission(self, tool_name: str, required_permission: PermissionLevel) -> bool:
         """检查工具权限
 
         Args:
@@ -387,13 +458,17 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
             except Exception as e:
                 execution_time_ms = (time.time() - start_time) * 1000
 
-                # 记录失败调用
+                # 脱敏错误消息后记录失败调用 (P1-3)
+                from ..shared.utils.security import sanitize_error_message
+
+                safe_error = sanitize_error_message(str(e))
+
                 manager.log_tool_call(
                     tool_name=tool_name,
                     arguments=kwargs,
                     result="error",
                     execution_time_ms=execution_time_ms,
-                    error_message=str(e),
+                    error_message=safe_error,
                 )
 
                 raise

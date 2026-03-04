@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .base import BaseViewModel
-from .single_process_viewmodel import SingleProcessViewModel
 from .batch_process_viewmodel import BatchProcessViewModel
 from .settings_viewmodel import SettingsViewModel
+from .single_process_viewmodel import SingleProcessViewModel
 
 if TYPE_CHECKING:
     from ....infrastructure.config import Container

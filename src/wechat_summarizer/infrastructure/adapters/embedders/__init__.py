@@ -6,7 +6,7 @@ from .openai_embedder import OpenAIEmbedder
 
 __all__ = [
     "BaseEmbedder",
-    "OpenAIEmbedder",
     "LocalEmbedder",
+    "OpenAIEmbedder",
     "SimpleHashEmbedder",
 ]

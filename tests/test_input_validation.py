@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from wechat_summarizer.domain.value_objects.url import ArticleURL
 from wechat_summarizer.domain.value_objects.content import ArticleContent
+from wechat_summarizer.domain.value_objects.url import ArticleURL
 from wechat_summarizer.shared.exceptions import InvalidURLError
 
 
@@ -116,7 +116,7 @@ class TestXssSanitization:
         """纯文本移除script标签"""
         html = "<p>Hello</p><script>alert('xss')</script><p>World</p>"
         content = ArticleContent(html)
-        
+
         assert "<script>" not in content.text
         assert "Hello" in content.text
         assert "World" in content.text
@@ -125,7 +125,7 @@ class TestXssSanitization:
         """保留正常文本内容"""
         html = "<h1>标题</h1><p>这是正常的文章内容。</p>"
         content = ArticleContent(html)
-        
+
         assert "标题" in content.text
         assert "正常的文章内容" in content.text
 
@@ -136,16 +136,20 @@ class TestFilenameSanitization:
     def test_removes_windows_reserved_chars(self):
         """移除Windows保留字符"""
         from wechat_summarizer.infrastructure.adapters.exporters.markdown import MarkdownExporter
-        
+
         exporter = MarkdownExporter(output_dir="./output")
-        
+
         # 创建一个带有特殊字符的文章
-        article = type('Article', (), {
-            'title': 'file<>:"|?*name',
-        })()
-        
+        article = type(
+            "Article",
+            (),
+            {
+                "title": 'file<>:"|?*name',
+            },
+        )()
+
         result = exporter._generate_filename(article)
-        
+
         # 检查危险字符被移除
         for char in '<>:"|?*':
             assert char not in result
@@ -153,33 +157,41 @@ class TestFilenameSanitization:
     def test_handles_very_long_filename(self):
         """处理超长文件名"""
         from wechat_summarizer.infrastructure.adapters.exporters.markdown import MarkdownExporter
-        
+
         exporter = MarkdownExporter(output_dir="./output")
-        
+
         # 创建一个超长标题的文章
-        article = type('Article', (), {
-            'title': 'a' * 300,
-        })()
-        
+        article = type(
+            "Article",
+            (),
+            {
+                "title": "a" * 300,
+            },
+        )()
+
         result = exporter._generate_filename(article)
-        
+
         # 结果应该被截断
         assert len(result) <= 60  # 50 + 扩展名
 
     def test_preserves_chinese_characters(self):
         """保留中文字符"""
         from wechat_summarizer.infrastructure.adapters.exporters.markdown import MarkdownExporter
-        
+
         exporter = MarkdownExporter(output_dir="./output")
-        
-        article = type('Article', (), {
-            'title': '这是一篇中文文章标题',
-        })()
-        
+
+        article = type(
+            "Article",
+            (),
+            {
+                "title": "这是一篇中文文章标题",
+            },
+        )()
+
         result = exporter._generate_filename(article)
-        
+
         # 中文字符应该被保留
-        assert '中文' in result
+        assert "中文" in result
 
 
 class TestContentValidation:
@@ -195,5 +207,5 @@ class TestContentValidation:
         """处理Unicode内容"""
         unicode_content = "<p>中文内容 🎉 émoji</p>"
         content = ArticleContent(unicode_content)
-        
+
         assert "中文内容" in content.text

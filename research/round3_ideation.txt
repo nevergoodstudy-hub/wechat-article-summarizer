@@ -1,0 +1,22 @@
+Round 3 Ideation — Distribution, Signing/Notarization, Auto‑update, CI/CD
+
+Distribution
+- Windows: onefile exe + optional NSIS installer; keep console-hidden runtime.
+- macOS: .app inside .dmg; codesign + notarytool notarization; staple ticket.
+- Linux: onefile binary + AppImage; optionally Flatpak for sandbox stores.
+
+Signing/Notarization (macOS)
+- Use `codesign --options runtime --timestamp --entitlements entitlements.plist` with a Developer ID Application certificate.
+- Submit with `xcrun notarytool submit --wait` and staple with `xcrun stapler staple`.
+
+Auto‑update
+- Windows/macOS/Linux: integrate PyUpdater (or custom updater) to check GitHub Releases; download per‑OS artifact; verify SHA256; replace on next launch.
+- AppImage: recommend AppImageUpdate (zsync) for delta updates.
+
+CI/CD
+- GitHub Actions matrix: windows-latest, macos-latest, ubuntu-latest.
+- Steps: checkout, setup Python, install deps (core + gui), build with per‑OS spec, upload artifacts, (mac only) sign+notarize using secrets.
+- Cache pip and PyInstaller.
+
+Telemetry/Crash
+- Optional: Sentry or OpenTelemetry traces on CLI/daemon editions; disable by default and require opt‑in.

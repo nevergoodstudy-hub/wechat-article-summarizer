@@ -1,7 +1,9 @@
 """ChromaDB 向量存储 - 持久化向量数据库"""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -10,19 +12,22 @@ from .base import BaseVectorStore
 
 # ChromaDB 是可选依赖
 _chromadb_available = True
+chromadb: Any | None = None
+Settings: Any | None = None
 try:
-    import chromadb
-    from chromadb.config import Settings
-except ImportError:
+    import chromadb as _chromadb
+    from chromadb.config import Settings as _Settings
+
+    chromadb = _chromadb
+    Settings = _Settings
+except Exception:
     _chromadb_available = False
-    chromadb = None
-    Settings = None
 
 
 class ChromaDBStore(BaseVectorStore):
     """
     ChromaDB 向量存储
-    
+
     使用 ChromaDB 进行持久化向量存储，适用于：
     - 中等规模数据（10K - 1M 条）
     - 需要持久化的场景
@@ -37,7 +42,7 @@ class ChromaDBStore(BaseVectorStore):
     ):
         """
         初始化 ChromaDB 存储
-        
+
         Args:
             collection_name: 集合名称
             persist_directory: 持久化目录（None 表示仅内存）
@@ -45,15 +50,16 @@ class ChromaDBStore(BaseVectorStore):
         """
         self._collection_name = collection_name
         self._dimension = dimension
-        self._client: "chromadb.Client | None" = None
-        self._collection: "chromadb.Collection | None" = None
-        
+        self._client: Any | None = None
+        self._collection: Any | None = None
+        self._persist_dir: Path | None
+
         if persist_directory:
             self._persist_dir = Path(persist_directory)
             self._persist_dir.mkdir(parents=True, exist_ok=True)
         else:
             self._persist_dir = None
-        
+
         self._init_client()
 
     def _init_client(self) -> None:
@@ -61,13 +67,18 @@ class ChromaDBStore(BaseVectorStore):
         if not _chromadb_available:
             logger.warning("ChromaDB 库未安装，存储不可用")
             return
-        
+        chromadb_module = chromadb
+        settings_cls = Settings
+        if chromadb_module is None or settings_cls is None:
+            logger.warning("ChromaDB 模块初始化不完整，存储不可用")
+            return
+
         try:
             if self._persist_dir:
                 # 持久化模式
-                self._client = chromadb.PersistentClient(
+                self._client = chromadb_module.PersistentClient(
                     path=str(self._persist_dir),
-                    settings=Settings(
+                    settings=settings_cls(
                         anonymized_telemetry=False,
                         allow_reset=True,
                     ),
@@ -75,20 +86,20 @@ class ChromaDBStore(BaseVectorStore):
                 logger.info(f"ChromaDB 持久化存储已初始化: {self._persist_dir}")
             else:
                 # 内存模式
-                self._client = chromadb.Client(
-                    settings=Settings(
+                self._client = chromadb_module.Client(
+                    settings=settings_cls(
                         anonymized_telemetry=False,
                         allow_reset=True,
                     ),
                 )
                 logger.info("ChromaDB 内存存储已初始化")
-            
+
             # 获取或创建集合
             self._collection = self._client.get_or_create_collection(
                 name=self._collection_name,
                 metadata={"dimension": self._dimension},
             )
-            
+
         except Exception as e:
             logger.error(f"初始化 ChromaDB 失败: {e}")
             self._client = None
@@ -103,23 +114,24 @@ class ChromaDBStore(BaseVectorStore):
 
     def add(self, documents: list[VectorDocument]) -> None:
         """添加文档"""
-        if not self.is_available():
+        collection = self._collection
+        if collection is None:
             raise RuntimeError("ChromaDB 存储不可用")
-        
+
         if not documents:
             return
-        
+
         ids = [doc.id for doc in documents]
         embeddings = [doc.vector for doc in documents]
         texts = [doc.text for doc in documents]
         metadatas = [doc.metadata for doc in documents]
-        
+
         try:
-            self._collection.add(
+            collection.add(
                 ids=ids,
-                embeddings=embeddings,
+                embeddings=cast(Any, embeddings),
                 documents=texts,
-                metadatas=metadatas,
+                metadatas=cast(Any, metadatas),
             )
             logger.debug(f"已添加 {len(documents)} 个文档到 ChromaDB")
         except Exception as e:
@@ -133,25 +145,25 @@ class ChromaDBStore(BaseVectorStore):
         filter_metadata: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
         """搜索相似文档"""
-        if not self.is_available():
+        collection = self._collection
+        if collection is None:
             raise RuntimeError("ChromaDB 存储不可用")
-        
+
         try:
             # 构建查询参数
-            query_params = {
+            query_params: dict[str, Any] = {
                 "query_embeddings": [query_vector],
                 "n_results": top_k,
             }
-            
+
             if filter_metadata:
                 # ChromaDB 使用 where 参数进行过滤
                 query_params["where"] = filter_metadata
-            
-            results = self._collection.query(**query_params)
-            
+            results = cast(dict[str, Any], collection.query(**query_params))
+
             # 转换结果
             search_results: list[SearchResult] = []
-            
+
             if results["ids"] and results["ids"][0]:
                 for i, doc_id in enumerate(results["ids"][0]):
                     # ChromaDB 返回的距离需要转换为相似度
@@ -159,30 +171,33 @@ class ChromaDBStore(BaseVectorStore):
                     # 余弦距离转相似度: similarity = 1 - distance (对于 cosine 距离)
                     # 或者 L2 距离转相似度: similarity = 1 / (1 + distance)
                     score = 1 / (1 + distance)
-                    
-                    search_results.append(SearchResult(
-                        id=doc_id,
-                        text=results["documents"][0][i] if results["documents"] else "",
-                        score=score,
-                        metadata=results["metadatas"][0][i] if results["metadatas"] else {},
-                    ))
-            
+
+                    search_results.append(
+                        SearchResult(
+                            id=doc_id,
+                            text=results["documents"][0][i] if results["documents"] else "",
+                            score=score,
+                            metadata=results["metadatas"][0][i] if results["metadatas"] else {},
+                        )
+                    )
+
             return search_results
-            
+
         except Exception as e:
             logger.error(f"ChromaDB 搜索失败: {e}")
             raise RuntimeError(f"搜索失败: {e}") from e
 
     def delete(self, ids: list[str]) -> None:
         """删除文档"""
-        if not self.is_available():
+        collection = self._collection
+        if collection is None:
             raise RuntimeError("ChromaDB 存储不可用")
-        
+
         if not ids:
             return
-        
+
         try:
-            self._collection.delete(ids=ids)
+            collection.delete(ids=ids)
             logger.debug(f"已从 ChromaDB 删除 {len(ids)} 个文档")
         except Exception as e:
             logger.error(f"从 ChromaDB 删除文档失败: {e}")
@@ -190,13 +205,16 @@ class ChromaDBStore(BaseVectorStore):
 
     def clear(self) -> None:
         """清空所有文档"""
-        if not self.is_available():
+        if self._collection is None:
             raise RuntimeError("ChromaDB 存储不可用")
-        
+        client = self._client
+        if client is None:
+            raise RuntimeError("ChromaDB 客户端不可用")
+
         try:
             # 删除并重新创建集合
-            self._client.delete_collection(self._collection_name)
-            self._collection = self._client.create_collection(
+            client.delete_collection(self._collection_name)
+            self._collection = client.create_collection(
                 name=self._collection_name,
                 metadata={"dimension": self._dimension},
             )
@@ -207,25 +225,30 @@ class ChromaDBStore(BaseVectorStore):
 
     def count(self) -> int:
         """获取文档数量"""
-        if not self.is_available():
+        collection = self._collection
+        if collection is None:
             return 0
-        
+
         try:
-            return self._collection.count()
+            return int(collection.count())
         except Exception:
             return 0
 
     def get(self, doc_id: str) -> VectorDocument | None:
         """获取单个文档"""
-        if not self.is_available():
+        collection = self._collection
+        if collection is None:
             return None
-        
+
         try:
-            result = self._collection.get(
+            result = cast(
+                dict[str, Any],
+                collection.get(
                 ids=[doc_id],
                 include=["documents", "embeddings", "metadatas"],
+                ),
             )
-            
+
             if result["ids"]:
                 return VectorDocument(
                     id=result["ids"][0],
@@ -234,6 +257,6 @@ class ChromaDBStore(BaseVectorStore):
                     metadata=result["metadatas"][0] if result["metadatas"] else {},
                 )
             return None
-            
+
         except Exception:
             return None

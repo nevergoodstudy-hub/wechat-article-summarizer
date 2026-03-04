@@ -1,5 +1,18 @@
 """PyInstaller 启动入口 - 使用绝对导入"""
+
 import sys
+
+# 在打包环境中立即隐藏控制台窗口（仅 Windows，使用 console bootloader 配合 ctypes 隐藏）
+if getattr(sys, "frozen", False) and sys.platform == "win32":
+    try:
+        import ctypes
+
+        ctypes.windll.user32.ShowWindow(
+            ctypes.windll.kernel32.GetConsoleWindow(),
+            0,  # SW_HIDE
+        )
+    except Exception:
+        pass
 
 # 确保使用绝对导入
 from wechat_summarizer.shared.utils import setup_logger
@@ -25,11 +38,13 @@ def main() -> None:
     if mode_or_cmd == "cli":
         sys.argv.pop(1)
         from wechat_summarizer.presentation.cli import run_cli
+
         run_cli()
         return
 
     # 其他情况：按 CLI 命令解析
     from wechat_summarizer.presentation.cli import run_cli
+
     run_cli()
 
 
@@ -37,6 +52,7 @@ def _run_gui_or_exit() -> None:
     """启动 GUI；失败时给出 CLI 退路。"""
     try:
         from wechat_summarizer.presentation.gui import run_gui
+
         run_gui()
     except ImportError as e:
         print(f"GUI启动失败: {e}")

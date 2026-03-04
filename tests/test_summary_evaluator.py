@@ -82,9 +82,7 @@ class TestEvaluationResult:
     def test_has_quality_issues(self) -> None:
         """测试质量问题检测"""
         # 有幻觉
-        result1 = EvaluationResult(
-            hallucination=HallucinationInfo(has_hallucination=True)
-        )
+        result1 = EvaluationResult(hallucination=HallucinationInfo(has_hallucination=True))
         assert result1.has_quality_issues is True
 
         # 准确性低
@@ -181,7 +179,10 @@ class TestSummaryEvaluator:
 
         # 应该检测到可疑数字
         if result.hallucination:
-            assert result.hallucination.has_hallucination or len(result.hallucination.suspicious_numbers) > 0
+            assert (
+                result.hallucination.has_hallucination
+                or len(result.hallucination.suspicious_numbers) > 0
+            )
 
     @pytest.mark.unit
     def test_info_density_calculation(self, evaluator: SummaryEvaluator) -> None:

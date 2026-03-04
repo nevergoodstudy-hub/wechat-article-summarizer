@@ -1,0 +1,24 @@
+Round 1 Ideation — Cross‑platform CTk/Tk + PyInstaller packaging
+
+Key opportunities
+- Provide macOS .app and .dmg distribution using PyInstaller (console=False, windowed bootloader), with post-build codesign and notarization flow (notarytool) for macOS 12+.
+- Provide Linux onefile and AppImage distributions; for the latter, integrate linuxdeploy + appimagetool for wider compatibility.
+- Keep Windows build using console bootloader + runtime console hide (works reliably after fixing CTk nametowidget/_root shadowing).
+
+Prerequisites and pitfalls (informed by research)
+- macOS: Prefer python.org installers (universal2) that bundle a working Tk 8.6; Homebrew Python often links to brewed Tcl/Tk and may need `brew install tcl-tk` and env overrides.
+- customtkinter works cross‑platform but depends on system Tk; ensure Tk is present and modern (8.6+). On mac, CTk prefers Cocoa Tk (Aqua); on Linux, ship/require tkinter libs.
+- PyInstaller macOS app signing + notarization requires hardened runtime and entitlements (outbound network, JIT disabled). Use `codesign --options runtime --timestamp` and `xcrun notarytool`.
+- Linux packaging: If targeting old distros, prefer AppImage to avoid glibc mismatch. Ensure `python3-tk`, `tcl`, `tk` runtime libs are bundled or present.
+- Hidden import noise like encodings.cp936 on non‑Windows should not be forced; maintain per‑OS spec files to avoid platform‑specific hiddenimports (e.g., pywinstyles, comtypes).
+
+Deliverables for this project
+- macOS spec (exclude Windows‑only deps), icon .icns, entitlements.plist, build + sign + notarize script.
+- Linux spec (console=False), optional AppImage recipe using linuxdeploy.
+- GitHub Actions workflows to build per‑OS artifacts (matrix: windows-latest, macos-latest, ubuntu-latest), caching python + pip, artifact upload.
+- Runtime OS feature shims: keep WindowsIntegration no‑ops on non‑Windows (already OK); gate any other Win‑only imports.
+
+Risks
+- macOS notarization requires paid Apple Developer account; local testing will run unsigned but Gatekeeper will prompt.
+- Tk availability on some Linux minimal images may require user to install `python3-tk` if not bundled.
+- HiDPI and titlebar styling differences (Windows 11 styling skipped elsewhere).

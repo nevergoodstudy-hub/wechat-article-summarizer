@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from .base import BaseViewModel, Command, Observable
 
@@ -149,10 +149,14 @@ class SingleProcessViewModel(BaseViewModel):
     def subscribe_url(self, callback: Callable[[str, str], None]) -> Callable[[], None]:
         return self._url.subscribe(callback)
 
-    def subscribe_article(self, callback: Callable[[ArticleDisplayModel | None, ArticleDisplayModel | None], None]) -> Callable[[], None]:
+    def subscribe_article(
+        self, callback: Callable[[ArticleDisplayModel | None, ArticleDisplayModel | None], None]
+    ) -> Callable[[], None]:
         return self._article.subscribe(callback)
 
-    def subscribe_summary(self, callback: Callable[[SummaryDisplayModel | None, SummaryDisplayModel | None], None]) -> Callable[[], None]:
+    def subscribe_summary(
+        self, callback: Callable[[SummaryDisplayModel | None, SummaryDisplayModel | None], None]
+    ) -> Callable[[], None]:
         return self._summary.subscribe(callback)
 
     def subscribe_progress(self, callback: Callable[[float, float], None]) -> Callable[[], None]:

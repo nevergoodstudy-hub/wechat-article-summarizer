@@ -5,11 +5,12 @@
 
 from __future__ import annotations
 
-import io
+import contextlib
 import re
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 
 import httpx
 from loguru import logger
@@ -62,7 +63,7 @@ class ZipExporter(BaseExporter):
 
     def export(
         self,
-        article: "Article",
+        article: Article,
         path: str | None = None,
         **options,
     ) -> str:
@@ -71,9 +72,9 @@ class ZipExporter(BaseExporter):
 
     def export_batch(
         self,
-        articles: list["Article"],
+        articles: list[Article],
         path: str | None = None,
-        progress_callback: Optional[Callable[[int, int, str], None]] = None,
+        progress_callback: Callable[[int, int, str], None] | None = None,
         **options,
     ) -> str:
         """
@@ -104,7 +105,7 @@ class ZipExporter(BaseExporter):
         # 确保扩展名
         if not str(output_path).endswith(".zip"):
             output_path = Path(str(output_path) + ".zip")
-        
+
         logger.info(f"📦 开始打包 {total} 篇文章为 ZIP...")
 
         try:
@@ -112,11 +113,9 @@ class ZipExporter(BaseExporter):
                 for i, article in enumerate(articles):
                     # 调用进度回调
                     if progress_callback:
-                        try:
+                        with contextlib.suppress(Exception):
                             progress_callback(i, total, article.title[:30])
-                        except Exception:
-                            pass
-                    
+
                     # 生成 HTML 内容
                     html_content = self._html_exporter._generate_html(article, **options)
                     safe_title = self._safe_filename(article.title)
@@ -135,16 +134,14 @@ class ZipExporter(BaseExporter):
 
                     # 添加 HTML 到 ZIP
                     zf.writestr(html_filename, html_content.encode("utf-8"))
-                    
+
                     # 记录进度日志
                     logger.debug(f"已打包 {i + 1}/{total}: {article.title[:30]}")
-                
+
                 # 最后一次进度回调
                 if progress_callback:
-                    try:
+                    with contextlib.suppress(Exception):
                         progress_callback(total, total, "生成索引文件")
-                    except Exception:
-                        pass
 
                 # 添加索引文件
                 index_content = self._generate_index(articles)
@@ -156,7 +153,7 @@ class ZipExporter(BaseExporter):
         except Exception as e:
             raise ExporterError(f"ZIP 导出失败: {e}") from e
 
-    def _generate_zip_name(self, articles: list["Article"]) -> str:
+    def _generate_zip_name(self, articles: list[Article]) -> str:
         """生成 ZIP 文件名"""
         from datetime import datetime
 
@@ -238,7 +235,7 @@ class ZipExporter(BaseExporter):
 
         return ".jpg"  # 默认
 
-    def _generate_index(self, articles: list["Article"]) -> str:
+    def _generate_index(self, articles: list[Article]) -> str:
         """生成索引页 HTML"""
         items = []
         for i, article in enumerate(articles):

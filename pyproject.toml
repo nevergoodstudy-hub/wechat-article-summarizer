@@ -34,6 +34,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "loguru>=0.7.0",
+    "structlog>=24.1.0",
     "cryptography>=41.0.0",  # 凭证加密存储 (Fernet)
     # CLI
     "click>=8.1.0",
@@ -141,10 +142,13 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.12.0",
     "pytest-benchmark>=4.0.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-randomly>=3.15.0",
     "respx>=0.20.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
+    "pip-audit>=2.7.0",
 ]
 
 [project.scripts]
@@ -158,17 +162,33 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
-ignore = ["E501"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "C4", "RUF"]
+ignore = ["E501", "RUF001", "RUF002", "RUF003", "RUF012", "SIM108"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "wechat_summarizer.domain.*",
+    "wechat_summarizer.application.*",
+]
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_return_any = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

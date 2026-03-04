@@ -102,9 +102,7 @@ class TestArticleEntity:
         assert sample_article.updated_at >= original_updated_at
 
     @pytest.mark.unit
-    def test_article_without_content_returns_empty(
-        self, sample_wechat_url: ArticleURL
-    ) -> None:
+    def test_article_without_content_returns_empty(self, sample_wechat_url: ArticleURL) -> None:
         """测试无内容文章返回空字符串"""
         article = Article(url=sample_wechat_url, title="无内容")
 

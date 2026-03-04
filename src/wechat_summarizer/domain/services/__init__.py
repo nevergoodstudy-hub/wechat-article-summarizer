@@ -5,6 +5,6 @@ from .quality_evaluator import QualityScore, SummaryQualityEvaluator
 
 __all__ = [
     "ArticleProcessorService",
-    "SummaryQualityEvaluator",
     "QualityScore",
+    "SummaryQualityEvaluator",
 ]

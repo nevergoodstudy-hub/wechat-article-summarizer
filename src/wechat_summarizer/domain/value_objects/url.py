@@ -78,8 +78,11 @@ class ArticleURL:
         except ValueError:
             pass
 
-        # 对于域名，尝试DNS解析（可选，仅在需要严格防护时启用）
-        # 这里不做DNS解析以避免网络请求，仅做基础检查
+        # NOTE: DNS rebinding protection limitation
+        # This method only checks hostnames, not resolved IPs. A malicious DNS
+        # server could initially return a public IP and later rebind to a private IP.
+        # For full DNS rebinding protection, use validate_resolved_ip() at the
+        # connection layer to verify the actual IP address before making requests.
         return False
 
     @property
@@ -125,3 +128,83 @@ class ArticleURL:
 
     def __repr__(self) -> str:
         return f"ArticleURL({self.value!r})"
+
+
+def validate_resolved_ip(ip_string: str) -> bool:
+    """验证解析后的IP地址是否安全（用于SSRF DNS rebinding防护）
+
+    此函数应在HTTP客户端层进行DNS解析后调用，用于验证实际解析的IP地址
+    是否为安全的公网地址。这可以防止DNS rebinding攻击，其中攻击者的DNS
+    服务器初始返回公网IP，随后重新绑定到内网IP。
+
+    Usage example:
+        ```python
+        import socket
+        from wechat_summarizer.domain.value_objects.url import validate_resolved_ip
+
+        def safe_request(url: str):
+            parsed = urlparse(url)
+            host = parsed.netloc.split(":")[0]
+
+            # Resolve DNS and validate the IP
+            resolved_ip = socket.gethostbyname(host)
+            if not validate_resolved_ip(resolved_ip):
+                raise SecurityError(f"Blocked request to private IP: {resolved_ip}")
+
+            # Proceed with the actual request using the resolved IP
+            # ...
+        ```
+
+    Args:
+        ip_string: 解析后的IP地址字符串
+
+    Returns:
+        True 如果IP地址安全（公网地址），False 如果为内网/保留地址
+    """
+    try:
+        ip = ipaddress.ip_address(ip_string)
+    except ValueError:
+        # Invalid IP address format
+        return False
+
+    # Block private, loopback, reserved, and link-local addresses
+    if ip.is_private:
+        return False
+    if ip.is_loopback:
+        return False
+    if ip.is_reserved:
+        return False
+    if ip.is_link_local:
+        return False
+
+    # For IPv6, also check multicast and unspecified
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.is_multicast:
+            return False
+        # Unspecified address (::)
+        if ip == ipaddress.IPv6Address("::"):
+            return False
+
+    # For IPv4, check for 0.0.0.0
+    return not (isinstance(ip, ipaddress.IPv4Address) and ip == ipaddress.IPv4Address("0.0.0.0"))
+
+
+def resolve_and_validate_host(hostname: str) -> tuple[bool, str | None]:
+    """解析主机名并验证解析后的IP是否安全
+
+    此函数结合DNS解析和IP验证，提供完整的DNS rebinding防护。
+
+    Args:
+        hostname: 主机名（不包含端口号）
+
+    Returns:
+        (是否安全, 解析的IP地址或None)
+    """
+    try:
+        resolved_ip = socket.gethostbyname(hostname)
+    except socket.gaierror:
+        # DNS resolution failed
+        return False, None
+
+    is_safe = validate_resolved_ip(resolved_ip)
+    return is_safe, resolved_ip if is_safe else None

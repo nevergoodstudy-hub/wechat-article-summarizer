@@ -5,19 +5,19 @@
 用于批量展示和筛选，不包含文章完整内容。
 """
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Iterator
+from datetime import UTC, datetime
 
 
 @dataclass
 class ArticleListItem:
     """
     文章列表项
-    
+
     表示公众号文章列表中的一条记录，是轻量级的文章元数据。
     用于批量获取和筛选场景，不包含文章正文内容。
-    
+
     Attributes:
         aid: 文章ID（微信内部标识）
         title: 文章标题
@@ -53,8 +53,8 @@ class ArticleListItem:
     def publish_datetime(self) -> datetime:
         """获取发布时间（datetime对象，timezone-aware）"""
         if self.update_time:
-            return datetime.fromtimestamp(self.update_time, tz=timezone.utc)
-        return datetime.now(timezone.utc)
+            return datetime.fromtimestamp(self.update_time, tz=UTC)
+        return datetime.now(UTC)
 
     @property
     def publish_date_str(self) -> str:
@@ -67,12 +67,12 @@ class ArticleListItem:
         return bool(self.cover)
 
     @classmethod
-    def from_api_response(cls, data: dict) -> "ArticleListItem":
+    def from_api_response(cls, data: dict) -> ArticleListItem:
         """从微信API响应创建实体
-        
+
         Args:
             data: 微信appmsg API返回的文章数据
-            
+
         Returns:
             ArticleListItem实例
         """
@@ -124,9 +124,9 @@ class ArticleListItem:
 class ArticleList:
     """
     文章列表聚合根
-    
+
     管理公众号的文章列表集合，提供分页、筛选等功能。
-    
+
     Attributes:
         fakeid: 所属公众号的fakeid
         account_name: 公众号名称
@@ -139,7 +139,7 @@ class ArticleList:
     account_name: str
     items: list[ArticleListItem] = field(default_factory=list)
     total_count: int = 0
-    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # 内部去重索引（基于 link 的 O(1) 查重）
     _link_index: set[str] = field(default_factory=set, init=False, repr=False)
@@ -177,7 +177,7 @@ class ArticleList:
 
     def add_items(self, items: list[ArticleListItem]) -> int:
         """批量添加文章项
-        
+
         Returns:
             实际新增的数量
         """
@@ -195,11 +195,11 @@ class ArticleList:
         end_date: datetime | None = None,
     ) -> list[ArticleListItem]:
         """按日期范围筛选文章
-        
+
         Args:
             start_date: 开始日期（包含）
             end_date: 结束日期（包含）
-            
+
         Returns:
             符合条件的文章列表
         """
@@ -215,10 +215,10 @@ class ArticleList:
 
     def get_by_keyword(self, keyword: str) -> list[ArticleListItem]:
         """按关键词筛选文章（标题和摘要）
-        
+
         Args:
             keyword: 搜索关键词
-            
+
         Returns:
             符合条件的文章列表
         """
@@ -226,8 +226,7 @@ class ArticleList:
         return [
             item
             for item in self.items
-            if keyword_lower in item.title.lower()
-            or keyword_lower in item.digest.lower()
+            if keyword_lower in item.title.lower() or keyword_lower in item.digest.lower()
         ]
 
     def get_original_only(self) -> list[ArticleListItem]:
@@ -236,10 +235,10 @@ class ArticleList:
 
     def sort_by_time(self, ascending: bool = False) -> list[ArticleListItem]:
         """按时间排序
-        
+
         Args:
             ascending: 是否升序（默认降序，最新在前）
-            
+
         Returns:
             排序后的文章列表
         """
@@ -251,11 +250,11 @@ class ArticleList:
 
     def slice(self, start: int, end: int | None = None) -> list[ArticleListItem]:
         """获取指定范围的文章
-        
+
         Args:
             start: 起始索引
             end: 结束索引（不包含）
-            
+
         Returns:
             指定范围的文章列表
         """
@@ -271,10 +270,7 @@ class ArticleList:
         return self.items[index]
 
     def __str__(self) -> str:
-        return (
-            f"ArticleList({self.account_name}: "
-            f"{self.count}/{self.total_count} articles)"
-        )
+        return f"ArticleList({self.account_name}: {self.count}/{self.total_count} articles)"
 
     def __repr__(self) -> str:
         return (
@@ -296,7 +292,7 @@ class ArticleList:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ArticleList":
+    def from_dict(cls, data: dict) -> ArticleList:
         """从字典创建实例（用于缓存恢复）"""
         article_list = cls(
             fakeid=data["fakeid"],

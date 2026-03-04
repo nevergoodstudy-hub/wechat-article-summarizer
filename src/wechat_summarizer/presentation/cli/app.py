@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import UTC
 
 import click
 from rich.console import Console
@@ -152,9 +153,13 @@ def gui():
     help="导出格式",
 )
 @click.option("--output-dir", "-o", type=click.Path(), help="输出目录")
-@click.option("--input-file", "-f", type=click.Path(exists=True), help="从文件读取URL列表（每行一个URL）")
+@click.option(
+    "--input-file", "-f", type=click.Path(exists=True), help="从文件读取URL列表（每行一个URL）"
+)
 @click.option("--from-clipboard", is_flag=True, help="从剪贴板读取URL")
-@click.option("--output-format", type=click.Choice(["text", "json"]), default="text", help="输出格式")
+@click.option(
+    "--output-format", type=click.Choice(["text", "json"]), default="text", help="输出格式"
+)
 @click.option("--quiet", "-q", is_flag=True, help="静默模式")
 def batch(
     urls: tuple[str, ...],
@@ -182,7 +187,7 @@ def batch(
 
     # 从文件读取
     if input_file:
-        with open(input_file, "r", encoding="utf-8") as f:
+        with open(input_file, encoding="utf-8") as f:
             file_urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
             url_list.extend(file_urls)
 
@@ -201,10 +206,11 @@ def batch(
                 # Linux 优先使用 xclip，回退 xsel
                 cmd = ["xclip", "-selection", "clipboard", "-o"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0:
+            clipboard_result = subprocess.run(cmd, capture_output=True, text=True)
+            if clipboard_result.returncode == 0:
                 clipboard_urls = [
-                    line.strip() for line in result.stdout.split("\n")
+                    line.strip()
+                    for line in clipboard_result.stdout.split("\n")
                     if line.strip() and ("http://" in line or "https://" in line)
                 ]
                 url_list.extend(clipboard_urls)
@@ -243,23 +249,34 @@ def batch(
                 articles.append(article)
                 success_count += 1
 
-                results_data.append({
+                result_entry: dict[str, object] = {
                     "url": url,
                     "title": article.title,
                     "success": True,
                     "word_count": article.word_count,
-                })
+                    "author": article.author,
+                    "account_name": article.account_name,
+                    "publish_time": article.publish_time_str,
+                }
+                if article.summary:
+                    result_entry["summary"] = article.summary.content
+                    result_entry["key_points"] = list(article.summary.key_points)
+                    result_entry["tags"] = list(article.summary.tags)
+                    result_entry["summary_method"] = article.summary.method.value
+                results_data.append(result_entry)
 
                 if not quiet:
                     console.print(f"[green]✓[/green] {article.title[:40]}...")
 
             except Exception as e:
                 failed_count += 1
-                results_data.append({
-                    "url": url,
-                    "success": False,
-                    "error": str(e),
-                })
+                results_data.append(
+                    {
+                        "url": url,
+                        "success": False,
+                        "error": str(e),
+                    }
+                )
                 if not quiet:
                     console.print(f"[red]✗[/red] {url[:50]}... - {e}")
 
@@ -272,21 +289,24 @@ def batch(
             console.print("\n[bold]导出文章...[/bold]")
         for article in articles:
             try:
-                result = container.export_use_case.execute(
+                export_result = container.export_use_case.execute(
                     article,
                     target=export,
                     path=output_dir,
                 )
-                exported_files.append(result)
+                exported_files.append(export_result)
                 if not quiet:
-                    console.print(f"[green]已导出:[/green] {result}")
+                    console.print(f"[green]已导出:[/green] {export_result}")
             except Exception as e:
                 if not quiet:
                     console.print(f"[red]导出失败:[/red] {e}")
 
     # 输出结果
     if output_format == "json":
+        from datetime import datetime
+
         output_data = {
+            "timestamp": datetime.now(UTC).isoformat(),
             "success_count": success_count,
             "failed_count": failed_count,
             "total": len(url_list),
@@ -381,10 +401,9 @@ WECHAT_SUMMARIZER_EXPORT__DEFAULT_OUTPUT_DIR={output_dir}
 """
 
     env_path = Path(".env")
-    if env_path.exists():
-        if not click.confirm("\n.env 文件已存在，是否覆盖？"):
-            console.print("[已取消]")
-            return
+    if env_path.exists() and not click.confirm("\n.env 文件已存在，是否覆盖？"):
+        console.print("[已取消]")
+        return
 
     env_path.write_text(env_content, encoding="utf-8")
     console.print(f"\n[green]✓ 配置已保存到 {env_path.absolute()}[/green]")
@@ -456,18 +475,15 @@ def batch_async(
     """
     import asyncio
 
-    from ...application.use_cases import AsyncBatchProcessUseCase
     from ...application.ports.inbound import BatchProgress
+    from ...application.use_cases import AsyncBatchProcessUseCase
 
     container = get_container()
 
     console.print(f"[bold]开始异步批量处理 {len(urls)} 篇文章（并发数: {concurrency}）...[/bold]")
 
     # 获取支持异步的抓取器
-    async_scrapers = [
-        s for s in container.scrapers
-        if hasattr(s, "scrape_async")
-    ]
+    async_scrapers = [s for s in container.scrapers if hasattr(s, "scrape_async")]
 
     if not async_scrapers:
         console.print("[red]没有可用的异步抓取器[/red]")
@@ -544,10 +560,18 @@ def cache_clean(clean_all: bool, expired: bool):
         return
 
     if clean_all:
-        count = storage.clear_all()
+        clear_all = getattr(storage, "clear_all", None)
+        if not callable(clear_all):
+            console.print("[yellow]当前缓存存储不支持 clear_all[/yellow]")
+            return
+        count = int(clear_all())
         console.print(f"[green]已清理 {count} 条缓存[/green]")
     else:
-        count = storage.cleanup_expired()
+        cleanup_expired = getattr(storage, "cleanup_expired", None)
+        if not callable(cleanup_expired):
+            console.print("[yellow]当前缓存存储不支持 cleanup_expired[/yellow]")
+            return
+        count = int(cleanup_expired())
         if count > 0:
             console.print(f"[green]已清理 {count} 条过期缓存[/green]")
         else:
@@ -612,7 +636,9 @@ def mcp_server(transport: str, port: int):
         from ...mcp import run_mcp_server
 
         console.print(f"[bold green]启动 MCP 服务器[/bold green] (transport={transport})")
-        console.print("[dim]提供工具: fetch_article, summarize_article, batch_summarize, list_available_methods[/dim]")
+        console.print(
+            "[dim]提供工具: fetch_article, summarize_article, batch_summarize, list_available_methods[/dim]"
+        )
 
         if transport == "http":
             console.print(f"[cyan]HTTP 端点: http://localhost:{port}/mcp[/cyan]")
@@ -689,6 +715,7 @@ def _display_article(article):
 # 注册批量获取命令组
 try:
     from .batch_commands import batch_mp
+
     cli.add_command(batch_mp)
 except ImportError:
     pass  # 如果导入失败则跳过

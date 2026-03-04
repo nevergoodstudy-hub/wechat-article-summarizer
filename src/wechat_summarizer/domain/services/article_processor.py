@@ -42,10 +42,7 @@ class ArticleProcessorService:
         if not content.text:
             return False
 
-        if content.word_count < 100:
-            return False
-
-        return True
+        return not content.word_count < 100
 
     def estimate_tokens(self, content: ArticleContent) -> int:
         """

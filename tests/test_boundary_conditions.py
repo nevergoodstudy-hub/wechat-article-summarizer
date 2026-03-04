@@ -7,11 +7,7 @@
 
 from __future__ import annotations
 
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-
-import pytest
 
 from wechat_summarizer.domain.entities.article import Article
 from wechat_summarizer.domain.value_objects.content import ArticleContent
@@ -28,14 +24,14 @@ class TestEmptyContentHandling:
             title="测试标题",
             content=ArticleContent(""),
         )
-        
+
         assert article.content.html == ""
         assert article.content.text == ""
 
     def test_article_with_none_like_content(self):
         """文章类空内容"""
         edge_cases = ["", " ", "\n", "\t"]
-        
+
         for content in edge_cases:
             article_content = ArticleContent(content)
             assert article_content.text is not None
@@ -45,10 +41,10 @@ class TestEmptyContentHandling:
         from wechat_summarizer.infrastructure.adapters.summarizers.simple import (
             SimpleSummarizer,
         )
-        
+
         summarizer = SimpleSummarizer()
         content = ArticleContent("")
-        
+
         summary = summarizer.summarize(content)
         assert summary is not None
 
@@ -60,19 +56,19 @@ class TestExtremelyLongContent:
         """非常长的内容"""
         long_text = "这是一段很长的文字。" * 10000
         content = ArticleContent(long_text)
-        
+
         assert len(content.text) > 0
 
     def test_long_title(self):
         """超长标题"""
         long_title = "标题" * 500
-        
+
         article = Article(
             url=ArticleURL("https://example.com/article"),
             title=long_title,
             content=ArticleContent("<p>内容</p>"),
         )
-        
+
         assert len(article.title) == len(long_title)
 
 
@@ -86,7 +82,7 @@ class TestSpecialCharactersInTitle:
             title="🎉 庆祝文章 🎊",
             content=ArticleContent("<p>内容</p>"),
         )
-        
+
         assert "🎉" in article.title
 
     def test_title_with_special_punctuation(self):
@@ -96,7 +92,7 @@ class TestSpecialCharactersInTitle:
             "问题？解答！",
             "A&B公司",
         ]
-        
+
         for title in special_titles:
             article = Article(
                 url=ArticleURL("https://example.com/article"),
@@ -111,30 +107,32 @@ class TestConcurrentOperations:
 
     def test_concurrent_article_creation(self):
         """并发创建文章"""
+
         def create_article(i: int) -> Article:
             return Article(
                 url=ArticleURL(f"https://example.com/article{i}"),
                 title=f"标题{i}",
                 content=ArticleContent(f"<p>内容{i}</p>"),
             )
-        
+
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(create_article, i) for i in range(100)]
             articles = [f.result() for f in futures]
-        
+
         assert len(articles) == 100
         assert all(a.title.startswith("标题") for a in articles)
 
     def test_concurrent_content_parsing(self):
         """并发内容解析"""
+
         def parse_content(i: int) -> ArticleContent:
             html = f"<div><p>段落{i}</p></div>"
             return ArticleContent(html)
-        
+
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(parse_content, i) for i in range(100)]
             contents = [f.result() for f in futures]
-        
+
         assert len(contents) == 100
 
 
@@ -160,10 +158,10 @@ class TestSummarizerBoundaries:
         from wechat_summarizer.infrastructure.adapters.summarizers.simple import (
             SimpleSummarizer,
         )
-        
+
         summarizer = SimpleSummarizer()
         content = ArticleContent("短。")
-        
+
         summary = summarizer.summarize(content)
         assert summary is not None
 
@@ -172,9 +170,9 @@ class TestSummarizerBoundaries:
         from wechat_summarizer.infrastructure.adapters.summarizers.textrank import (
             TextRankSummarizer,
         )
-        
+
         summarizer = TextRankSummarizer()
         content = ArticleContent("这是唯一的一句话。")
-        
+
         summary = summarizer.summarize(content)
         assert summary is not None

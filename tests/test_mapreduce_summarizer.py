@@ -5,7 +5,7 @@
 
 import pytest
 
-from wechat_summarizer.domain.entities import Summary, SummaryMethod, SummaryStyle
+from wechat_summarizer.domain.entities import Summary, SummaryMethod
 from wechat_summarizer.domain.value_objects import ArticleContent
 from wechat_summarizer.infrastructure.adapters.summarizers import (
     MapReduceSummarizer,
@@ -39,9 +39,7 @@ class TestMapReduceSummarizer:
         assert mapreduce_summarizer.is_available() is True
 
     @pytest.mark.unit
-    def test_short_text_direct_summarize(
-        self, mapreduce_summarizer: MapReduceSummarizer
-    ) -> None:
+    def test_short_text_direct_summarize(self, mapreduce_summarizer: MapReduceSummarizer) -> None:
         """测试短文本直接摘要（不分块）"""
         short_text = "这是一段短文本，不需要分块处理。" * 5
         content = ArticleContent(text=short_text)

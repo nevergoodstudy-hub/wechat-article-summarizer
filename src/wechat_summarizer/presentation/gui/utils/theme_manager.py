@@ -15,17 +15,19 @@
 
 from __future__ import annotations
 
-import os
 import json
+import os
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Callable, Optional, Dict, Any
-from dataclasses import dataclass, asdict
+from typing import Any, cast
 
 from loguru import logger
 
 
 class AppearanceMode(Enum):
     """外观模式"""
+
     LIGHT = "light"
     DARK = "dark"
     SYSTEM = "system"
@@ -33,6 +35,7 @@ class AppearanceMode(Enum):
 
 class ContrastMode(Enum):
     """对比度模式"""
+
     NORMAL = "normal"
     HIGH = "high"
     HIGHER = "higher"
@@ -41,28 +44,28 @@ class ContrastMode(Enum):
 @dataclass
 class AccessibilitySettings:
     """可访问性设置"""
+
     font_scale: float = 1.0  # 字体缩放 (1.0 = 100%)
     contrast_mode: str = "normal"  # normal, high, higher
     reduce_motion: bool = False  # 减少动画
     reduce_transparency: bool = False  # 减少透明度
-    
+
     # 安全限制
     MIN_FONT_SCALE = 0.8
     MAX_FONT_SCALE = 2.0
-    
+
     def __post_init__(self):
         # 验证字体缩放范围
-        self.font_scale = max(
-            self.MIN_FONT_SCALE,
-            min(self.MAX_FONT_SCALE, self.font_scale)
-        )
+        self.font_scale = max(self.MIN_FONT_SCALE, min(self.MAX_FONT_SCALE, self.font_scale))
+ThemePalette = dict[str, str]
+ThemeMap = dict[str, ThemePalette]
 
 
 class ThemeManager:
     """主题管理器
 
     管理应用的主题和外观设置。
-    
+
     2026年增强:
     - 可访问性设置管理
     - 字体缩放
@@ -77,7 +80,7 @@ class ThemeManager:
     WECHAT_BLUE = "#576B95"
 
     # 预定义主题
-    THEMES = {
+    THEMES: ThemeMap = {
         "light": {
             "primary": WECHAT_GREEN,
             "secondary": WECHAT_BLUE,
@@ -103,9 +106,9 @@ class ThemeManager:
             "error": "#FF4D4F",
         },
     }
-    
+
     # 高对比度主题
-    HIGH_CONTRAST_THEMES = {
+    HIGH_CONTRAST_THEMES: ThemeMap = {
         "light": {
             "primary": "#0066CC",
             "secondary": "#003366",
@@ -131,9 +134,9 @@ class ThemeManager:
             "error": "#FF6666",
         },
     }
-    
+
     # 基础字体大小 (px)
-    BASE_FONT_SIZES = {
+    BASE_FONT_SIZES: dict[str, int] = {
         "xs": 10,
         "sm": 12,
         "base": 14,
@@ -154,19 +157,17 @@ class ThemeManager:
     def __init__(self):
         if self._initialized:
             return
-        self._initialized = True
-        self._current_mode = AppearanceMode.LIGHT
+        self._initialized: bool = True
+        self._current_mode: AppearanceMode = AppearanceMode.LIGHT
         self._callbacks: list[Callable[[AppearanceMode], None]] = []
         self._accessibility_callbacks: list[Callable[[AccessibilitySettings], None]] = []
-        self._accessibility = AccessibilitySettings()
-        
+        self._accessibility: AccessibilitySettings = AccessibilitySettings()
+
         # 配置文件路径
-        self._config_file = os.path.join(
-            os.path.expanduser("~"),
-            ".wechat_summarizer",
-            "accessibility.json"
+        self._config_file: str = os.path.join(
+            os.path.expanduser("~"), ".wechat_summarizer", "accessibility.json"
         )
-        
+
         # 加载保存的设置
         self._load_accessibility_settings()
 
@@ -205,25 +206,6 @@ class ThemeManager:
 
         except ImportError:
             logger.debug("customtkinter not available for theme switching")
-
-    def get_colors(self, mode: AppearanceMode | None = None) -> dict[str, str]:
-        """获取指定模式的颜色配置
-
-        Args:
-            mode: 外观模式，None 表示当前模式
-
-        Returns:
-            颜色配置字典
-        """
-        if mode is None:
-            mode = self._current_mode
-
-        if mode == AppearanceMode.SYSTEM:
-            # 检测系统主题
-            mode = self._detect_system_theme()
-
-        mode_str = "dark" if mode == AppearanceMode.DARK else "light"
-        return self.THEMES.get(mode_str, self.THEMES["light"])
 
     def _detect_system_theme(self) -> AppearanceMode:
         """检测系统主题"""
@@ -277,99 +259,92 @@ class ThemeManager:
         else:
             self.set_mode(AppearanceMode.DARK)
         return self._current_mode
-    
+
     # ========== 可访问性设置 ==========
-    
+
     @property
     def accessibility(self) -> AccessibilitySettings:
         """获取可访问性设置"""
         return self._accessibility
-    
+
     def set_font_scale(self, scale: float) -> None:
         """设置字体缩放
-        
+
         Args:
             scale: 缩放比例 (0.8 - 2.0)
         """
         scale = max(
-            AccessibilitySettings.MIN_FONT_SCALE,
-            min(AccessibilitySettings.MAX_FONT_SCALE, scale)
+            AccessibilitySettings.MIN_FONT_SCALE, min(AccessibilitySettings.MAX_FONT_SCALE, scale)
         )
-        
+
         if scale == self._accessibility.font_scale:
             return
-        
+
         self._accessibility.font_scale = scale
         self._save_accessibility_settings()
         self._notify_accessibility_callbacks()
-    
+
     def increase_font_scale(self, step: float = 0.1) -> float:
         """增大字体
-        
+
         Args:
             step: 增量
-            
+
         Returns:
             新的缩放比例
         """
-        new_scale = min(
-            AccessibilitySettings.MAX_FONT_SCALE,
-            self._accessibility.font_scale + step
-        )
+        new_scale = min(AccessibilitySettings.MAX_FONT_SCALE, self._accessibility.font_scale + step)
         self.set_font_scale(new_scale)
         return self._accessibility.font_scale
-    
+
     def decrease_font_scale(self, step: float = 0.1) -> float:
         """减小字体
-        
+
         Args:
             step: 减量
-            
+
         Returns:
             新的缩放比例
         """
-        new_scale = max(
-            AccessibilitySettings.MIN_FONT_SCALE,
-            self._accessibility.font_scale - step
-        )
+        new_scale = max(AccessibilitySettings.MIN_FONT_SCALE, self._accessibility.font_scale - step)
         self.set_font_scale(new_scale)
         return self._accessibility.font_scale
-    
+
     def reset_font_scale(self) -> None:
         """重置字体大小"""
         self.set_font_scale(1.0)
-    
+
     def get_scaled_font_size(self, size_key: str = "base") -> int:
         """获取缩放后的字体大小
-        
+
         Args:
             size_key: 字体大小键 (xs, sm, base, lg, xl, 2xl, 3xl, 4xl)
-            
+
         Returns:
             缩放后的字体大小 (px)
         """
         base_size = self.BASE_FONT_SIZES.get(size_key, 14)
         return int(base_size * self._accessibility.font_scale)
-    
+
     def set_contrast_mode(self, mode: ContrastMode | str) -> None:
         """设置对比度模式
-        
+
         Args:
             mode: 对比度模式
         """
         if isinstance(mode, ContrastMode):
             mode = mode.value
-        
+
         if mode == self._accessibility.contrast_mode:
             return
-        
+
         self._accessibility.contrast_mode = mode
         self._save_accessibility_settings()
         self._notify_accessibility_callbacks()
-    
+
     def toggle_high_contrast(self) -> bool:
         """切换高对比度模式
-        
+
         Returns:
             是否启用高对比度
         """
@@ -379,50 +354,49 @@ class ThemeManager:
         else:
             self.set_contrast_mode("normal")
             return False
-    
+
     def is_high_contrast(self) -> bool:
         """是否为高对比度模式"""
         return self._accessibility.contrast_mode != "normal"
-    
+
     def set_reduce_motion(self, enabled: bool) -> None:
         """设置减少动画
-        
+
         Args:
             enabled: 是否减少动画
         """
         if enabled == self._accessibility.reduce_motion:
             return
-        
+
         self._accessibility.reduce_motion = enabled
         self._save_accessibility_settings()
         self._notify_accessibility_callbacks()
-    
+
     def toggle_reduce_motion(self) -> bool:
         """切换减少动画
-        
+
         Returns:
             是否启用减少动画
         """
         self.set_reduce_motion(not self._accessibility.reduce_motion)
         return self._accessibility.reduce_motion
-    
+
     def should_reduce_motion(self) -> bool:
         """是否应减少动画
-        
+
         同时检查用户设置和系统设置(prefers-reduced-motion)
         """
         if self._accessibility.reduce_motion:
             return True
-        
+
         # 检查系统设置 (Windows)
         try:
             import sys
+
             if sys.platform == "win32":
                 import winreg
-                key = winreg.OpenKey(
-                    winreg.HKEY_CURRENT_USER,
-                    r"Control Panel\Desktop"
-                )
+
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
                 # ClientAreaAnimation: 0 = off, 1 = on
                 value, _ = winreg.QueryValueEx(key, "UserPreferencesMask")
                 winreg.CloseKey(key)
@@ -431,22 +405,22 @@ class ThemeManager:
                     return not (value[1] & 0x02)
         except Exception:
             pass
-        
+
         return False
-    
+
     def set_reduce_transparency(self, enabled: bool) -> None:
         """设置减少透明度
-        
+
         Args:
             enabled: 是否减少透明度
         """
         if enabled == self._accessibility.reduce_transparency:
             return
-        
+
         self._accessibility.reduce_transparency = enabled
         self._save_accessibility_settings()
         self._notify_accessibility_callbacks()
-    
+
     def get_colors(self, mode: AppearanceMode | None = None) -> dict[str, str]:
         """获取指定模式的颜色配置
 
@@ -463,28 +437,27 @@ class ThemeManager:
             mode = self._detect_system_theme()
 
         mode_str = "dark" if mode == AppearanceMode.DARK else "light"
-        
+
         # 高对比度模式使用特殊主题
         if self.is_high_contrast():
             return self.HIGH_CONTRAST_THEMES.get(mode_str, self.HIGH_CONTRAST_THEMES["light"])
-        
+
         return self.THEMES.get(mode_str, self.THEMES["light"])
-    
+
     def on_accessibility_changed(
-        self, 
-        callback: Callable[[AccessibilitySettings], None]
+        self, callback: Callable[[AccessibilitySettings], None]
     ) -> Callable[[], None]:
         """注册可访问性设置变更回调
-        
+
         Args:
             callback: 回调函数
-            
+
         Returns:
             取消注册的函数
         """
         self._accessibility_callbacks.append(callback)
         return lambda: self._accessibility_callbacks.remove(callback)
-    
+
     def _notify_accessibility_callbacks(self) -> None:
         """通知可访问性回调"""
         for callback in self._accessibility_callbacks:
@@ -492,28 +465,28 @@ class ThemeManager:
                 callback(self._accessibility)
             except Exception as e:
                 logger.debug(f"Accessibility callback error: {e}")
-    
+
     def _load_accessibility_settings(self) -> None:
         """加载可访问性设置"""
         try:
             if os.path.exists(self._config_file):
-                with open(self._config_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                
+                with open(self._config_file, encoding="utf-8") as f:
+                    data = cast(dict[str, Any], json.load(f))
+
                 self._accessibility = AccessibilitySettings(
                     font_scale=data.get("font_scale", 1.0),
                     contrast_mode=data.get("contrast_mode", "normal"),
                     reduce_motion=data.get("reduce_motion", False),
-                    reduce_transparency=data.get("reduce_transparency", False)
+                    reduce_transparency=data.get("reduce_transparency", False),
                 )
         except Exception as e:
             logger.warning(f"加载可访问性设置失败: {e}")
-    
+
     def _save_accessibility_settings(self) -> None:
         """保存可访问性设置"""
         try:
             os.makedirs(os.path.dirname(self._config_file), exist_ok=True)
-            
+
             with open(self._config_file, "w", encoding="utf-8") as f:
                 json.dump(asdict(self._accessibility), f, indent=2)
         except Exception as e:

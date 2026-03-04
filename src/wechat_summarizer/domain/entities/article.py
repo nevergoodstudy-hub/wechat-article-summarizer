@@ -15,13 +15,16 @@ if TYPE_CHECKING:
     from .summary import Summary
 
 
-@dataclass
+@dataclass(frozen=True)
 class Article:
     """
-    文章聚合根
+    文章聚合根 (不可变实体)
 
     聚合根是DDD中的核心概念，它是一个实体的边界，
     所有对聚合内部对象的访问都必须通过聚合根进行。
+
+    设计为 frozen=True 以确保实体不可变性。
+    受控变异通过 object.__setattr__ 在聚合根方法内完成。
     """
 
     # 核心属性（url 必填）
@@ -74,19 +77,11 @@ class Article:
         return self.publish_time.strftime("%Y-%m-%d %H:%M:%S")
 
     def attach_summary(self, summary: Summary) -> None:
-        """附加摘要到文章"""
-        self.summary = summary
-        self.updated_at = utc_now()
+        """附加摘要到文章（受控变异）"""
+        object.__setattr__(self, "summary", summary)
+        object.__setattr__(self, "updated_at", utc_now())
 
     def update_content(self, content: ArticleContent) -> None:
-        """更新文章内容"""
-        self.content = content
-        self.updated_at = utc_now()
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Article):
-            return False
-        return self.id == other.id
+        """更新文章内容（受控变异）"""
+        object.__setattr__(self, "content", content)
+        object.__setattr__(self, "updated_at", utc_now())

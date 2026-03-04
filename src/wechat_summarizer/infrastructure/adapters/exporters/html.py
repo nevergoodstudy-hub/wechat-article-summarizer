@@ -3,8 +3,9 @@
 import html
 import re
 from pathlib import Path
+from typing import cast
 
-import bleach
+import bleach  # type: ignore[import-untyped]
 from loguru import logger
 
 from ....domain.entities import Article
@@ -13,15 +14,40 @@ from .base import BaseExporter
 
 # 安全 HTML 标签白名单
 ALLOWED_TAGS = [
-    "p", "div", "span", "br", "hr",
-    "h1", "h2", "h3", "h4", "h5", "h6",
-    "a", "img",
-    "ul", "ol", "li",
-    "blockquote", "code", "pre",
-    "strong", "em", "b", "i", "u",
-    "table", "thead", "tbody", "tr", "th", "td",
-    "figure", "figcaption",
-    "section", "article",
+    "p",
+    "div",
+    "span",
+    "br",
+    "hr",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "a",
+    "img",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "code",
+    "pre",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "u",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "figure",
+    "figcaption",
+    "section",
+    "article",
 ]
 
 # 安全属性白名单
@@ -94,11 +120,14 @@ class HtmlExporter(BaseExporter):
         """清洗 HTML 内容，移除潜在的 XSS 攻击向量"""
         if not content:
             return ""
-        return bleach.clean(
-            content,
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRIBUTES,
-            strip=True,
+        return cast(
+            str,
+            bleach.clean(
+                content,
+                tags=ALLOWED_TAGS,
+                attributes=ALLOWED_ATTRIBUTES,
+                strip=True,
+            ),
         )
 
     def _escape_text(self, text: str) -> str:

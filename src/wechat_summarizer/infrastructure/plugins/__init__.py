@@ -12,6 +12,6 @@
     my_scraper = "my_package.scrapers:MyScraper"
 """
 
-from .loader import PluginLoader, PluginInfo, PluginType
+from .loader import PluginInfo, PluginLoader, PluginType
 
-__all__ = ["PluginLoader", "PluginInfo", "PluginType"]
+__all__ = ["PluginInfo", "PluginLoader", "PluginType"]

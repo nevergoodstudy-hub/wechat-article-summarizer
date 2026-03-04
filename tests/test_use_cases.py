@@ -3,21 +3,17 @@
 测试 FetchArticleUseCase、SummarizeArticleUseCase、ExportArticleUseCase 等用例。
 """
 
-from unittest.mock import Mock, MagicMock
-from uuid import uuid4
-from datetime import datetime
+from unittest.mock import Mock
 
 import pytest
 
 from wechat_summarizer.application.use_cases import (
+    ExportArticleUseCase,
     FetchArticleUseCase,
     SummarizeArticleUseCase,
-    ExportArticleUseCase,
 )
 from wechat_summarizer.domain.entities import Article, Summary
-from wechat_summarizer.domain.entities.summary import SummaryMethod, SummaryStyle
-from wechat_summarizer.domain.value_objects import ArticleURL, ArticleContent
-from wechat_summarizer.shared.exceptions import UseCaseError, ScraperError
+from wechat_summarizer.shared.exceptions import ScraperError, UseCaseError
 
 
 class TestFetchArticleUseCase:
@@ -162,9 +158,7 @@ class TestSummarizeArticleUseCase:
         mock_summarizer.summarize.assert_called_once()
 
     @pytest.mark.unit
-    def test_execute_default_method(
-        self, sample_article: Article, sample_summary: Summary
-    ) -> None:
+    def test_execute_default_method(self, sample_article: Article, sample_summary: Summary) -> None:
         """测试默认摘要方法"""
         mock_simple = Mock()
         mock_simple.name = "simple"
@@ -201,9 +195,7 @@ class TestExportArticleUseCase:
     """ExportArticleUseCase 测试"""
 
     @pytest.mark.unit
-    def test_execute_with_valid_article(
-        self, article_with_summary: Article, tmp_path
-    ) -> None:
+    def test_execute_with_valid_article(self, article_with_summary: Article, tmp_path) -> None:
         """测试正常导出流程"""
         output_file = tmp_path / "output.html"
 

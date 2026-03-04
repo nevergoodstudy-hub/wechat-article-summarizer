@@ -11,43 +11,44 @@
 - 透明度参数边界验证
 - 防止过度重绘导致性能问题
 """
+
 from __future__ import annotations
 
 import math
 import tkinter as tk
-from typing import Optional, Tuple, Union
 
 try:
     import customtkinter as ctk
+
     _CTK_AVAILABLE = True
 except ImportError:
     _CTK_AVAILABLE = False
     ctk = None
 
-from ..styles.colors import ModernColors, to_tkinter_color
-from ..utils.gradient import GradientAnimator, EasingFunction
+from ..styles.colors import ModernColors
+from ..utils.gradient import GradientAnimator
 
 
-class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
+class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):  # type: ignore[misc]
     """液态玻璃效果框架组件
-    
+
     提供2026年流行的液态玻璃(Liquid Glass)视觉效果：
     - 半透明磨砂背景
     - 边缘高光
     - 可选透明度动画
-    
+
     特性：
     - 支持暗色/浅色主题
     - 可配置模糊程度和透明度
     - 边缘发光效果
     """
-    
+
     # 安全限制
     MIN_OPACITY = 0.3  # 最小透明度
     MAX_OPACITY = 1.0  # 最大透明度
-    MIN_BLUR = 0       # 最小模糊半径
-    MAX_BLUR = 30      # 最大模糊半径
-    
+    MIN_BLUR = 0  # 最小模糊半径
+    MAX_BLUR = 30  # 最大模糊半径
+
     def __init__(
         self,
         master,
@@ -59,10 +60,10 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
         theme: str = "dark",
         corner_radius: int = 16,
         animated: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """初始化液态玻璃框架
-        
+
         Args:
             master: 父容器
             width: 宽度
@@ -82,17 +83,15 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
         self._theme = theme
         self._animated = animated
         self._animation_id = None
-        
+
         # 根据主题选择颜色 (使用SOLID版本以兼容Tkinter)
         if theme == "dark":
-            bg_color = ModernColors.DARK_GLASS_SOLID
             border_color = ModernColors.DARK_GLASS_BORDER_SOLID
             self._base_color = "#1e1e1e"
         else:
-            bg_color = ModernColors.LIGHT_GLASS_SOLID
             border_color = ModernColors.LIGHT_GLASS_BORDER_SOLID
             self._base_color = "#ffffff"
-        
+
         # 初始化父类
         if _CTK_AVAILABLE:
             super().__init__(
@@ -103,7 +102,7 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
                 fg_color=self._apply_opacity(self._base_color, self._opacity),
                 border_width=1,
                 border_color=border_color,
-                **kwargs
+                **kwargs,
             )
         else:
             super().__init__(
@@ -113,39 +112,37 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
                 bg=self._base_color,
                 highlightthickness=1,
                 highlightbackground=border_color,
-                **kwargs
+                **kwargs,
             )
-        
+
         # 如果启用动画，启动透明度动画
         if self._animated:
             self._start_breathing_animation()
-    
+
     def _apply_opacity(self, color: str, opacity: float) -> str:
         """应用透明度到颜色
-        
+
         Args:
             color: 十六进制颜色
             opacity: 透明度 (0.0-1.0)
-            
+
         Returns:
             str: 带透明度的颜色（如果支持）
         """
         # CustomTkinter 支持带透明度的颜色
         # 这里简化处理，实际可以转换为rgba格式
         return color
-    
+
     def _start_breathing_animation(self):
         """启动呼吸效果动画"""
         if not self._animated:
             return
-        
+
         animator = GradientAnimator(fps=60)
         self._animation_id = animator.create_breathing_animation(
-            base_color=self._base_color,
-            intensity=0.1,
-            duration=3.0
+            base_color=self._base_color, intensity=0.1, duration=3.0
         )
-        
+
         def update_opacity():
             if self._animation_id is not None:
                 # 透明度在 0.75-0.95 之间呼吸变化
@@ -153,39 +150,37 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
                 wave = math.sin(self._animation_frame * 0.05) * 0.1
                 new_opacity = base_opacity + wave
                 new_opacity = max(0.75, min(0.95, new_opacity))
-                
-                if _CTK_AVAILABLE and hasattr(self, 'configure'):
+
+                if _CTK_AVAILABLE and hasattr(self, "configure"):
                     # 更新透明度（简化实现）
                     pass
-                
+
                 self._animation_frame += 1
                 self.after(33, update_opacity)  # ~30fps
-        
+
         self._animation_frame = 0
         update_opacity()
-    
+
     def stop_animation(self):
         """停止动画"""
         self._animated = False
         self._animation_id = None
-    
+
     def set_opacity(self, opacity: float):
         """设置透明度
-        
+
         Args:
             opacity: 透明度 (0.3-1.0)
         """
         opacity = max(self.MIN_OPACITY, min(self.MAX_OPACITY, opacity))
         self._opacity = opacity
-        
-        if _CTK_AVAILABLE and hasattr(self, 'configure'):
-            self.configure(
-                fg_color=self._apply_opacity(self._base_color, opacity)
-            )
-    
+
+        if _CTK_AVAILABLE and hasattr(self, "configure"):
+            self.configure(fg_color=self._apply_opacity(self._base_color, opacity))
+
     def set_blur(self, blur_radius: int):
         """设置模糊半径
-        
+
         Args:
             blur_radius: 模糊半径 (0-30px)
         """
@@ -195,21 +190,21 @@ class LiquidGlassFrame(ctk.CTkFrame if _CTK_AVAILABLE else tk.Frame):
 
 class GlassCard(LiquidGlassFrame):
     """玻璃卡片组件
-    
+
     基于液态玻璃效果的卡片组件，常用于内容展示。
     """
-    
+
     def __init__(
         self,
         master,
         width: int = 300,
         height: int = 200,
-        title: Optional[str] = None,
+        title: str | None = None,
         theme: str = "dark",
-        **kwargs
+        **kwargs,
     ):
         """初始化玻璃卡片
-        
+
         Args:
             master: 父容器
             width: 宽度
@@ -227,80 +222,61 @@ class GlassCard(LiquidGlassFrame):
             border_glow=True,
             theme=theme,
             corner_radius=16,
-            **kwargs
+            **kwargs,
         )
-        
+
         # 内容区域
-        self._content_frame = None
-        self._title_label = None
-        
+        self._content_frame: tk.Widget | None = None
+        self._title_label: tk.Widget | None = None
+
         if title:
             self._create_title(title)
-    
+
     def _create_title(self, title: str):
         """创建标题
-        
+
         Args:
             title: 标题文本
         """
         text_color = ModernColors.DARK_TEXT if self._theme == "dark" else ModernColors.LIGHT_TEXT
-        
+
         if _CTK_AVAILABLE:
             self._title_label = ctk.CTkLabel(
-                self,
-                text=title,
-                font=("Inter", 20, "bold"),
-                text_color=text_color
+                self, text=title, font=("Inter", 20, "bold"), text_color=text_color
             )
         else:
             self._title_label = tk.Label(
-                self,
-                text=title,
-                font=("Arial", 20, "bold"),
-                fg=text_color,
-                bg=self._base_color
+                self, text=title, font=("Arial", 20, "bold"), fg=text_color, bg=self._base_color
             )
-        
-        self._title_label.pack(pady=(20, 10), padx=20, anchor="w")
-    
+
+        if self._title_label is not None:
+            self._title_label.pack(pady=(20, 10), padx=20, anchor="w")
+
     def add_content(self, widget):
         """添加内容组件
-        
+
         Args:
             widget: 要添加的组件
         """
         if self._content_frame is None:
             if _CTK_AVAILABLE:
-                self._content_frame = ctk.CTkFrame(
-                    self,
-                    fg_color="transparent"
-                )
+                self._content_frame = ctk.CTkFrame(self, fg_color="transparent")
             else:
-                self._content_frame = tk.Frame(
-                    self,
-                    bg=self._base_color
-                )
+                self._content_frame = tk.Frame(self, bg=self._base_color)
             self._content_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
+
         widget.pack(in_=self._content_frame, fill="both", expand=True)
 
 
-class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):
+class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):  # type: ignore[misc]
     """玻璃效果按钮
-    
+
     具有玻璃质感的按钮组件，支持hover效果。
     """
-    
-    def __init__(
-        self,
-        master,
-        text: str = "",
-        command=None,
-        theme: str = "dark",
-        **kwargs
-    ):
+
+    def __init__(self, master, text: str = "", command=None, theme: str = "dark", **kwargs):
         """初始化玻璃按钮
-        
+
         Args:
             master: 父容器
             text: 按钮文本
@@ -316,7 +292,7 @@ class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):
             fg_color = ModernColors.LIGHT_ACCENT
             hover_color = ModernColors.LIGHT_ACCENT_HOVER
             text_color = ModernColors.LIGHT_TEXT
-        
+
         if _CTK_AVAILABLE:
             super().__init__(
                 master,
@@ -327,9 +303,11 @@ class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):
                 text_color=text_color,
                 corner_radius=12,
                 border_width=1,
-                border_color=ModernColors.DARK_GLASS_BORDER_SOLID if theme == "dark" else ModernColors.LIGHT_GLASS_BORDER_SOLID,
+                border_color=ModernColors.DARK_GLASS_BORDER_SOLID
+                if theme == "dark"
+                else ModernColors.LIGHT_GLASS_BORDER_SOLID,
                 font=("Inter", 14),
-                **kwargs
+                **kwargs,
             )
         else:
             super().__init__(
@@ -341,18 +319,18 @@ class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):
                 activebackground=hover_color,
                 font=("Arial", 14),
                 relief="flat",
-                **kwargs
+                **kwargs,
             )
-        
+
         # 绑定hover效果
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
-    
+
     def _on_enter(self, event):
         """鼠标进入"""
         # 可以添加额外的hover效果，如阴影
         pass
-    
+
     def _on_leave(self, event):
         """鼠标离开"""
         pass
@@ -360,10 +338,10 @@ class GlassButton(ctk.CTkButton if _CTK_AVAILABLE else tk.Button):
 
 class GlassModal(tk.Toplevel):
     """玻璃模态框
-    
+
     具有玻璃背景模糊效果的模态对话框。
     """
-    
+
     def __init__(
         self,
         master,
@@ -371,10 +349,10 @@ class GlassModal(tk.Toplevel):
         width: int = 400,
         height: int = 300,
         theme: str = "dark",
-        **kwargs
+        **kwargs,
     ):
         """初始化玻璃模态框
-        
+
         Args:
             master: 父窗口
             title: 标题
@@ -384,73 +362,59 @@ class GlassModal(tk.Toplevel):
             **kwargs: 其他参数
         """
         super().__init__(master, **kwargs)
-        
+
         self.title(title)
         self.geometry(f"{width}x{height}")
-        
+
         # 设置为模态
         self.transient(master)
         self.grab_set()
-        
+
         # 居中显示
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (width // 2)
         y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f"+{x}+{y}")
-        
+
         # 创建玻璃效果背景
         self._glass_frame = LiquidGlassFrame(
-            self,
-            width=width,
-            height=height,
-            opacity=0.95,
-            theme=theme
+            self, width=width, height=height, opacity=0.95, theme=theme
         )
         self._glass_frame.pack(fill="both", expand=True)
-        
+
         # ESC键关闭
         self.bind("<Escape>", lambda e: self.destroy())
 
 
 # 便捷函数
 def create_glass_frame(
-    master,
-    width: int = 200,
-    height: int = 200,
-    theme: str = "dark",
-    **kwargs
+    master, width: int = 200, height: int = 200, theme: str = "dark", **kwargs
 ) -> LiquidGlassFrame:
     """快速创建玻璃框架
-    
+
     Args:
         master: 父容器
         width: 宽度
-        height: 高度  
+        height: 高度
         theme: 主题
         **kwargs: 其他参数
-        
+
     Returns:
         LiquidGlassFrame: 玻璃框架实例
     """
-    return LiquidGlassFrame(
-        master,
-        width=width,
-        height=height,
-        theme=theme,
-        **kwargs
-    )
+    return LiquidGlassFrame(master, width=width, height=height, theme=theme, **kwargs)
 
 
 def create_glass_card(
     master,
-    title: Optional[str] = None,
+    title: str | None = None,
     width: int = 300,
     height: int = 200,
     theme: str = "dark",
-    **kwargs
+    **kwargs,
 ) -> GlassCard:
     """快速创建玻璃卡片
-    
+
     Args:
         master: 父容器
         title: 标题
@@ -458,15 +422,8 @@ def create_glass_card(
         height: 高度
         theme: 主题
         **kwargs: 其他参数
-        
+
     Returns:
         GlassCard: 玻璃卡片实例
     """
-    return GlassCard(
-        master,
-        title=title,
-        width=width,
-        height=height,
-        theme=theme,
-        **kwargs
-    )
+    return GlassCard(master, title=title, width=width, height=height, theme=theme, **kwargs)

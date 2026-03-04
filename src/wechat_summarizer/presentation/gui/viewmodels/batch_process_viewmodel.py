@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from .base import BaseViewModel, Command, Observable
 
@@ -145,7 +146,9 @@ class BatchProcessViewModel(BaseViewModel):
 
     # region Subscriptions
 
-    def subscribe_items(self, callback: Callable[[list[BatchItemModel], list[BatchItemModel]], None]) -> Callable[[], None]:
+    def subscribe_items(
+        self, callback: Callable[[list[BatchItemModel], list[BatchItemModel]], None]
+    ) -> Callable[[], None]:
         return self._items.subscribe(callback)
 
     def subscribe_progress(self, callback: Callable[[float, float], None]) -> Callable[[], None]:

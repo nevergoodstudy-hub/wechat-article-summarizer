@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 from uuid import uuid4
 
 from loguru import logger
@@ -21,7 +20,7 @@ from .base import BaseSummarizer
 @dataclass
 class RAGContext:
     """RAG 检索上下文"""
-    
+
     query: str
     retrieved_chunks: list[SearchResult] = field(default_factory=list)
     relevance_scores: list[float] = field(default_factory=list)
@@ -30,12 +29,12 @@ class RAGContext:
 class RAGEnhancedSummarizer(BaseSummarizer):
     """
     RAG 增强摘要器
-    
+
     通过检索相关文档片段来增强摘要生成：
     1. 将文章分块并嵌入到向量存储
     2. 生成摘要时检索相关片段
     3. 将检索结果作为上下文增强 LLM 摘要
-    
+
     优势:
     - 减少幻觉（事实验证）
     - 支持长文档（分块处理）
@@ -44,7 +43,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
 
     def __init__(
         self,
-        base_summarizer: "BaseSummarizer",
+        base_summarizer: BaseSummarizer,
         embedder: EmbedderPort,
         vector_store: VectorStorePort,
         chunk_size: int = 500,
@@ -54,7 +53,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
     ):
         """
         初始化 RAG 增强摘要器
-        
+
         Args:
             base_summarizer: 基础摘要器（用于生成最终摘要）
             embedder: 向量嵌入器
@@ -96,28 +95,28 @@ class RAGEnhancedSummarizer(BaseSummarizer):
         """生成 RAG 增强摘要"""
         if not self.is_available():
             raise RuntimeError("RAG 增强摘要器不可用")
-        
+
         text = content.text
         if not text:
             raise ValueError("文章内容为空")
-        
+
         # 1. 分块
         chunks = self._chunk_text(text)
         logger.debug(f"文章已分为 {len(chunks)} 个片段")
-        
+
         # 2. 嵌入并存储
         article_id = str(uuid4())
         self._index_chunks(chunks, article_id)
-        
+
         # 3. 检索相关片段
         # 使用文章的前几句作为查询
         query = self._extract_query(text)
         context = self._retrieve_context(query)
         logger.debug(f"检索到 {len(context.retrieved_chunks)} 个相关片段")
-        
+
         # 4. 构建增强上下文
         enhanced_content = self._build_enhanced_content(content, context)
-        
+
         # 5. 使用基础摘要器生成摘要
         try:
             summary = self._base_summarizer.summarize(
@@ -125,7 +124,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
                 style=style,
                 max_length=max_length,
             )
-            
+
             # 更新摘要方法
             return Summary(
                 content=summary.content,
@@ -145,23 +144,23 @@ class RAGEnhancedSummarizer(BaseSummarizer):
     def _chunk_text(self, text: str) -> list[str]:
         """
         将文本分块（语义分块）
-        
+
         按段落边界分块，确保语义完整性
         """
         # 首先按段落分割
         paragraphs = text.split("\n\n")
-        
+
         chunks: list[str] = []
         current_chunk: list[str] = []
         current_size = 0
-        
+
         for para in paragraphs:
             para = para.strip()
             if not para:
                 continue
-            
+
             para_size = len(para)
-            
+
             # 如果当前段落太大，需要进一步分割
             if para_size > self._chunk_size:
                 # 先保存当前块
@@ -169,7 +168,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
                     chunks.append("\n\n".join(current_chunk))
                     current_chunk = []
                     current_size = 0
-                
+
                 # 按句子分割大段落
                 sentences = self._split_sentences(para)
                 for sent in sentences:
@@ -177,7 +176,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
                     if current_size + sent_size > self._chunk_size and current_chunk:
                         chunks.append(" ".join(current_chunk))
                         # 保留重叠
-                        overlap_text = " ".join(current_chunk)[-self._chunk_overlap:]
+                        overlap_text = " ".join(current_chunk)[-self._chunk_overlap :]
                         current_chunk = [overlap_text] if overlap_text else []
                         current_size = len(overlap_text)
                     current_chunk.append(sent)
@@ -190,19 +189,19 @@ class RAGEnhancedSummarizer(BaseSummarizer):
                     current_size = 0
                 current_chunk.append(para)
                 current_size += para_size
-        
+
         # 保存最后一块
         if current_chunk:
             chunks.append("\n\n".join(current_chunk))
-        
+
         return chunks
 
     def _split_sentences(self, text: str) -> list[str]:
         """按句子分割文本"""
         import re
-        
+
         # 中英文句子分割
-        pattern = r'(?<=[。！？.!?])\s*'
+        pattern = r"(?<=[。！？.!?])\s*"
         sentences = re.split(pattern, text)
         return [s.strip() for s in sentences if s.strip()]
 
@@ -210,10 +209,10 @@ class RAGEnhancedSummarizer(BaseSummarizer):
         """将分块嵌入并索引到向量存储"""
         if not chunks:
             return
-        
+
         # 批量嵌入
         embeddings = self._embedder.embed(chunks)
-        
+
         # 创建文档
         documents = [
             VectorDocument(
@@ -225,9 +224,9 @@ class RAGEnhancedSummarizer(BaseSummarizer):
                     "chunk_index": i,
                 },
             )
-            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False))
         ]
-        
+
         # 添加到存储
         self._vector_store.add(documents)
 
@@ -244,19 +243,16 @@ class RAGEnhancedSummarizer(BaseSummarizer):
         """检索相关上下文"""
         # 嵌入查询
         query_embedding = self._embedder.embed_single(query)
-        
+
         # 搜索相似文档
         results = self._vector_store.search(
             query_vector=query_embedding,
             top_k=self._top_k,
         )
-        
+
         # 过滤低相关性结果
-        filtered_results = [
-            r for r in results
-            if r.score >= self._min_relevance_score
-        ]
-        
+        filtered_results = [r for r in results if r.score >= self._min_relevance_score]
+
         return RAGContext(
             query=query,
             retrieved_chunks=filtered_results,
@@ -271,14 +267,14 @@ class RAGEnhancedSummarizer(BaseSummarizer):
         """构建增强内容"""
         if not context.retrieved_chunks:
             return original_content
-        
+
         # 构建上下文提示
         context_parts = []
         for i, chunk in enumerate(context.retrieved_chunks):
-            context_parts.append(f"[相关片段 {i+1}]\n{chunk.text}")
-        
+            context_parts.append(f"[相关片段 {i + 1}]\n{chunk.text}")
+
         context_text = "\n\n".join(context_parts)
-        
+
         # 增强原文
         enhanced_text = f"""以下是文章的关键片段（按相关性排序）：
 
@@ -289,7 +285,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
 基于以上关键片段，请总结文章的主要内容：
 
 {original_content.text[:3000]}"""
-        
+
         return ArticleContent(
             text=enhanced_text,
             html=original_content.html,
@@ -302,7 +298,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
             # 由于我们使用了 article_id 前缀，可以通过元数据过滤删除
             # 但为了简单起见，这里假设我们知道分块数量
             # 实际应用中可以使用元数据过滤
-            
+
             # 尝试删除（忽略错误）
             for i in range(100):  # 假设最多 100 个分块
                 doc_id = f"{article_id}_{i}"
@@ -317,7 +313,7 @@ class RAGEnhancedSummarizer(BaseSummarizer):
 class HyDEEnhancedSummarizer(RAGEnhancedSummarizer):
     """
     HyDE (Hypothetical Document Embeddings) 增强摘要器
-    
+
     先生成假设性摘要，然后用它来检索相关文档，
     最后基于检索结果生成最终摘要。
     """

@@ -12,7 +12,7 @@ from .config import AppSettings, Container, get_container, get_settings
 
 __all__ = [
     "AppSettings",
-    "get_settings",
     "Container",
     "get_container",
+    "get_settings",
 ]

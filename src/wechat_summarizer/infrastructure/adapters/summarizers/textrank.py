@@ -117,7 +117,7 @@ class TextRankSummarizer(BaseSummarizer):
     def _split_sentences(self, text: str) -> list[str]:
         """分割句子"""
         # 中文句子分隔符
-        pattern = r'[。！？；\n]+'
+        pattern = r"[。！？；\n]+"
         sentences = re.split(pattern, text)
 
         # 清理并过滤
@@ -137,23 +137,86 @@ class TextRankSummarizer(BaseSummarizer):
         2. 提取英文单词
         """
         # 中文词（2-4字）
-        chinese_words = re.findall(r'[\u4e00-\u9fff]{2,4}', text)
+        chinese_words = re.findall(r"[\u4e00-\u9fff]{2,4}", text)
 
         # 英文词
-        english_words = re.findall(r'[a-zA-Z]+', text.lower())
+        english_words = re.findall(r"[a-zA-Z]+", text.lower())
 
         words = chinese_words + english_words
 
         # 停用词
         stopwords = {
-            "的", "是", "在", "有", "和", "与", "了", "等", "也", "都",
-            "而", "及", "或", "但", "如", "这", "那", "个", "一", "不",
-            "就", "为", "到", "被", "把", "让", "给", "从", "向", "能",
-            "会", "可以", "可能", "应该", "需要", "已经", "正在", "将",
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "have", "has", "had", "do", "does", "did", "will", "would",
-            "can", "could", "may", "might", "must", "shall", "should",
-            "of", "to", "in", "for", "on", "with", "at", "by", "from",
+            "的",
+            "是",
+            "在",
+            "有",
+            "和",
+            "与",
+            "了",
+            "等",
+            "也",
+            "都",
+            "而",
+            "及",
+            "或",
+            "但",
+            "如",
+            "这",
+            "那",
+            "个",
+            "一",
+            "不",
+            "就",
+            "为",
+            "到",
+            "被",
+            "把",
+            "让",
+            "给",
+            "从",
+            "向",
+            "能",
+            "会",
+            "可以",
+            "可能",
+            "应该",
+            "需要",
+            "已经",
+            "正在",
+            "将",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "can",
+            "could",
+            "may",
+            "might",
+            "must",
+            "shall",
+            "should",
+            "of",
+            "to",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
         }
 
         return [w for w in words if w not in stopwords]
@@ -188,11 +251,7 @@ class TextRankSummarizer(BaseSummarizer):
 
         for i in range(n):
             for j in range(i + 1, n):
-                sim = self._sentence_similarity(
-                    tokenized_sentences[i],
-                    tokenized_sentences[j],
-                    idf
-                )
+                sim = self._sentence_similarity(tokenized_sentences[i], tokenized_sentences[j], idf)
                 matrix[i][j] = sim
                 matrix[j][i] = sim
 
@@ -216,10 +275,7 @@ class TextRankSummarizer(BaseSummarizer):
         def tfidf_vector(sentence: list[str]) -> dict[str, float]:
             tf = Counter(sentence)
             total = len(sentence)
-            return {
-                word: (tf.get(word, 0) / total) * idf.get(word, 1.0)
-                for word in all_words
-            }
+            return {word: (tf.get(word, 0) / total) * idf.get(word, 1.0) for word in all_words}
 
         vec1 = tfidf_vector(sent1)
         vec2 = tfidf_vector(sent2)
@@ -275,15 +331,11 @@ class TextRankSummarizer(BaseSummarizer):
         return scores
 
     def _select_summary_sentences(
-        self,
-        sentences: list[str],
-        scores: list[float],
-        max_length: int,
-        style: SummaryStyle
+        self, sentences: list[str], scores: list[float], max_length: int, style: SummaryStyle
     ) -> tuple[str, list[str]]:
         """选择摘要句子"""
         # 将句子与分数配对，并按分数排序
-        scored_sentences = list(zip(range(len(sentences)), scores, sentences))
+        scored_sentences = list(zip(range(len(sentences)), scores, sentences, strict=False))
         scored_sentences.sort(key=lambda x: x[1], reverse=True)
 
         # 根据风格确定要选择的句子数量
@@ -297,11 +349,11 @@ class TextRankSummarizer(BaseSummarizer):
         max_sentences = max(3, int(len(sentences) * target_ratio))
 
         # 选择句子（按原文顺序重排）
-        selected = []
+        selected: list[tuple[int, str]] = []
         current_length = 0
         key_points = []
 
-        for idx, score, sentence in scored_sentences:
+        for idx, _score, sentence in scored_sentences:
             if len(selected) >= max_sentences:
                 break
             if current_length + len(sentence) > max_length:
@@ -337,7 +389,7 @@ class TextRankSummarizer(BaseSummarizer):
         word_counts = Counter(words)
 
         # 给出现在开头的词更高权重
-        first_words = set(words[:min(50, len(words))])
+        first_words = set(words[: min(50, len(words))])
         weighted_counts = {}
         for word, count in word_counts.items():
             weight = 1.5 if word in first_words else 1.0

@@ -22,20 +22,20 @@ from .graph_builder import (
 )
 
 __all__ = [
-    # Entity Extractors
-    "BaseEntityExtractor",
-    "LLMEntityExtractor",
-    "SimpleEntityExtractor",
-    # Graph Builders
-    "BaseGraphBuilder",
-    "NetworkXGraphBuilder",
-    "SimpleGraphBuilder",
     # Community Detectors
     "BaseCommunityDetector",
-    "LeidenCommunityDetector",
-    "SimpleCommunityDetector",
     # Community Summarizers
     "BaseCommunitySummarizer",
+    # Entity Extractors
+    "BaseEntityExtractor",
+    # Graph Builders
+    "BaseGraphBuilder",
     "LLMCommunitySummarizer",
+    "LLMEntityExtractor",
+    "LeidenCommunityDetector",
+    "NetworkXGraphBuilder",
+    "SimpleCommunityDetector",
     "SimpleCommunitySummarizer",
+    "SimpleEntityExtractor",
+    "SimpleGraphBuilder",
 ]

@@ -2,7 +2,13 @@
 """
 微信文章总结器 - PyInstaller 打包配置
 版本: 2.4.0
-更新日期: 2026-01-28
+更新日期: 2026-02-10
+
+安全加固:
+- 移除废弃的 block_cipher 参数 (PyInstaller 6.x)
+- 启用 strip=True 移除调试符号
+- 嵌入 Windows VERSIONINFO
+- console=False 防止信息泄露
 """
 
 import os
@@ -12,8 +18,6 @@ from pathlib import Path
 # 项目根目录
 PROJECT_ROOT = Path(SPECPATH)
 SRC_DIR = PROJECT_ROOT / "src"
-
-block_cipher = None
 
 # 需要包含的数据文件
 datas = [
@@ -96,14 +100,11 @@ a = Analysis(
         'unittest',
         '_pytest',
     ],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
 
 # PYZ 归档
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 
 # 可执行文件
 exe = EXE(
@@ -116,16 +117,16 @@ exe = EXE(
     name='微信文章总结器',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=False,  # Windows 上 strip 会损坏 python3xx.dll 的 PE 头导致加载失败
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # 不显示控制台窗口
+    console=True,  # 使用 console bootloader，窗口由 launcher.py 延迟隐藏
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon=None,  # 可以添加图标: 'assets/icon.ico'
-    version=None,  # 可以添加版本信息
+    version='file_version_info.txt',  # Windows 版本信息
 )

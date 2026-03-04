@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 from loguru import logger
 
@@ -41,6 +42,19 @@ class WechatPlaywrightScraper(BaseScraper):
         self._timeout = timeout * 1000  # 转换为毫秒
         self._headless = headless
 
+    @classmethod
+    def runtime_available(cls) -> bool:
+        """检查 Playwright 运行时是否可用（含 Chromium 可执行文件）。"""
+        if not _playwright_available:
+            return False
+
+        try:
+            with sync_playwright() as p:
+                chromium_path = p.chromium.executable_path
+            return Path(chromium_path).exists()
+        except Exception:
+            return False
+
     @property
     def name(self) -> str:
         return "wechat_playwright"
@@ -74,8 +88,8 @@ class WechatPlaywrightScraper(BaseScraper):
                     page.goto(str(url), timeout=self._timeout)
                     # 等待内容加载
                     page.wait_for_selector("#js_content", timeout=self._timeout)
-                except PlaywrightTimeout:
-                    raise ScraperTimeoutError("页面加载超时")
+                except PlaywrightTimeout as err:
+                    raise ScraperTimeoutError("页面加载超时") from err
 
                 # 执行JavaScript移除隐藏样式
                 page.evaluate("""

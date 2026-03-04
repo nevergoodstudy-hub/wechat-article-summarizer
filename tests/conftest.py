@@ -4,26 +4,107 @@
 - 示例 Article、Summary 实体
 - Mock 存储、抓取器、摘要器
 - 临时目录和文件
+- 全局容器隔离（防止外部连接阻断测试）
 """
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 from uuid import uuid4
 
-from wechat_summarizer.shared.utils import utc_now
-
 import pytest
 
 from wechat_summarizer.domain.entities import Article, Summary
 from wechat_summarizer.domain.entities.summary import SummaryMethod, SummaryStyle
 from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
+from wechat_summarizer.infrastructure.config.container import Container
+from wechat_summarizer.shared.utils import utc_now
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+
+# ============== 全局测试隔离（P0-1 + P1-8） ==============
+
+
+@pytest.fixture(autouse=True)
+def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
+    """全局测试隔离夹具（autouse）
+
+    每个测试自动执行：
+    1. 重置全局容器单例，防止测试间状态泄漏
+    2. 重置 settings lru_cache
+    3. 如果测试未标记为 @pytest.mark.integration，则 patch get_container
+       返回 create_minimal() 容器，避免连接外部服务
+    """
+    from wechat_summarizer.infrastructure.config.container import reset_container
+    from wechat_summarizer.infrastructure.config.settings import reset_settings
+    from wechat_summarizer.mcp.security import reset_security_manager
+
+    # 重置单例状态
+    reset_container()
+    reset_settings()
+    reset_security_manager()
+
+    # 对非 integration 测试，patch 全局 get_container 返回最小化容器
+    # integration 测试通过标记来 opt-in 使用真实容器
+    current_item = _get_current_test_item()
+    if current_item is None or "integration" not in [
+        m.name for m in current_item.iter_markers()
+    ]:
+        _minimal = Container.create_minimal()
+        monkeypatch.setattr(
+            "wechat_summarizer.infrastructure.config.container._container",
+            _minimal,
+        )
+
+    yield
+
+    # 测试结束后再次重置
+    reset_container()
+    reset_security_manager()
+
+
+# pytest 请求上下文辅助：获取当前测试 Item
+_current_test_item = None
+
+
+def _get_current_test_item():
+    return _current_test_item
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    """钩子：在每个测试 setup 阶段记录当前 Item"""
+    global _current_test_item
+    _current_test_item = item
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_runtest_teardown(item: pytest.Item) -> None:
+    """钩子：在每个测试 teardown 阶段清除当前 Item"""
+    global _current_test_item
+    _current_test_item = None
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """默认跳过 integration 测试，避免无外部依赖环境下阻塞。
+
+    通过设置环境变量 `RUN_INTEGRATION_TESTS=1` 可显式启用 integration 测试。
+    """
+    if os.getenv("RUN_INTEGRATION_TESTS", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        return
+
+    skip_integration = pytest.mark.skip(
+        reason="integration tests disabled by default; set RUN_INTEGRATION_TESTS=1 to enable",
+    )
+    for item in items:
+        if "integration" in item.keywords:
+            item.add_marker(skip_integration)
 
 
 # ============== 基础夹具 ==============
@@ -95,6 +176,15 @@ def article_with_summary(sample_article: Article, sample_summary: Summary) -> Ar
 
 
 @pytest.fixture
+def minimal_container() -> Container:
+    """最小化容器夹具（不连接外部服务）
+
+    用于测试环境，避免测试套件因等待外部服务而挂起。
+    """
+    return Container.create_minimal()
+
+
+@pytest.fixture
 def mock_storage() -> Mock:
     """Mock 存储适配器"""
     storage = Mock()
@@ -144,7 +234,7 @@ def mock_exporter(tmp_path: Path) -> Mock:
 
 
 @pytest.fixture
-def output_dir(tmp_path: Path) -> Generator[Path, None, None]:
+def output_dir(tmp_path: Path) -> Generator[Path]:
     """临时输出目录"""
     output = tmp_path / "output"
     output.mkdir(parents=True, exist_ok=True)
@@ -152,7 +242,7 @@ def output_dir(tmp_path: Path) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def cache_dir(tmp_path: Path) -> Generator[Path, None, None]:
+def cache_dir(tmp_path: Path) -> Generator[Path]:
     """临时缓存目录"""
     cache = tmp_path / "cache"
     cache.mkdir(parents=True, exist_ok=True)

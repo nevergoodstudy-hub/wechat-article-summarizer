@@ -17,7 +17,7 @@ from loguru import logger
 @dataclass
 class ClientConfig:
     """客户端配置
-    
+
     优化后的默认参数：
     - max_keepalive_connections: 30 (提高连接复用率)
     - keepalive_expiry: 60.0 (延长连接保活时间)
@@ -117,7 +117,9 @@ class HttpClientPool:
 
         async with lock:
             if key not in self._clients:
-                config = self._configs.get(key, self._default_config) if domain else self._default_config
+                config = (
+                    self._configs.get(key, self._default_config) if domain else self._default_config
+                )
                 self._clients[key] = self._create_client(config)
                 logger.debug(f"创建新的 HTTP 客户端: {key}")
 
@@ -125,7 +127,7 @@ class HttpClientPool:
 
     def _create_client(self, config: ClientConfig) -> httpx.AsyncClient:
         """创建客户端实例
-        
+
         优化特性：
         - 启用 HTTP/2 以支持多路复用
         - 配置连接池参数以提高复用率

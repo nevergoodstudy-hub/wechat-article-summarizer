@@ -504,7 +504,7 @@ pre-commit install
 - [x] 输入长度限制 ✅ (2026-01-16 已完成)
 
 ### 需改进
-- [ ] 添加速率限制（防滥用）
+- [x] 添加速率限制（防滥用）✅ 已完成（mcp/security.py RateLimiter 令牌桶算法 + wechat_batch/rate_limiter.py）
 
 ---
 

@@ -1,0 +1,168 @@
+================================================================================
+                微信公众号文章总结器 (WeChat Article Summarizer) v2.4.0
+                         测试问题清单 (Test Issues Log)
+                          测试日期: 2026-02-09
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-001】严重 | 容器初始化导致测试套件挂起 (Test Suite Hang)
+--------------------------------------------------------------------------------
+级别: P0 - 阻塞性
+位置: src/wechat_summarizer/infrastructure/config/container.py:80
+现象: 当测试用例触发 Container.summarizers 属性时，_create_summarizers() 方法
+      在执行过程中长时间阻塞（>4分钟），导致 pytest 测试套件挂起，最终需要
+      KeyboardInterrupt 才能终止。
+影响范围: 影响所有依赖 Container 的测试：test_graphrag.py, test_summary_evaluator.py
+         (integration部分), test_container.py, integration/test_full_flow.py
+根因分析: 容器使用双重检查锁（Double-Check Locking）懒加载模式，_create_summarizers()
+         内部可能尝试连接外部服务（如 Ollama localhost:11434）或加载大型模型/依赖
+         （如 sentence-transformers），在无服务可用时超时等待。
+建议修复:
+  1. 为 _create_summarizers() 中的外部连接添加快速失败超时（如 3 秒）
+  2. 在测试 conftest.py 中提供 mock Container，避免触发真实服务连接
+  3. 考虑添加 Container.create_minimal() 工厂方法用于测试环境
+参考标准: OWASP Testing Guide - 测试隔离原则
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-002】中等 | 已弃用 API 使用: datetime.utcnow()
+--------------------------------------------------------------------------------
+级别: P2 - 重要
+位置: src/wechat_summarizer/infrastructure/adapters/exporters/onenote.py:464
+现象: 使用了 Python 3.12+ 中已弃用的 datetime.datetime.utcnow()
+代码: created = escape(datetime.utcnow().isoformat())
+影响: Python 3.14 运行时产生 DeprecationWarning；未来 Python 版本将移除此 API，
+     导致运行时错误。
+建议修复: 替换为 datetime.datetime.now(datetime.UTC).isoformat()
+参考标准: Python 3.12 Release Notes - Deprecated APIs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-003】中等 | Mypy 类型错误: progress.py 缺少 Optional 导入
+--------------------------------------------------------------------------------
+级别: P2 - 重要
+位置: src/wechat_summarizer/shared/progress.py:269, :302, :325
+现象: 使用了 Optional 类型标注但未导入 typing.Optional，导致运行时 NameError。
+     由于使用了 from __future__ import annotations（延迟求值），此问题仅在
+     运行时类型检查（如 isinstance + get_type_hints）时暴露。
+建议修复: 在文件头部添加 from typing import Optional，或将 Optional[X] 改为 X | None
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-004】中等 | Mypy 类型错误: summary_evaluator.py 类型不匹配
+--------------------------------------------------------------------------------
+级别: P2 - 重要
+位置: src/wechat_summarizer/domain/services/summary_evaluator.py:471
+现象: 
+  (1) SummarizerPort | None 未做空值检查即调用 .summarize()
+  (2) summarize() 接受 ArticleContent 类型，但传入了 str 类型
+建议修复: 
+  1. 添加 if self._summarizer is not None: 空值检查
+  2. 将 str 参数包装为 ArticleContent.from_text(prompt) 后传入
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-005】低 | Mypy 类型错误: secure_storage.py 返回 Any
+--------------------------------------------------------------------------------
+级别: P3 - 一般
+位置: src/wechat_summarizer/shared/secure_storage.py:196
+现象: 函数声明返回 str 但实际返回 Any 类型
+建议修复: 添加显式类型转换 return str(result)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【BUG-006】低 | Mypy 类型错误: structured_logging.py 多处类型不匹配
+--------------------------------------------------------------------------------
+级别: P3 - 一般
+位置: src/wechat_summarizer/shared/utils/structured_logging.py:52, :87, :134
+现象: 
+  (1) 第52行: 返回 Any 但声明返回 str
+  (2) 第87行: append 参数类型与预期不匹配
+  (3) 第134行: 返回 Mapping[str, Token[Any]] 但声明返回 dict[str, Any]
+建议修复: 修正类型注解或添加适当的类型转换
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【WARN-001】代码质量 | Ruff 检出 4711 个代码风格问题
+--------------------------------------------------------------------------------
+级别: P3 - 改善
+统计:
+  - 可自动修复: 3913 个
+  - 需手动修复: 798 个
+主要类别:
+  - UP035/UP037/UP042/UP045: 类型标注现代化建议 (~2000+)
+  - I001/I002: 导入排序问题 (~800+)
+  - F401: 未使用的导入 (~100+)
+  - W293/W291: 空白字符问题 (~500+)
+  - N806/N803: 命名规范问题 (~50+)
+  - E722: 裸 except 捕获 (~20+)
+  - F541: 空 f-string (~30+)
+建议: 运行 `ruff check src --fix` 自动修复大部分问题
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【WARN-002】安全 | 加密密钥使用固定盐值
+--------------------------------------------------------------------------------
+级别: P2 - 安全关注
+位置: src/wechat_summarizer/shared/utils/security.py:59
+现象: PBKDF2 密钥派生使用固定盐值 b"wechat_summarizer_v2"
+影响: 同一用户在同一机器上始终生成相同密钥，降低了密钥的抗彩虹表能力。
+建议: 使用 os.urandom(16) 生成随机盐值并持久化保存
+参考标准: OWASP Cryptographic Storage Cheat Sheet
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【WARN-003】安全 | MCP 安全框架缺少输入消毒
+--------------------------------------------------------------------------------
+级别: P2 - 安全关注
+位置: src/wechat_summarizer/mcp/security.py (AuditLogger._sanitize_args)
+现象: 审计日志参数消毒仅检查键名是否包含敏感词，未对值进行深度检查。
+     长字符串值、嵌套对象等可能携带敏感数据未被过滤。
+建议: 
+  1. 对 str 类型值添加长度截断（如 >200 字符截断）
+  2. 检查值中是否包含类似 API Key 格式的字符串
+参考: MCP Security Best Practices (modelcontextprotocol.io)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【WARN-004】测试覆盖 | 测试套件结构性缺陷
+--------------------------------------------------------------------------------
+级别: P2 - 质量关注
+现象: 
+  1. 387 个测试中仅有 201 个可稳定运行（占 52%），其余因 Container 初始化
+     阻塞而无法在没有外部服务的环境中执行
+  2. 缺少对以下模块的独立单元测试:
+     - infrastructure/adapters/scrapers/ (各抓取器适配器)
+     - infrastructure/adapters/summarizers/simple.py (SimpleSummarizer)
+     - presentation/cli/ (CLI 命令)
+     - infrastructure/observability/ (可观测性)
+     - infrastructure/async_executor.py (异步执行器)
+  3. GUI 测试 (tests/gui/test_components.py) 在无图形环境下跳过
+建议:
+  1. 为每个适配器创建独立单元测试，使用 mock 隔离外部依赖
+  2. 在 conftest.py 中添加环境感知的 fixture，自动跳过需要外部服务的测试
+  3. 添加 pytest-timeout 防止测试无限等待
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【WARN-005】安全 | SSRF 防护不检查 DNS 重绑定
+--------------------------------------------------------------------------------
+级别: P3 - 安全改善
+位置: src/wechat_summarizer/domain/value_objects/url.py:81-83
+现象: _is_private_address() 方法注释说明不进行 DNS 解析以避免网络请求。
+     这意味着攻击者可以通过 DNS 重绑定（DNS Rebinding）绕过 SSRF 防护：
+     使用一个域名首次解析为公网 IP，后续解析为内网 IP。
+建议: 在实际发起 HTTP 请求前（而非 URL 构造时）进行连接级 IP 检查
+参考标准: OWASP SSRF Prevention Cheat Sheet
+
+================================================================================
+                              问题统计汇总
+================================================================================
+  P0 阻塞性缺陷:  1 个 (BUG-001)
+  P2 重要缺陷:    3 个 (BUG-002, BUG-003, BUG-004)
+  P3 一般缺陷:    2 个 (BUG-005, BUG-006)
+  安全告警:       3 个 (WARN-002, WARN-003, WARN-005)
+  质量告警:       2 个 (WARN-001, WARN-004)
+  合计:          11 个问题
+================================================================================

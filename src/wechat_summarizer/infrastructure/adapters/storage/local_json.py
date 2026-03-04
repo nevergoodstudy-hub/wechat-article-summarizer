@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -67,9 +67,7 @@ class LocalJsonStorage:
             path = self._dir / f"{article.id}.json"
             tmp_path = self._dir / f".{article.id}.json.tmp"
             # 原子写入：先写临时文件，再用 os.replace 覆盖
-            tmp_path.write_text(
-                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
+            tmp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             import os
 
             os.replace(tmp_path, path)
@@ -170,9 +168,7 @@ class LocalJsonStorage:
                     cache_file.unlink()
 
                     # 清理index
-                    to_delete = [
-                        url for url, aid in self._index.items() if aid == article_id
-                    ]
+                    to_delete = [url for url, aid in self._index.items() if aid == article_id]
                     for url in to_delete:
                         self._index.pop(url, None)
 
@@ -300,10 +296,10 @@ class LocalJsonStorage:
         publish_dt = datetime.fromisoformat(publish_time) if publish_time else None
 
         created_at = data.get("created_at")
-        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now(timezone.utc)
+        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now(UTC)
 
         updated_at = data.get("updated_at")
-        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now(timezone.utc)
+        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now(UTC)
 
         c = data.get("content") or {}
         content = ArticleContent(

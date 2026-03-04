@@ -10,6 +10,7 @@ import asyncio
 import random
 import re
 from datetime import datetime
+from typing import Any, cast
 
 import httpx
 from bs4 import BeautifulSoup
@@ -180,7 +181,11 @@ class ToutiaoScraper(BaseScraper):
         ]
 
         for tag, attrs in selectors:
-            elem = soup.find(tag, attrs=attrs) if attrs else soup.find(tag)
+            elem = (
+                soup.find(tag, attrs=cast(dict[str, Any] | None, attrs))
+                if attrs
+                else soup.find(tag)
+            )
             if elem:
                 if tag == "meta":
                     content = elem.get("content")
@@ -235,7 +240,7 @@ class ToutiaoScraper(BaseScraper):
         time_patterns = [
             r'"publish_time":\s*(\d+)',
             r'"time":\s*"(\d{4}-\d{2}-\d{2})"',
-            r'发布时间[：:]\s*(\d{4}-\d{2}-\d{2})',
+            r"发布时间[：:]\s*(\d{4}-\d{2}-\d{2})",
         ]
 
         for pattern in time_patterns:
@@ -249,7 +254,7 @@ class ToutiaoScraper(BaseScraper):
                         return datetime.fromtimestamp(timestamp)
                     else:
                         return datetime.strptime(time_val, "%Y-%m-%d")
-                except (ValueError, OSError):
+                except ValueError, OSError:
                     pass
 
         return None

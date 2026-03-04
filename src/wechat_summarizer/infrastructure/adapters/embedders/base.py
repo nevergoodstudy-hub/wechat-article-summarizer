@@ -37,11 +37,11 @@ class BaseEmbedder(ABC):
 
     def _preprocess_text(self, text: str, max_length: int = 8000) -> str:
         """预处理文本
-        
+
         Args:
             text: 原始文本
             max_length: 最大字符数
-            
+
         Returns:
             处理后的文本
         """

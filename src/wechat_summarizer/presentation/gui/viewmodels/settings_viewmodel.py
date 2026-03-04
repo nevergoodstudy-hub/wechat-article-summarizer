@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 from .base import BaseViewModel, Observable
 
 if TYPE_CHECKING:
     from ....infrastructure.config import Container
+
+@runtime_checkable
+class CacheStatsLike(Protocol):
+    total_entries: int
+    total_size_bytes: int
+
+@runtime_checkable
+class CacheStorageLike(Protocol):
+    def get_stats(self) -> CacheStatsLike: ...
+    def clear_all(self) -> int: ...
+    def cleanup_expired(self) -> int: ...
 
 
 class SettingsViewModel(BaseViewModel):
@@ -22,28 +34,34 @@ class SettingsViewModel(BaseViewModel):
         settings = container.settings
 
         # 主题设置
-        self._appearance_mode = Observable("light")
+        self._appearance_mode: Observable[str] = Observable("light")
 
         # 默认选项
-        self._default_summarizer = Observable(settings.default_summary_method)
-        self._default_exporter = Observable("html")
+        self._default_summarizer: Observable[str] = Observable(str(settings.default_summary_method))
+        self._default_exporter: Observable[str] = Observable("html")
 
         # API 配置状态（只读显示）
-        self._openai_configured = Observable(bool(settings.openai.api_key.get_secret_value()))
-        self._anthropic_configured = Observable(bool(settings.anthropic.api_key.get_secret_value()))
-        self._zhipu_configured = Observable(bool(settings.zhipu.api_key.get_secret_value()))
+        self._openai_configured: Observable[bool] = Observable(
+            bool(settings.openai.api_key.get_secret_value())
+        )
+        self._anthropic_configured: Observable[bool] = Observable(
+            bool(settings.anthropic.api_key.get_secret_value())
+        )
+        self._zhipu_configured: Observable[bool] = Observable(
+            bool(settings.zhipu.api_key.get_secret_value())
+        )
 
         # 导出配置状态
-        self._obsidian_configured = Observable(bool(settings.export.obsidian_vault_path))
-        self._notion_configured = Observable(
+        self._obsidian_configured: Observable[bool] = Observable(bool(settings.export.obsidian_vault_path))
+        self._notion_configured: Observable[bool] = Observable(
             bool(settings.export.notion_api_key.get_secret_value())
             and bool(settings.export.notion_database_id)
         )
-        self._onenote_configured = Observable(bool(settings.export.onenote_client_id))
+        self._onenote_configured: Observable[bool] = Observable(bool(settings.export.onenote_client_id))
 
         # 缓存信息
-        self._cache_size = Observable("")
-        self._cache_count = Observable(0)
+        self._cache_size: Observable[str] = Observable("")
+        self._cache_count: Observable[int] = Observable(0)
 
         # 刷新缓存统计
         self._refresh_cache_stats()
@@ -121,8 +139,9 @@ class SettingsViewModel(BaseViewModel):
         """刷新缓存统计信息"""
         try:
             storage = self._container.storage
-            if storage is not None:
-                stats = storage.get_stats()
+            if storage is not None and isinstance(storage, CacheStorageLike):
+                typed_storage = cast(CacheStorageLike, storage)
+                stats = typed_storage.get_stats()
                 self._cache_count.value = stats.total_entries
 
                 # 格式化大小
@@ -148,8 +167,9 @@ class SettingsViewModel(BaseViewModel):
         """
         try:
             storage = self._container.storage
-            if storage is not None:
-                count = storage.clear_all()
+            if storage is not None and isinstance(storage, CacheStorageLike):
+                typed_storage = cast(CacheStorageLike, storage)
+                count = int(typed_storage.clear_all())
                 self._refresh_cache_stats()
                 return count
             return 0
@@ -164,8 +184,9 @@ class SettingsViewModel(BaseViewModel):
         """
         try:
             storage = self._container.storage
-            if storage is not None:
-                count = storage.cleanup_expired()
+            if storage is not None and isinstance(storage, CacheStorageLike):
+                typed_storage = cast(CacheStorageLike, storage)
+                count = int(typed_storage.cleanup_expired())
                 self._refresh_cache_stats()
                 return count
             return 0

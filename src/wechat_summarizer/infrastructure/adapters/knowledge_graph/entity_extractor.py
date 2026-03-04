@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -47,7 +47,7 @@ DEFAULT_RELATIONSHIP_TYPES = [
 ]
 
 # 实体关系提取提示词
-EXTRACTION_PROMPT = '''你是一个专业的知识图谱构建助手。请从以下文本中提取实体和关系。
+EXTRACTION_PROMPT = """你是一个专业的知识图谱构建助手。请从以下文本中提取实体和关系。
 
 **任务说明**:
 1. 识别文本中的重要实体（如人物、组织、地点、事件、概念、技术、产品等）
@@ -81,7 +81,7 @@ EXTRACTION_PROMPT = '''你是一个专业的知识图谱构建助手。请从以
 **文本内容**:
 {text}
 
-请输出 JSON 格式的提取结果：'''
+请输出 JSON 格式的提取结果："""
 
 
 class BaseEntityExtractor(ABC):
@@ -111,18 +111,14 @@ class BaseEntityExtractor(ABC):
     def _generate_entity_id(self, name: str, entity_type: str) -> str:
         """生成实体 ID"""
         key = f"{entity_type}:{name}"
-        return hashlib.md5(key.encode()).hexdigest()[:12]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
-    def _generate_relationship_id(
-        self, source_id: str, target_id: str, rel_type: str
-    ) -> str:
+    def _generate_relationship_id(self, source_id: str, target_id: str, rel_type: str) -> str:
         """生成关系 ID"""
         key = f"{source_id}-{rel_type}-{target_id}"
-        return hashlib.md5(key.encode()).hexdigest()[:12]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
-    def _parse_extraction_response(
-        self, response: str, source_text: str
-    ) -> ExtractionResult:
+    def _parse_extraction_response(self, response: str, source_text: str) -> ExtractionResult:
         """解析 LLM 提取响应"""
         entities: list[Entity] = []
         relationships: list[Relationship] = []
@@ -311,13 +307,15 @@ class SimpleEntityExtractor(BaseEntityExtractor):
 
     # 常见的中文人名模式
     PERSON_PATTERNS = [
-        r"(?:由|被|让|使|向|对|跟|同|和|与|给|替|为|把|将|得|的)([^\s,，。！？、：；""'']{2,4})[说道讲表示认为提出]",
-        r"([^\s,，。！？、：；""'']{2,4})(?:先生|女士|教授|博士|老师|同学|院士|专家)",
+        r"(?:由|被|让|使|向|对|跟|同|和|与|给|替|为|把|将|得|的)([^\s,，。！？、：；"
+        "'']{2,4})[说道讲表示认为提出]",
+        r"([^\s,，。！？、：；" "'']{2,4})(?:先生|女士|教授|博士|老师|同学|院士|专家)",
     ]
 
     # 组织名模式
     ORG_PATTERNS = [
-        r"([^\s,，。！？、：；""'']+(?:公司|集团|大学|学院|研究院|中心|组织|协会|委员会|政府|部门))",
+        r"([^\s,，。！？、：；"
+        "'']+(?:公司|集团|大学|学院|研究院|中心|组织|协会|委员会|政府|部门))",
     ]
 
     # 技术/概念模式
@@ -383,18 +381,21 @@ class SimpleEntityExtractor(BaseEntityExtractor):
             matches = re.findall(pattern, text)
             for match in matches:
                 name = match.strip()
-                if name and len(name) >= 2 and name not in entity_names:
-                    # 过滤常见词
-                    if name.lower() not in {"the", "a", "an", "is", "are", "was", "were"}:
-                        entity_names.add(name)
-                        entities.append(
-                            Entity(
-                                id=self._generate_entity_id(name, "技术"),
-                                name=name,
-                                type="技术",
-                                description="",
-                            )
+                if (
+                    name
+                    and len(name) >= 2
+                    and name not in entity_names
+                    and name.lower() not in {"the", "a", "an", "is", "are", "was", "were"}
+                ):
+                    entity_names.add(name)
+                    entities.append(
+                        Entity(
+                            id=self._generate_entity_id(name, "技术"),
+                            name=name,
+                            type="技术",
+                            description="",
                         )
+                    )
 
         logger.debug(f"简单提取器提取到 {len(entities)} 个实体")
 

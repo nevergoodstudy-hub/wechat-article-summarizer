@@ -10,7 +10,7 @@ from enum import IntEnum
 
 class ServiceType(IntEnum):
     """公众号服务类型
-    
+
     微信公众号分为订阅号和服务号两种类型。
     """
 
@@ -22,9 +22,9 @@ class ServiceType(IntEnum):
 class OfficialAccount:
     """
     公众号实体
-    
+
     表示一个微信公众号账号，是搜索结果的核心数据结构。
-    
+
     Attributes:
         fakeid: 公众号唯一标识（微信内部ID，用于API调用）
         nickname: 公众号名称（显示名）
@@ -63,12 +63,12 @@ class OfficialAccount:
         return "订阅号" if self.service_type == ServiceType.SUBSCRIPTION else "服务号"
 
     @classmethod
-    def from_api_response(cls, data: dict) -> "OfficialAccount":
+    def from_api_response(cls, data: dict) -> OfficialAccount:
         """从微信API响应创建实体
-        
+
         Args:
             data: 微信搜索API返回的公众号数据
-            
+
         Returns:
             OfficialAccount实体实例
         """

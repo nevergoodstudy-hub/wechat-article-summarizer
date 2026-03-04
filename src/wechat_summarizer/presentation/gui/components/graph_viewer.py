@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from ..styles.colors import ModernColors
 
@@ -148,7 +149,7 @@ class GraphViewerComponent:
         """网格布局"""
         self.frame.grid(**kwargs)
 
-    def load_knowledge_graph(self, kg: "KnowledgeGraph") -> None:
+    def load_knowledge_graph(self, kg: KnowledgeGraph) -> None:
         """加载知识图谱
 
         Args:
@@ -170,12 +171,14 @@ class GraphViewerComponent:
 
         # 加载边
         for rel_id, rel in kg.relationships.items():
-            self.edges.append({
-                "id": rel_id,
-                "source": rel.source_id,
-                "target": rel.target_id,
-                "type": rel.type,
-            })
+            self.edges.append(
+                {
+                    "id": rel_id,
+                    "source": rel.source_id,
+                    "target": rel.target_id,
+                    "type": rel.type,
+                }
+            )
 
         # 初始化布局
         self._init_layout()
@@ -197,8 +200,14 @@ class GraphViewerComponent:
         self.edges.clear()
         self.node_positions.clear()
 
-        for entity in entities:
-            entity_id = entity.get("id", entity.get("name"))
+        for index, entity in enumerate(entities):
+            entity_id_raw = entity.get("id", entity.get("name"))
+            if entity_id_raw is None:
+                entity_id = f"entity_{index}"
+            elif isinstance(entity_id_raw, str):
+                entity_id = entity_id_raw
+            else:
+                entity_id = str(entity_id_raw)
             self.nodes[entity_id] = {
                 "id": entity_id,
                 "name": entity.get("name", ""),
@@ -207,12 +216,14 @@ class GraphViewerComponent:
             }
 
         for rel in relationships:
-            self.edges.append({
-                "id": rel.get("id", f"{rel['source']}-{rel['target']}"),
-                "source": rel.get("source_id", rel.get("source")),
-                "target": rel.get("target_id", rel.get("target")),
-                "type": rel.get("type", "相关"),
-            })
+            self.edges.append(
+                {
+                    "id": rel.get("id", f"{rel['source']}-{rel['target']}"),
+                    "source": rel.get("source_id", rel.get("source")),
+                    "target": rel.get("target_id", rel.get("target")),
+                    "type": rel.get("type", "相关"),
+                }
+            )
 
         self._init_layout()
         self._update_stats()
@@ -312,7 +323,10 @@ class GraphViewerComponent:
                 pos_s = self.node_positions[source]
                 pos_t = self.node_positions[target]
                 item = self.canvas.create_line(
-                    pos_s.x, pos_s.y, pos_t.x, pos_t.y,
+                    pos_s.x,
+                    pos_s.y,
+                    pos_t.x,
+                    pos_t.y,
                     fill=edge_color,
                     width=1,
                     arrow="last",
@@ -353,9 +367,7 @@ class GraphViewerComponent:
 
     def _update_stats(self) -> None:
         """更新统计信息"""
-        self.stats_label.configure(
-            text=f"节点: {len(self.nodes)} | 边: {len(self.edges)}"
-        )
+        self.stats_label.configure(text=f"节点: {len(self.nodes)} | 边: {len(self.edges)}")
 
     def _reset_layout(self) -> None:
         """重置布局"""

@@ -9,8 +9,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Callable
+from dataclasses import dataclass
 
 from loguru import logger
 
@@ -24,7 +23,7 @@ class RateLimitConfig:
     max_interval: float = 5.0  # 最大请求间隔（秒）
     burst_size: int = 5  # 突发请求数
     adaptive: bool = True  # 是否启用自适应调整
-    
+
     @property
     def base_interval(self) -> float:
         """基准间隔时间"""
@@ -34,17 +33,17 @@ class RateLimitConfig:
 class RateLimiter:
     """
     频率限制器
-    
+
     使用滑动窗口算法控制请求频率，支持自适应调整。
     当检测到速率限制错误时会自动增加等待时间。
-    
+
     使用方法:
         limiter = RateLimiter(config)
-        
+
         async with limiter:
             # 执行请求
             response = await client.get(url)
-            
+
         # 或者手动等待
         await limiter.wait()
         response = await client.get(url)
@@ -87,7 +86,7 @@ class RateLimiter:
 
     async def wait(self) -> float:
         """等待直到可以发送下一个请求
-        
+
         Returns:
             实际等待的时间（秒）
         """
@@ -130,14 +129,14 @@ class RateLimiter:
 
     def report_success(self) -> None:
         """报告请求成功
-        
+
         用于自适应调整：成功时逐渐减少间隔
         """
         if not self._config.adaptive:
             return
 
         self._consecutive_errors = 0
-        
+
         # 成功时缓慢减少间隔
         if self._current_interval > self._config.min_interval:
             self._current_interval = max(
@@ -148,7 +147,7 @@ class RateLimiter:
 
     def report_error(self, is_rate_limit: bool = False) -> None:
         """报告请求失败
-        
+
         Args:
             is_rate_limit: 是否为频率限制错误
         """
@@ -163,9 +162,7 @@ class RateLimiter:
                 self._config.max_interval,
                 self._current_interval * 2.0,
             )
-            logger.warning(
-                f"检测到频率限制，增加间隔为 {self._current_interval:.2f}s"
-            )
+            logger.warning(f"检测到频率限制，增加间隔为 {self._current_interval:.2f}s")
         else:
             # 其他错误：小幅增加间隔
             self._current_interval = min(
@@ -181,7 +178,7 @@ class RateLimiter:
         self._consecutive_errors = 0
         logger.debug("频率限制器已重置")
 
-    async def __aenter__(self) -> "RateLimiter":
+    async def __aenter__(self) -> RateLimiter:
         """异步上下文管理器入口"""
         await self.wait()
         return self
@@ -199,7 +196,7 @@ class RateLimiter:
 class AdaptiveRateLimiter(RateLimiter):
     """
     自适应频率限制器
-    
+
     基于响应时间动态调整请求间隔。
     """
 
@@ -209,15 +206,15 @@ class AdaptiveRateLimiter(RateLimiter):
 
     def record_response_time(self, response_time: float) -> None:
         """记录响应时间
-        
+
         Args:
             response_time: 响应耗时（秒）
         """
         self._response_times.append(response_time)
-        
+
         if len(self._response_times) >= 5:
             avg_time = sum(self._response_times) / len(self._response_times)
-            
+
             # 如果平均响应时间过长，增加请求间隔
             if avg_time > 5.0:
                 self._current_interval = min(
@@ -225,8 +222,7 @@ class AdaptiveRateLimiter(RateLimiter):
                     self._current_interval * 1.1,
                 )
                 logger.debug(
-                    f"响应时间较长 ({avg_time:.2f}s)，"
-                    f"调整间隔为 {self._current_interval:.2f}s"
+                    f"响应时间较长 ({avg_time:.2f}s)，调整间隔为 {self._current_interval:.2f}s"
                 )
             elif avg_time < 2.0 and self._consecutive_errors == 0:
                 self._current_interval = max(

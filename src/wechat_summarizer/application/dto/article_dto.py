@@ -25,7 +25,7 @@ class ArticleDTO:
     source_platform: str = ""
 
     # 摘要（如果有）
-    summary: "SummaryDTO | None" = None
+    summary: SummaryDTO | None = None
 
     # 元数据
     id: str | None = None

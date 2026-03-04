@@ -1,7 +1,7 @@
 """异步批量处理用例
 
 使用 asyncio.Semaphore 限制最大并发数，防止触发限流。
-使用 asyncio.gather 批量执行异步任务。
+使用 asyncio.TaskGroup 批量执行异步任务（Python 3.11+ 结构化并发）。
 """
 
 from __future__ import annotations
@@ -17,8 +17,9 @@ from ...domain.entities import Article
 from ..ports.inbound import BatchProgress
 
 if TYPE_CHECKING:
-    from ..ports.outbound.scraper_port import AsyncScraperPort
+    from ...domain.value_objects import ArticleURL
     from ..ports.outbound import StoragePort, SummarizerPort
+    from ..ports.outbound.scraper_port import AsyncScraperPort
 
 
 @dataclass
@@ -148,15 +149,20 @@ class AsyncBatchProcessUseCase:
                         on_progress(progress)
                     return None
 
-        # 使用 gather 并发执行所有任务
-        tasks = [process_one(url) for url in urls]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # 使用 TaskGroup 并发执行所有任务（结构化并发）
+        # process_one 内部已捕获异常并返回 None，所以 TaskGroup 不会因单任务失败而取消全部
+        task_results: list[Article | None] = []
+        async with asyncio.TaskGroup() as tg:
+
+            async def _collect(url: str) -> None:
+                task_results.append(await process_one(url))
+
+            for url in urls:
+                tg.create_task(_collect(url))
 
         # 收集结果
-        for i, res in enumerate(results):
-            if isinstance(res, Exception):
-                result.errors.append((urls[i], str(res)))
-            elif res is not None:
+        for res in task_results:
+            if res is not None:
                 result.articles.append(res)
             # res 为 None 的情况已经在 process_one 中记录了
 
@@ -167,7 +173,7 @@ class AsyncBatchProcessUseCase:
 
         return result
 
-    async def _scrape_with_fallback(self, url: "ArticleURL") -> Article | None:
+    async def _scrape_with_fallback(self, url: ArticleURL) -> Article | None:
         """使用抓取器抓取，支持回退"""
         from ...shared.exceptions import ScraperError
 
@@ -201,10 +207,13 @@ class AsyncBatchProcessUseCase:
         try:
             # 在线程池中执行同步的摘要生成（避免阻塞事件循环）
             loop = asyncio.get_event_loop()
+            content = article.content
+            if content is None:
+                logger.warning("文章内容为空，跳过摘要生成")
+                return article
             summary = await loop.run_in_executor(
                 None,
-                summarizer.summarize,
-                article.content_text,
+                lambda: summarizer.summarize(content),
             )
             article.attach_summary(summary)
             logger.info(f"摘要生成成功: {article.title}")

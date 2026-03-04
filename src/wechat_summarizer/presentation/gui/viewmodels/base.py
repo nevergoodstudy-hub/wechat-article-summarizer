@@ -8,9 +8,11 @@
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -33,13 +35,13 @@ class PropertyChangedEvent:
     new_value: Any
 
 
-class Observable(Generic[T]):
+class Observable[T]:
     """可观察属性
 
     用于实现数据绑定，当值变化时自动通知订阅者。
     """
 
-    def __init__(self, initial_value: T):
+    def __init__(self, initial_value: T) -> None:
         self._value = initial_value
         self._callbacks: list[Callable[[T, T], None]] = []
 
@@ -68,10 +70,8 @@ class Observable(Generic[T]):
 
     def _notify(self, old_value: T, new_value: T) -> None:
         for callback in self._callbacks:
-            try:
+            with contextlib.suppress(Exception):
                 callback(old_value, new_value)
-            except Exception:
-                pass  # 忽略回调异常
 
 
 @dataclass
@@ -99,10 +99,10 @@ class BaseViewModel:
     - 错误处理
     """
 
-    def __init__(self):
-        self._state = Observable(ViewModelState.IDLE)
-        self._error_message = Observable("")
-        self._is_busy = Observable(False)
+    def __init__(self) -> None:
+        self._state: Observable[ViewModelState] = Observable(ViewModelState.IDLE)
+        self._error_message: Observable[str] = Observable("")
+        self._is_busy: Observable[bool] = Observable(False)
         self._property_changed_callbacks: list[Callable[[PropertyChangedEvent], None]] = []
 
     @property
@@ -129,7 +129,9 @@ class BaseViewModel:
     def is_busy(self, value: bool) -> None:
         self._is_busy.value = value
 
-    def subscribe_state(self, callback: Callable[[ViewModelState, ViewModelState], None]) -> Callable[[], None]:
+    def subscribe_state(
+        self, callback: Callable[[ViewModelState, ViewModelState], None]
+    ) -> Callable[[], None]:
         """订阅状态变化"""
         return self._state.subscribe(callback)
 
@@ -141,7 +143,9 @@ class BaseViewModel:
         """订阅忙碌状态变化"""
         return self._is_busy.subscribe(callback)
 
-    def on_property_changed(self, callback: Callable[[PropertyChangedEvent], None]) -> Callable[[], None]:
+    def on_property_changed(
+        self, callback: Callable[[PropertyChangedEvent], None]
+    ) -> Callable[[], None]:
         """订阅属性变更事件"""
         self._property_changed_callbacks.append(callback)
         return lambda: self._property_changed_callbacks.remove(callback)
@@ -150,10 +154,8 @@ class BaseViewModel:
         """通知属性变更"""
         event = PropertyChangedEvent(property_name, old_value, new_value)
         for callback in self._property_changed_callbacks:
-            try:
+            with contextlib.suppress(Exception):
                 callback(event)
-            except Exception:
-                pass
 
     def set_error(self, message: str) -> None:
         """设置错误状态"""

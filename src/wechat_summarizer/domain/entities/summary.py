@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from ...shared.utils import utc_now
 
 
-class SummaryMethod(str, Enum):
+class SummaryMethod(StrEnum):
     """摘要生成方法"""
 
     SIMPLE = "simple"  # 简单规则提取
@@ -23,7 +23,7 @@ class SummaryMethod(str, Enum):
     GRAPHRAG = "graphrag"  # GraphRAG 知识图谱摘要
 
 
-class SummaryStyle(str, Enum):
+class SummaryStyle(StrEnum):
     """摘要风格"""
 
     CONCISE = "concise"  # 简洁

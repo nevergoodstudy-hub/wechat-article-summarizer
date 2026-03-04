@@ -1,0 +1,1714 @@
+﻿[
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 14,
+      "row": 372
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\domain\\services\\summary_evaluator.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 372
+    },
+    "message": "Variable `P` in function should be lowercase",
+    "noqa_row": 372,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 17,
+      "row": 372
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\domain\\services\\summary_evaluator.py",
+    "fix": null,
+    "location": {
+      "column": 16,
+      "row": 372
+    },
+    "message": "Variable `R` in function should be lowercase",
+    "noqa_row": 372,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 21,
+      "row": 372
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\domain\\services\\summary_evaluator.py",
+    "fix": null,
+    "location": {
+      "column": 19,
+      "row": 372
+    },
+    "message": "Variable `F1` in function should be lowercase",
+    "noqa_row": 372,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 91,
+      "row": 418
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\domain\\services\\summary_evaluator.py",
+    "fix": null,
+    "location": {
+      "column": 21,
+      "row": 416
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 416,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 91,
+      "row": 386
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\adapters\\knowledge_graph\\entity_extractor.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 384
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 384,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 10,
+      "row": 196
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\adapters\\knowledge_graph\\graph_builder.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 196
+    },
+    "message": "Variable `G` in function should be lowercase",
+    "noqa_row": 196,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N803",
+    "end_location": {
+      "column": 40,
+      "row": 222
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\adapters\\knowledge_graph\\graph_builder.py",
+    "fix": null,
+    "location": {
+      "column": 29,
+      "row": 222
+    },
+    "message": "Argument name `G` should be lowercase",
+    "noqa_row": 222,
+    "url": "https://docs.astral.sh/ruff/rules/invalid-argument-name"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 86,
+      "row": 286
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\adapters\\knowledge_graph\\graph_builder.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 284
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 284,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 76,
+      "row": 64
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\adapters\\vector_stores\\memory_store.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 63
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 63,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 29,
+      "row": 121
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\infrastructure\\async_executor.py",
+    "fix": null,
+    "location": {
+      "column": 21,
+      "row": 118
+    },
+    "message": "Use `contextlib.suppress(BaseExceptionGroup)` instead of `try`-`except`-`pass`",
+    "noqa_row": 118,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 69,
+      "row": 962
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\app.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 961
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 961,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 21,
+      "row": 473
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\assets\\icons.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 470
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 470,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 466
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\components\\button.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 463
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 463,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 71,
+      "row": 342
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\components\\contextmenu.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 341
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 341,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 70,
+      "row": 260
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\components\\modal.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 258
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 258,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 37,
+      "row": 616
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\components\\tabs.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 614
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 614,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 49,
+      "row": 17
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\batch_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 18
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\batch_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 18,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 19
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\batch_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 19
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 19,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 28,
+      "row": 20
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\batch_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 20
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 20,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 20
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\history_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 20
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 20,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 28,
+      "row": 21
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\history_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 21
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 21,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 21
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\home_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 21
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 21,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 22
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\home_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 22
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 22,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 23
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\home_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 23
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 23,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 34,
+      "row": 24
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\home_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 24
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 24,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 54,
+      "row": 25
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\home_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 25
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 25,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 21
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\settings_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 21
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 21,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 42,
+      "row": 22
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\settings_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 22
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 22,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 79,
+      "row": 23
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\settings_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 23
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 23,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 59,
+      "row": 24
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\settings_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 24
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 24,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 17
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\single_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 18
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\single_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 18,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 28,
+      "row": 19
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\pages\\single_page.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 19
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 19,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 35,
+      "row": 227
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\utils\\animation.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 227
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 227,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 30,
+      "row": 72
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\utils\\windows_integration.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 72
+    },
+    "message": "Variable `CLSID_TaskbarList` in function should be lowercase",
+    "noqa_row": 72,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 31,
+      "row": 286
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\utils\\windows_integration.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 286
+    },
+    "message": "Variable `CSIDL_PERSONAL` in function should be lowercase",
+    "noqa_row": 286,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 39,
+      "row": 302
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\utils\\windows_integration.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 302
+    },
+    "message": "Variable `CSIDL_DESKTOPDIRECTORY` in function should be lowercase",
+    "noqa_row": 302,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 21,
+      "row": 76
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\viewmodels\\base.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 73
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 73,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 12,
+      "row": 51
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\animation_helper.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 51
+    },
+    "message": "Function name `FPS` should be lowercase",
+    "noqa_row": 51,
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 23,
+      "row": 58
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\animation_helper.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 58
+    },
+    "message": "Function name `FRAME_DURATION` should be lowercase",
+    "noqa_row": 58,
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 17
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\log_panel.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 18
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\log_panel.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 18,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 46,
+      "row": 19
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\log_panel.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 19
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 19,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 17
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\sidebar.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 18
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\sidebar.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 18,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 36,
+      "row": 19
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\sidebar.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 19
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 19,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 41,
+      "row": 17
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\tooltip.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 18
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\presentation\\gui\\widgets\\tooltip.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 18,
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 34,
+      "row": 32
+    },
+    "filename": "D:\\Newidea-warp\\src\\wechat_summarizer\\shared\\utils\\security.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 32
+    },
+    "message": "Variable `FILE_ATTRIBUTE_HIDDEN` in function should be lowercase",
+    "noqa_row": 32,
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "UP043",
+    "end_location": {
+      "column": 82,
+      "row": 34
+    },
+    "filename": "D:\\Newidea-warp\\tests\\conftest.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "Generator[None]",
+          "end_location": {
+            "column": 82,
+            "row": 34
+          },
+          "location": {
+            "column": 55,
+            "row": 34
+          }
+        }
+      ],
+      "message": "Remove default type arguments"
+    },
+    "location": {
+      "column": 55,
+      "row": 34
+    },
+    "message": "Unnecessary default type arguments",
+    "noqa_row": 34,
+    "url": "https://docs.astral.sh/ruff/rules/unnecessary-default-type-args"
+  },
+  {
+    "cell": null,
+    "code": "RUF100",
+    "end_location": {
+      "column": 40,
+      "row": 69
+    },
+    "filename": "D:\\Newidea-warp\\tests\\conftest.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 40,
+            "row": 69
+          },
+          "location": {
+            "column": 26,
+            "row": 69
+          }
+        }
+      ],
+      "message": "Remove unused `noqa` directive"
+    },
+    "location": {
+      "column": 28,
+      "row": 69
+    },
+    "message": "Unused `noqa` directive (unused: `N816`)",
+    "noqa_row": 69,
+    "url": "https://docs.astral.sh/ruff/rules/unused-noqa"
+  },
+  {
+    "cell": null,
+    "code": "UP043",
+    "end_location": {
+      "column": 62,
+      "row": 217
+    },
+    "filename": "D:\\Newidea-warp\\tests\\conftest.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "Generator[Path]",
+          "end_location": {
+            "column": 62,
+            "row": 217
+          },
+          "location": {
+            "column": 35,
+            "row": 217
+          }
+        }
+      ],
+      "message": "Remove default type arguments"
+    },
+    "location": {
+      "column": 35,
+      "row": 217
+    },
+    "message": "Unnecessary default type arguments",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/unnecessary-default-type-args"
+  },
+  {
+    "cell": null,
+    "code": "UP043",
+    "end_location": {
+      "column": 61,
+      "row": 225
+    },
+    "filename": "D:\\Newidea-warp\\tests\\conftest.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "Generator[Path]",
+          "end_location": {
+            "column": 61,
+            "row": 225
+          },
+          "location": {
+            "column": 34,
+            "row": 225
+          }
+        }
+      ],
+      "message": "Remove default type arguments"
+    },
+    "location": {
+      "column": 34,
+      "row": 225
+    },
+    "message": "Unnecessary default type arguments",
+    "noqa_row": 225,
+    "url": "https://docs.astral.sh/ruff/rules/unnecessary-default-type-args"
+  },
+  {
+    "cell": null,
+    "code": "E721",
+    "end_location": {
+      "column": 39,
+      "row": 101
+    },
+    "filename": "D:\\Newidea-warp\\tests\\gui\\test_components.py",
+    "fix": null,
+    "location": {
+      "column": 16,
+      "row": 101
+    },
+    "message": "Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks",
+    "noqa_row": 101,
+    "url": "https://docs.astral.sh/ruff/rules/type-comparison"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 70,
+      "row": 328
+    },
+    "filename": "D:\\Newidea-warp\\tests\\gui\\test_components.py",
+    "fix": null,
+    "location": {
+      "column": 66,
+      "row": 328
+    },
+    "message": "`wechat_summarizer.presentation.gui.utils.i18n` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+    "noqa_row": 328,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 79,
+      "row": 349
+    },
+    "filename": "D:\\Newidea-warp\\tests\\gui\\test_components.py",
+    "fix": null,
+    "location": {
+      "column": 66,
+      "row": 349
+    },
+    "message": "`wechat_summarizer.presentation.gui.utils.theme_manager` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+    "noqa_row": 349,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 23,
+      "row": 372
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_graphrag.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 26,
+            "row": 372
+          },
+          "location": {
+            "column": 9,
+            "row": 372
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `graphrag_names`"
+    },
+    "location": {
+      "column": 9,
+      "row": 372
+    },
+    "message": "Local variable `graphrag_names` is assigned to but never used",
+    "noqa_row": 372,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 88,
+      "row": 20
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_mcp_input_validator.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\r\n\r\nfrom unittest.mock import patch\r\n\r\nimport pytest\r\n\r\nfrom wechat_summarizer.mcp.input_validator import MCPInputValidator, MCPValidationError\r\n\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 23
+          },
+          "location": {
+            "column": 1,
+            "row": 14
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 14
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 14,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 32,
+      "row": 9
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_memory_cache.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 10
+          },
+          "location": {
+            "column": 1,
+            "row": 9
+          }
+        }
+      ],
+      "message": "Remove unused import: `unittest.mock.patch`"
+    },
+    "location": {
+      "column": 27,
+      "row": 9
+    },
+    "message": "`unittest.mock.patch` imported but unused",
+    "noqa_row": 9,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "SIM118",
+    "end_location": {
+      "column": 49,
+      "row": 124
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 49,
+            "row": 124
+          },
+          "location": {
+            "column": 42,
+            "row": 124
+          }
+        }
+      ],
+      "message": "Remove `.keys()`"
+    },
+    "location": {
+      "column": 29,
+      "row": 124
+    },
+    "message": "Use `key in dict` instead of `key in dict.keys()`",
+    "noqa_row": 124,
+    "url": "https://docs.astral.sh/ruff/rules/in-dict-keys"
+  },
+  {
+    "cell": null,
+    "code": "SIM118",
+    "end_location": {
+      "column": 51,
+      "row": 137
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 51,
+            "row": 137
+          },
+          "location": {
+            "column": 44,
+            "row": 137
+          }
+        }
+      ],
+      "message": "Remove `.keys()`"
+    },
+    "location": {
+      "column": 31,
+      "row": 137
+    },
+    "message": "Use `key in dict` instead of `key in dict.keys()`",
+    "noqa_row": 137,
+    "url": "https://docs.astral.sh/ruff/rules/in-dict-keys"
+  },
+  {
+    "cell": null,
+    "code": "SIM118",
+    "end_location": {
+      "column": 50,
+      "row": 150
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 50,
+            "row": 150
+          },
+          "location": {
+            "column": 43,
+            "row": 150
+          }
+        }
+      ],
+      "message": "Remove `.keys()`"
+    },
+    "location": {
+      "column": 30,
+      "row": 150
+    },
+    "message": "Use `key in dict` instead of `key in dict.keys()`",
+    "noqa_row": 150,
+    "url": "https://docs.astral.sh/ruff/rules/in-dict-keys"
+  },
+  {
+    "cell": null,
+    "code": "SIM118",
+    "end_location": {
+      "column": 51,
+      "row": 283
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 51,
+            "row": 283
+          },
+          "location": {
+            "column": 44,
+            "row": 283
+          }
+        }
+      ],
+      "message": "Remove `.keys()`"
+    },
+    "location": {
+      "column": 31,
+      "row": 283
+    },
+    "message": "Use `key in dict` instead of `key in dict.keys()`",
+    "noqa_row": 283,
+    "url": "https://docs.astral.sh/ruff/rules/in-dict-keys"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 58,
+      "row": 289
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        with pytest.raises(ValueError), collector.measure_fetch(\"test_scraper\"):\r\n            raise ValueError(\"娴嬭瘯閿欒\")",
+          "end_location": {
+            "column": 41,
+            "row": 290
+          },
+          "location": {
+            "column": 1,
+            "row": 288
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 288
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 288,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 54,
+      "row": 313
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        with pytest.raises(RuntimeError), collector.measure_summary(\"ollama\"):\r\n            raise RuntimeError(\"API 閿欒\")",
+          "end_location": {
+            "column": 45,
+            "row": 314
+          },
+          "location": {
+            "column": 1,
+            "row": 312
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 312
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 312,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM118",
+    "end_location": {
+      "column": 47,
+      "row": 363
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_observability.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 47,
+            "row": 363
+          },
+          "location": {
+            "column": 40,
+            "row": 363
+          }
+        }
+      ],
+      "message": "Remove `.keys()`"
+    },
+    "location": {
+      "column": 27,
+      "row": 363
+    },
+    "message": "Use `key in dict` instead of `key in dict.keys()`",
+    "noqa_row": 363,
+    "url": "https://docs.astral.sh/ruff/rules/in-dict-keys"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 18,
+      "row": 260
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_rag_summarizer.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 21,
+            "row": 260
+          },
+          "location": {
+            "column": 9,
+            "row": 260
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `rag_names`"
+    },
+    "location": {
+      "column": 9,
+      "row": 260
+    },
+    "message": "Local variable `rag_names` is assigned to but never used",
+    "noqa_row": 260,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 53,
+      "row": 240
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_scrapers.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        with patch.object(\r\n            scraper,\r\n            \"_get_with_retry\",\r\n            side_effect=httpx.TimeoutException(\"Connection timeout\"),\r\n        ), pytest.raises(ScraperTimeoutError):\r\n            scraper.scrape(wechat_url)",
+          "end_location": {
+            "column": 43,
+            "row": 241
+          },
+          "location": {
+            "column": 1,
+            "row": 235
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 235
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 235,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 53,
+      "row": 256
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_scrapers.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 255
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 255,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 53,
+      "row": 272
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_scrapers.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 271
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 271,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "W293",
+    "end_location": {
+      "column": 9,
+      "row": 32
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_simple_summarizer.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 9,
+            "row": 32
+          },
+          "location": {
+            "column": 1,
+            "row": 32
+          }
+        }
+      ],
+      "message": "Remove whitespace from blank line"
+    },
+    "location": {
+      "column": 1,
+      "row": 32
+    },
+    "message": "Blank line contains whitespace",
+    "noqa_row": 43,
+    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 2,
+      "row": 20
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_ssrf_protection.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\r\n\r\nfrom unittest.mock import patch\r\n\r\nimport pytest\r\n\r\nfrom wechat_summarizer.shared.utils.ssrf_protection import (\r\n    SSRFBlockedError,\r\n    SSRFSafeTransport,\r\n    create_safe_async_client,\r\n)\r\n\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 23
+          },
+          "location": {
+            "column": 1,
+            "row": 10
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 10
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 10,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 70,
+      "row": 133
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_ssrf_protection.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 132
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 132,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 81,
+      "row": 150
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_ssrf_protection.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 149
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 149,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 71,
+      "row": 156
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_ssrf_protection.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 155
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 155,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 50,
+      "row": 158
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_tracing.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 50,
+            "row": 158
+          },
+          "location": {
+            "column": 42,
+            "row": 158
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `span`"
+    },
+    "location": {
+      "column": 46,
+      "row": 158
+    },
+    "message": "Local variable `span` is assigned to but never used",
+    "noqa_row": 158,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 72,
+      "row": 164
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_tracing.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 72,
+            "row": 164
+          },
+          "location": {
+            "column": 64,
+            "row": 164
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `span`"
+    },
+    "location": {
+      "column": 68,
+      "row": 164
+    },
+    "message": "Local variable `span` is assigned to but never used",
+    "noqa_row": 164,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 43,
+      "row": 171
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_tracing.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        with pytest.raises(ValueError, match=\"span error\"), trace_span(\"failing-op\"):\r\n            raise ValueError(\"span error\")",
+          "end_location": {
+            "column": 47,
+            "row": 172
+          },
+          "location": {
+            "column": 1,
+            "row": 170
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 170
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 170,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 40,
+      "row": 205
+    },
+    "filename": "D:\\Newidea-warp\\tests\\test_tracing.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 40,
+            "row": 205
+          },
+          "location": {
+            "column": 32,
+            "row": 205
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `span`"
+    },
+    "location": {
+      "column": 36,
+      "row": 205
+    },
+    "message": "Local variable `span` is assigned to but never used",
+    "noqa_row": 205,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  }
+]

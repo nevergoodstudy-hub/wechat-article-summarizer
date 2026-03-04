@@ -3,12 +3,12 @@
 定义批量导出文章链接的配置选项。
 """
 
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     """导出格式"""
 
     TXT = "txt"  # 纯文本，每行一个链接
@@ -17,7 +17,7 @@ class ExportFormat(str, Enum):
     MARKDOWN = "markdown"  # Markdown格式，带标题链接
 
 
-class LinkFormat(str, Enum):
+class LinkFormat(StrEnum):
     """链接格式"""
 
     RAW = "raw"  # 原始链接
@@ -30,9 +30,9 @@ class LinkFormat(str, Enum):
 class BatchExportOptions:
     """
     批量导出选项值对象
-    
+
     配置导出文章链接时的各种选项，包括格式、路径、去重等。
-    
+
     Attributes:
         export_format: 导出文件格式
         link_format: 链接格式（用于TXT/MARKDOWN导出）
@@ -69,23 +69,21 @@ class BatchExportOptions:
         prefix: str = "wechat_articles",
     ) -> str:
         """生成导出文件名
-        
+
         Args:
             account_name: 公众号名称（可选）
             prefix: 文件名前缀
-            
+
         Returns:
             生成的文件名
         """
         from datetime import datetime
 
         parts = [prefix]
-        
+
         if account_name:
             # 清理文件名中的非法字符
-            safe_name = "".join(
-                c for c in account_name if c.isalnum() or c in "._- "
-            ).strip()
+            safe_name = "".join(c for c in account_name if c.isalnum() or c in "._- ").strip()
             if safe_name:
                 parts.append(safe_name)
 
@@ -110,7 +108,7 @@ class BatchExportOptions:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "BatchExportOptions":
+    def from_dict(cls, data: dict) -> BatchExportOptions:
         """从字典创建实例"""
         return cls(
             export_format=ExportFormat(data.get("export_format", "txt")),
@@ -124,7 +122,7 @@ class BatchExportOptions:
         )
 
     @classmethod
-    def simple_txt(cls, output_path: Path | None = None) -> "BatchExportOptions":
+    def simple_txt(cls, output_path: Path | None = None) -> BatchExportOptions:
         """创建简单TXT导出选项"""
         return cls(
             export_format=ExportFormat.TXT,
@@ -134,9 +132,7 @@ class BatchExportOptions:
         )
 
     @classmethod
-    def markdown_with_titles(
-        cls, output_path: Path | None = None
-    ) -> "BatchExportOptions":
+    def markdown_with_titles(cls, output_path: Path | None = None) -> BatchExportOptions:
         """创建带标题的Markdown导出选项"""
         return cls(
             export_format=ExportFormat.MARKDOWN,
@@ -147,7 +143,7 @@ class BatchExportOptions:
         )
 
     @classmethod
-    def full_json(cls, output_path: Path | None = None) -> "BatchExportOptions":
+    def full_json(cls, output_path: Path | None = None) -> BatchExportOptions:
         """创建完整JSON导出选项"""
         return cls(
             export_format=ExportFormat.JSON,
@@ -157,7 +153,7 @@ class BatchExportOptions:
         )
 
     @classmethod
-    def csv_for_analysis(cls, output_path: Path | None = None) -> "BatchExportOptions":
+    def csv_for_analysis(cls, output_path: Path | None = None) -> BatchExportOptions:
         """创建用于数据分析的CSV导出选项"""
         return cls(
             export_format=ExportFormat.CSV,
@@ -169,8 +165,7 @@ class BatchExportOptions:
 
     def __str__(self) -> str:
         return (
-            f"BatchExportOptions(format={self.export_format.value}, "
-            f"link={self.link_format.value})"
+            f"BatchExportOptions(format={self.export_format.value}, link={self.link_format.value})"
         )
 
     def __repr__(self) -> str:

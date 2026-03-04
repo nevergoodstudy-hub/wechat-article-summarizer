@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
+import os
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Generator
+from typing import Any
 
 from loguru import logger
 
@@ -98,11 +100,17 @@ class MetricsCollector:
     def _init_opentelemetry(self) -> None:
         """初始化 OpenTelemetry"""
         try:
-            reader = PeriodicExportingMetricReader(
-                ConsoleMetricExporter(),
-                export_interval_millis=self._config.export_interval_seconds * 1000,
-            )
-            provider = MeterProvider(metric_readers=[reader])
+            enable_console_export = os.getenv(
+                "WECHAT_SUMMARIZER_METRICS_CONSOLE_EXPORT", ""
+            ).lower() in {"1", "true", "yes"}
+            if enable_console_export:
+                reader = PeriodicExportingMetricReader(
+                    ConsoleMetricExporter(),
+                    export_interval_millis=self._config.export_interval_seconds * 1000,
+                )
+                provider = MeterProvider(metric_readers=[reader])
+            else:
+                provider = MeterProvider()
             metrics.set_meter_provider(provider)
 
             self._meter = metrics.get_meter("wechat_summarizer")
@@ -186,7 +194,9 @@ class MetricsCollector:
 
             # 启动 HTTP server
             start_http_server(self._config.prometheus_port)
-            logger.info(f"Prometheus metrics 端点已启动: http://localhost:{self._config.prometheus_port}")
+            logger.info(
+                f"Prometheus metrics 端点已启动: http://localhost:{self._config.prometheus_port}"
+            )
 
         except Exception as e:
             logger.warning(f"Prometheus 初始化失败: {e}")
@@ -282,7 +292,7 @@ class MetricsCollector:
     # -------------------- 上下文管理器 --------------------
 
     @contextmanager
-    def measure_fetch(self, scraper: str) -> Generator[None, None, None]:
+    def measure_fetch(self, scraper: str) -> Generator[None]:
         """测量抓取耗时的上下文管理器"""
         start = time.perf_counter()
         success = True
@@ -296,7 +306,7 @@ class MetricsCollector:
             self.record_fetch(scraper, duration, success)
 
     @contextmanager
-    def measure_summary(self, model: str) -> Generator[None, None, None]:
+    def measure_summary(self, model: str) -> Generator[None]:
         """测量摘要生成耗时的上下文管理器"""
         start = time.perf_counter()
         success = True
@@ -327,10 +337,10 @@ class MetricsCollector:
 
     def get_stats(self) -> dict[str, Any]:
         """获取内存计数器统计"""
-        stats = {"counters": dict(self._counters)}
+        stats: dict[str, Any] = {"counters": dict(self._counters)}
 
         # 计算直方图统计
-        histogram_stats = {}
+        histogram_stats: dict[str, dict[str, float]] = {}
         for key, values in self._histograms.items():
             if values:
                 histogram_stats[key] = {

@@ -114,9 +114,7 @@ class TestRAGEnhancedSummarizer:
             assert len(chunks) >= 2
 
     @pytest.mark.unit
-    def test_build_context_from_chunks(
-        self, rag_summarizer: RAGEnhancedSummarizer
-    ) -> None:
+    def test_build_context_from_chunks(self, rag_summarizer: RAGEnhancedSummarizer) -> None:
         """测试从块构建上下文"""
         # 先添加一些文档到存储
         text = "人工智能正在改变世界。机器学习是其核心。深度学习取得突破。" * 20
@@ -259,7 +257,7 @@ class TestRAGIntegration:
 
         # 如果有可用的 LLM 和 RAG 组件，应该有 RAG 摘要器
         # 注意：这取决于环境配置
-        rag_names = [name for name in summarizers if name.startswith("rag-")]
+        [name for name in summarizers if name.startswith("rag-")]
 
         # 至少应该尝试创建 RAG 摘要器（即使最终不可用）
         # 这个测试主要验证创建逻辑不会崩溃

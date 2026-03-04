@@ -14,10 +14,10 @@ from .article_events import (
 )
 
 __all__ = [
-    "DomainEvent",
+    "ArticleExported",
     "ArticleFetched",
     "ArticleSummarized",
-    "ArticleExported",
-    "BatchProcessStarted",
     "BatchProcessCompleted",
+    "BatchProcessStarted",
+    "DomainEvent",
 ]

@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -28,20 +28,18 @@ except ImportError:
     FastMCP = None  # type: ignore
 
 
-def _get_mcp() -> "FastMCP":
+def _get_mcp() -> FastMCP:
     """获取 MCP 实例"""
     if not _mcp_available:
-        raise ImportError(
-            "MCP SDK 未安装。请运行: pip install mcp>=1.2.0"
-        )
+        raise ImportError("MCP SDK 未安装。请运行: pip install mcp>=1.2.0")
     return FastMCP("WeChat Article Summarizer")
 
 
 # 创建 MCP 实例（延迟初始化）
-mcp: "FastMCP | None" = None
+mcp: FastMCP | None = None
 
 
-def _ensure_mcp() -> "FastMCP":
+def _ensure_mcp() -> FastMCP:
     """确保 MCP 实例已创建"""
     global mcp
     if mcp is None:
@@ -51,26 +49,28 @@ def _ensure_mcp() -> "FastMCP":
     return mcp
 
 
-def _register_tools(mcp_instance: "FastMCP") -> None:
+def _register_tools(mcp_instance: FastMCP) -> None:
     """注册 MCP 工具"""
-    
+
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
     async def fetch_article(url: str) -> dict[str, Any]:
         """抓取微信公众号或其他支持的文章
-        
+
         Args:
             url: 文章 URL（支持微信公众号、知乎、头条等）
-        
+
         Returns:
             文章信息，包含标题、作者、内容等
         """
         from ..infrastructure.config import get_container
-        
+        from .input_validator import MCPInputValidator
+
         try:
+            url = MCPInputValidator.validate_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
-            
+
             return {
                 "success": True,
                 "title": article.title,
@@ -87,7 +87,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 "success": False,
                 "error": str(e),
             }
-    
+
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
     async def summarize_article(
@@ -96,32 +96,36 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         max_length: int = 500,
     ) -> dict[str, Any]:
         """抓取并摘要文章
-        
+
         Args:
             url: 文章 URL
             method: 摘要方法 (simple, ollama, openai, anthropic, zhipu, deepseek, textrank)
             max_length: 摘要最大长度
-        
+
         Returns:
             文章摘要信息
         """
         from ..infrastructure.config import get_container
-        
+        from .input_validator import MCPInputValidator
+
         try:
+            url = MCPInputValidator.validate_url(url)
+            method = MCPInputValidator.validate_method(method)
+            max_length = MCPInputValidator.validate_max_length(max_length)
             container = get_container()
-            
+
             # 抓取文章
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
-            
+
             # 生成摘要
             summary = await asyncio.to_thread(
                 container.summarize_use_case.execute,
-                article, 
+                article,
                 method=method,
                 max_length=max_length,
             )
             article.attach_summary(summary)
-            
+
             return {
                 "success": True,
                 "title": article.title,
@@ -141,29 +145,31 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 "success": False,
                 "error": str(e),
             }
-    
+
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
     async def get_article_info(url: str) -> dict[str, Any]:
         """获取文章基本信息（不含完整内容）
-        
+
         Args:
             url: 文章 URL
-        
+
         Returns:
             文章基本信息
         """
         from ..infrastructure.config import get_container
-        
+        from .input_validator import MCPInputValidator
+
         try:
+            url = MCPInputValidator.validate_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
-            
+
             # 提取前几段作为预览
             preview = article.content_text[:500]
             if len(article.content_text) > 500:
                 preview += "..."
-            
+
             return {
                 "success": True,
                 "title": article.title,
@@ -179,7 +185,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 "success": False,
                 "error": str(e),
             }
-    
+
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
     async def batch_summarize(
@@ -188,20 +194,24 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         max_length: int = 300,
     ) -> dict[str, Any]:
         """批量摘要多篇文章
-        
+
         Args:
             urls: 文章 URL 列表
             method: 摘要方法
             max_length: 单篇摘要最大长度
-        
+
         Returns:
             批量摘要结果
         """
         from ..infrastructure.config import get_container
-        
+        from .input_validator import MCPInputValidator
+
+        urls = MCPInputValidator.validate_urls(urls)
+        method = MCPInputValidator.validate_method(method)
+        max_length = MCPInputValidator.validate_max_length(max_length)
         container = get_container()
         results = []
-        
+
         for url in urls[:10]:  # 限制最多 10 篇
             try:
                 article = await asyncio.to_thread(container.fetch_use_case.execute, url)
@@ -211,40 +221,44 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                     method=method,
                     max_length=max_length,
                 )
-                
-                results.append({
-                    "url": url,
-                    "success": True,
-                    "title": article.title,
-                    "summary": summary.content,
-                    "tags": list(summary.tags),
-                })
+
+                results.append(
+                    {
+                        "url": url,
+                        "success": True,
+                        "title": article.title,
+                        "summary": summary.content,
+                        "tags": list(summary.tags),
+                    }
+                )
             except Exception as e:
-                results.append({
-                    "url": url,
-                    "success": False,
-                    "error": str(e),
-                })
-        
+                results.append(
+                    {
+                        "url": url,
+                        "success": False,
+                        "error": str(e),
+                    }
+                )
+
         return {
             "total": len(urls),
             "processed": len(results),
             "results": results,
         }
-    
+
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
     async def list_available_methods() -> dict[str, Any]:
         """列出所有可用的摘要方法
-        
+
         Returns:
             可用摘要方法列表
         """
         from ..infrastructure.config import get_container
-        
+
         container = get_container()
         methods = list(container.summarizers.keys())
-        
+
         return {
             "methods": methods,
             "descriptions": {
@@ -257,7 +271,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 "deepseek": "使用 DeepSeek 模型",
                 "rag-*": "RAG 增强摘要（基于向量检索）",
                 "graphrag-*": "GraphRAG 摘要（基于知识图谱）",
-            }
+            },
         }
 
     @mcp_instance.tool()
@@ -273,25 +287,26 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         Returns:
             知识图谱分析结果，包含实体、关系、社区信息
         """
-        from ..infrastructure.config import get_container
         from ..domain.value_objects import ArticleContent
+        from ..infrastructure.config import get_container
+        from .input_validator import MCPInputValidator
 
         try:
+            url = MCPInputValidator.validate_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
             # 尝试使用 GraphRAG 摘要器
             graphrag_summarizers = [
-                name for name in container.summarizers
-                if name.startswith("graphrag-")
+                name for name in container.summarizers if name.startswith("graphrag-")
             ]
 
             if not graphrag_summarizers:
                 # 使用简单实体提取
                 from ..infrastructure.adapters.knowledge_graph import (
+                    SimpleCommunityDetector,
                     SimpleEntityExtractor,
                     SimpleGraphBuilder,
-                    SimpleCommunityDetector,
                 )
 
                 extractor = SimpleEntityExtractor()
@@ -307,7 +322,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                     kg.add_community(comm)
             else:
                 # 使用 GraphRAG 摘要器
-                summarizer = container.summarizers[graphrag_summarizers[0]]
+                summarizer = cast(Any, container.summarizers[graphrag_summarizers[0]])
                 content = ArticleContent(text=article.content_text)
                 await asyncio.to_thread(summarizer.summarize, content)
                 kg = summarizer.get_knowledge_graph()
@@ -326,8 +341,12 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 ],
                 "relationships": [
                     {
-                        "source": kg.get_entity(r.source_id).name if kg.get_entity(r.source_id) else r.source_id,
-                        "target": kg.get_entity(r.target_id).name if kg.get_entity(r.target_id) else r.target_id,
+                        "source": source_entity.name
+                        if (source_entity := kg.get_entity(r.source_id))
+                        else r.source_id,
+                        "target": target_entity.name
+                        if (target_entity := kg.get_entity(r.target_id))
+                        else r.target_id,
                         "type": r.type,
                     }
                     for r in list(kg.relationships.values())[:30]  # 限制数量
@@ -366,15 +385,16 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         Returns:
             对比分析结果
         """
-        from ..infrastructure.config import get_container
         from ..infrastructure.adapters.knowledge_graph import SimpleEntityExtractor
+        from ..infrastructure.config import get_container
+        from .input_validator import MCPInputValidator
+
+        urls = MCPInputValidator.validate_urls(urls, max_count=5)
+        aspects = MCPInputValidator.validate_aspects(aspects)
 
         if len(urls) < 2:
             return {"success": False, "error": "至少需要 2 篇文章进行对比"}
-        if len(urls) > 5:
-            urls = urls[:5]  # 限制最多 5 篇
 
-        aspects = aspects or ["主题", "观点", "实体"]
         container = get_container()
         extractor = SimpleEntityExtractor()
 
@@ -388,32 +408,42 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 # 生成简短摘要
                 summary = await asyncio.to_thread(
                     container.summarize_use_case.execute,
-                    article, method="simple", max_length=200,
+                    article,
+                    method="simple",
+                    max_length=200,
                 )
 
-                articles_data.append({
-                    "url": url,
-                    "title": article.title,
-                    "author": article.author,
-                    "word_count": article.word_count,
-                    "summary": summary.content,
-                    "tags": list(summary.tags),
-                    "entities": [
-                        {"name": e.name, "type": e.type}
-                        for e in extraction.entities[:10]
-                    ],
-                })
+                articles_data.append(
+                    {
+                        "url": url,
+                        "title": article.title,
+                        "author": article.author,
+                        "word_count": article.word_count,
+                        "summary": summary.content,
+                        "tags": list(summary.tags),
+                        "entities": [
+                            {"name": e.name, "type": e.type} for e in extraction.entities[:10]
+                        ],
+                    }
+                )
 
             # 找出共同实体
-            all_entity_names = [
-                set(e["name"] for e in a["entities"])
-                for a in articles_data
-            ]
-            common_entities = set.intersection(*all_entity_names) if all_entity_names else set()
+            entity_name_sets: list[set[str]] = []
+            tag_sets: list[set[str]] = []
+            word_counts: list[int] = []
+            for article_data in articles_data:
+                entities = cast(list[dict[str, str]], article_data.get("entities", []))
+                entity_name_sets.append(
+                    {entity["name"] for entity in entities if "name" in entity}
+                )
+                tags = cast(list[str], article_data.get("tags", []))
+                tag_sets.append(set(tags))
+                word_count_value = article_data.get("word_count")
+                word_counts.append(word_count_value if isinstance(word_count_value, int) else 0)
 
-            # 找出共同标签
-            all_tags = [set(a["tags"]) for a in articles_data]
-            common_tags = set.intersection(*all_tags) if all_tags else set()
+            common_entities = set.intersection(*entity_name_sets) if entity_name_sets else set()
+            common_tags = set.intersection(*tag_sets) if tag_sets else set()
+            total_word_count = sum(word_counts)
 
             return {
                 "success": True,
@@ -422,8 +452,8 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 "comparison": {
                     "common_entities": list(common_entities),
                     "common_tags": list(common_tags),
-                    "total_word_count": sum(a["word_count"] for a in articles_data),
-                    "avg_word_count": sum(a["word_count"] for a in articles_data) // len(articles_data),
+                    "total_word_count": total_word_count,
+                    "avg_word_count": total_word_count // len(articles_data),
                 },
             }
         except Exception as e:
@@ -450,8 +480,9 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
         Returns:
             主题追踪结果
         """
-        from ..infrastructure.config import get_container
         import re
+
+        from ..infrastructure.config import get_container
 
         container = get_container()
         topic_data = []
@@ -474,33 +505,45 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                         if topic_lower in p.lower() and len(p.strip()) > 20
                     ][:3]  # 最多 3 个段落
 
-                    topic_data.append({
-                        "url": url,
-                        "title": article.title,
-                        "publish_time": article.publish_time_str,
-                        "topic_occurrences": occurrences,
-                        "relevant_excerpts": relevant_paragraphs,
-                        "relevance_score": min(1.0, occurrences / 10),  # 简单相关度评分
-                    })
+                    topic_data.append(
+                        {
+                            "url": url,
+                            "title": article.title,
+                            "publish_time": article.publish_time_str,
+                            "topic_occurrences": occurrences,
+                            "relevant_excerpts": relevant_paragraphs,
+                            "relevance_score": min(1.0, occurrences / 10),  # 简单相关度评分
+                        }
+                    )
                 except Exception as e:
-                    topic_data.append({
-                        "url": url,
-                        "error": str(e),
-                    })
+                    topic_data.append(
+                        {
+                            "url": url,
+                            "error": str(e),
+                        }
+                    )
 
             # 按相关度排序
+            def _to_int(value: Any) -> int:
+                return value if isinstance(value, int) else 0
+
             sorted_data = sorted(
                 [d for d in topic_data if "error" not in d],
-                key=lambda x: x["topic_occurrences"],
+                key=lambda x: _to_int(x.get("topic_occurrences")),
                 reverse=True,
             )
+
+            articles_with_topic = len(
+                [d for d in topic_data if _to_int(d.get("topic_occurrences")) > 0]
+            )
+            total_occurrences = sum(_to_int(d.get("topic_occurrences")) for d in topic_data)
 
             return {
                 "success": True,
                 "topic": topic,
                 "total_articles": len(topic_data),
-                "articles_with_topic": len([d for d in topic_data if d.get("topic_occurrences", 0) > 0]),
-                "total_occurrences": sum(d.get("topic_occurrences", 0) for d in topic_data),
+                "articles_with_topic": articles_with_topic,
+                "total_occurrences": total_occurrences,
                 "results": sorted_data,
             }
         except Exception as e:
@@ -539,7 +582,9 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
             if not summary_text:
                 summary = await asyncio.to_thread(
                     container.summarize_use_case.execute,
-                    article, method=method, max_length=500,
+                    article,
+                    method=method,
+                    max_length=500,
                 )
                 summary_text = summary.content
 
@@ -551,17 +596,18 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
             # 关键词覆盖度（简单评估）
             # 提取原文高频词
             import re
-            words = re.findall(r'[\u4e00-\u9fff]+', article.content_text)
-            word_freq = {}
+
+            words = re.findall(r"[\u4e00-\u9fff]+", article.content_text)
+            word_freq: dict[str, int] = {}
             for w in words:
                 if len(w) >= 2:
                     word_freq[w] = word_freq.get(w, 0) + 1
 
             top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:20]
-            top_word_set = set(w for w, _ in top_words)
+            top_word_set = {w for w, _ in top_words}
 
             # 检查摘要中包含多少高频词
-            summary_words = set(re.findall(r'[\u4e00-\u9fff]+', summary_text))
+            summary_words = set(re.findall(r"[\u4e00-\u9fff]+", summary_text))
             covered_words = top_word_set & summary_words
             keyword_coverage = len(covered_words) / len(top_word_set) if top_word_set else 0
 
@@ -575,7 +621,7 @@ def _register_tools(mcp_instance: "FastMCP") -> None:
                 conciseness_score = max(0, 1 - (compression_ratio - 0.15) / 0.35)
 
             # 综合评分
-            overall_score = (keyword_coverage * 0.6 + conciseness_score * 0.4)
+            overall_score = keyword_coverage * 0.6 + conciseness_score * 0.4
 
             return {
                 "success": True,
@@ -660,21 +706,21 @@ def _get_summary_recommendations(
     return recommendations
 
 
-def _register_resources(mcp_instance: "FastMCP") -> None:
+def _register_resources(mcp_instance: FastMCP) -> None:
     """注册 MCP 资源"""
-    
+
     @mcp_instance.resource("article://{url}")
     async def get_article_content(url: str) -> str:
         """获取文章内容作为资源
-        
+
         可用于 RAG 或上下文增强。
         """
         from ..infrastructure.config import get_container
-        
+
         try:
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
-            
+
             # 格式化为 Markdown
             content = f"""# {article.title}
 
@@ -694,15 +740,15 @@ def _register_resources(mcp_instance: "FastMCP") -> None:
 
 def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
     """运行 MCP 服务器
-    
+
     Args:
         transport: 传输方式 ("stdio" 或 "http")
         port: HTTP 模式端口号
     """
     mcp_instance = _ensure_mcp()
-    
+
     logger.info(f"启动 MCP 服务器 (transport={transport})")
-    
+
     if transport == "stdio":
         mcp_instance.run(transport="stdio")
     elif transport == "http":
@@ -710,7 +756,7 @@ def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
         import uvicorn
         from starlette.applications import Starlette
         from starlette.routing import Mount
-        
+
         app = Starlette(
             routes=[
                 Mount("/mcp", app=mcp_instance.sse_app()),

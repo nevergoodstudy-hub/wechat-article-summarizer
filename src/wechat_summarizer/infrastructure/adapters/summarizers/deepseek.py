@@ -15,8 +15,8 @@ from loguru import logger
 from ....domain.entities import Summary, SummaryMethod, SummaryStyle
 from ....domain.value_objects import ArticleContent
 from ....shared.constants import DEFAULT_DEEPSEEK_BASE_URL
-from ....shared.prompts import SUMMARY_PROMPT_TEMPLATE
 from ....shared.exceptions import SummarizerAPIError, SummarizerError
+from ....shared.prompts import SUMMARY_PROMPT_TEMPLATE
 from .base import BaseSummarizer
 
 # 延迟导入 OpenAI（DeepSeek 使用兼容的 OpenAI SDK）
@@ -33,7 +33,7 @@ class DeepSeekSummarizer(BaseSummarizer):
 
     使用 DeepSeek API 生成高质量摘要。
     DeepSeek 提供与 OpenAI 兼容的 API 接口，因此使用 OpenAI SDK 进行调用。
-    
+
     特点：
     - 国产大模型，响应速度快
     - 支持 64K 上下文窗口
