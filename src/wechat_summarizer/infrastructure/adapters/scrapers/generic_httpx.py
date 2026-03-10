@@ -12,6 +12,7 @@ from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import USER_AGENTS
 from ....shared.exceptions import ScraperError, ScraperTimeoutError
+from ....shared.utils.ssrf_protection import create_safe_async_client, create_safe_client
 from .base import BaseScraper
 
 
@@ -54,10 +55,10 @@ class GenericHttpxScraper(BaseScraper):
         }
 
         try:
-            with httpx.Client(
+            with create_safe_client(
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
+                follow_redirects=True,
             ) as client:
                 response = client.get(str(url), headers=headers)
                 response.raise_for_status()
@@ -177,10 +178,10 @@ class GenericHttpxScraper(BaseScraper):
         }
 
         try:
-            async with httpx.AsyncClient(
+            async with create_safe_async_client(
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
+                follow_redirects=True,
             ) as client:
                 response = await client.get(str(url), headers=headers)
                 response.raise_for_status()

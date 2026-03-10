@@ -57,6 +57,8 @@ class AccessibilitySettings:
     def __post_init__(self):
         # 验证字体缩放范围
         self.font_scale = max(self.MIN_FONT_SCALE, min(self.MAX_FONT_SCALE, self.font_scale))
+
+
 ThemePalette = dict[str, str]
 ThemeMap = dict[str, ThemePalette]
 

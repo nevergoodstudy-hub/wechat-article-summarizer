@@ -16,8 +16,10 @@ import pytest
 
 from wechat_summarizer.shared.utils.ssrf_protection import (
     SSRFBlockedError,
+    SSRFSafeSyncTransport,
     SSRFSafeTransport,
     create_safe_async_client,
+    create_safe_client,
     safe_fetch,
 )
 
@@ -130,9 +132,10 @@ class TestResolveAndValidate:
         fake_addrs = [
             (2, 1, 6, "", ("192.168.1.1", 443)),
         ]
-        with patch(
-            "socket.getaddrinfo", return_value=fake_addrs
-        ), pytest.raises(SSRFBlockedError, match="blocked IP"):
+        with (
+            patch("socket.getaddrinfo", return_value=fake_addrs),
+            pytest.raises(SSRFBlockedError, match="blocked IP"),
+        ):
             SSRFSafeTransport.resolve_and_validate("evil.example.com")
 
     def test_dns_resolving_to_public_ip_allowed(self):
@@ -148,15 +151,17 @@ class TestResolveAndValidate:
         """DNS 解析失败时抛出异常"""
         import socket
 
-        with patch(
-            "socket.getaddrinfo", side_effect=socket.gaierror("DNS failed")
-        ), pytest.raises(SSRFBlockedError, match="DNS resolution failed"):
+        with (
+            patch("socket.getaddrinfo", side_effect=socket.gaierror("DNS failed")),
+            pytest.raises(SSRFBlockedError, match="DNS resolution failed"),
+        ):
             SSRFSafeTransport.resolve_and_validate("nonexistent.invalid")
 
     def test_empty_dns_results_raises(self):
         """DNS 返回空结果时抛出异常"""
-        with patch("socket.getaddrinfo", return_value=[]), pytest.raises(
-            SSRFBlockedError, match="No valid IP"
+        with (
+            patch("socket.getaddrinfo", return_value=[]),
+            pytest.raises(SSRFBlockedError, match="No valid IP"),
         ):
             SSRFSafeTransport.resolve_and_validate("empty.example.com")
 
@@ -202,6 +207,16 @@ class TestValidateUrl:
 class TestCreateSafeAsyncClient:
     """安全 HTTP 客户端工厂测试"""
 
+    def test_sync_client_disables_auto_redirects(self):
+        """同步客户端默认禁用自动重定向"""
+        client = create_safe_client()
+        assert client.follow_redirects is False
+
+    def test_sync_client_uses_ssrf_transport(self):
+        """同步客户端使用 SSRFSafeSyncTransport 传输层"""
+        client = create_safe_client()
+        assert isinstance(client._transport, SSRFSafeSyncTransport)
+
     def test_client_disables_auto_redirects(self):
         """默认禁用自动重定向"""
         client = create_safe_async_client()
@@ -237,12 +252,15 @@ class TestSafeFetchRedirects:
             return url
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=False)
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.create_safe_async_client",
-            return_value=client,
-        ), patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=_validate,
+        with (
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.create_safe_async_client",
+                return_value=client,
+            ),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=_validate,
+            ),
         ):
             response = await safe_fetch("https://example.com/start")
 
@@ -265,11 +283,15 @@ class TestSafeFetchRedirects:
             return url
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=False)
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.create_safe_async_client",
-            return_value=client,
-        ), patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=_validate,
-        ), pytest.raises(SSRFBlockedError, match="Blocked metadata redirect"):
+        with (
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.create_safe_async_client",
+                return_value=client,
+            ),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=_validate,
+            ),
+            pytest.raises(SSRFBlockedError, match="Blocked metadata redirect"),
+        ):
             await safe_fetch("https://example.com/start")

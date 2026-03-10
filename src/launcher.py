@@ -15,6 +15,7 @@ if getattr(sys, "frozen", False) and sys.platform == "win32":
         pass
 
 # 确保使用绝对导入
+from wechat_summarizer.bootstrap import build_app_runtime
 from wechat_summarizer.shared.utils import setup_logger
 
 
@@ -53,7 +54,7 @@ def _run_gui_or_exit() -> None:
     try:
         from wechat_summarizer.presentation.gui import run_gui
 
-        run_gui()
+        run_gui(runtime=build_app_runtime())
     except ImportError as e:
         print(f"GUI启动失败: {e}")
         print("尝试使用CLI模式: wechat-summarizer --help")

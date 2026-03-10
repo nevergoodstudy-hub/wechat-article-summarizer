@@ -75,39 +75,51 @@ class SettingsPage(ctk.CTkFrame):
 
         # 摘要服务状态
         self._build_summarizer_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # API 密钥配置
         self._build_api_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # 导出设置
         self._build_export_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # 系统设置
         self._build_system_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # 性能设置
         self._build_perf_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # 语言设置
         self._build_lang_section(settings_card)
-        ctk.CTkFrame(settings_card, height=2, fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR)).pack(
-            fill="x", padx=30, pady=15
-        )
+        ctk.CTkFrame(
+            settings_card,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
 
         # 快捷操作 + 保存
         self._build_quick_section(settings_card)
@@ -744,7 +756,6 @@ class SettingsPage(ctk.CTkFrame):
 
     def _save_api_keys(self):
         """保存API密钥"""
-        from ....infrastructure.config import get_container
 
         saved_count = 0
         api_keys = {}
@@ -754,8 +765,7 @@ class SettingsPage(ctk.CTkFrame):
             if key:
                 saved_count += 1
                 api_keys[provider] = key
-        container = get_container()
-        container.reload_summarizers(api_keys)
+        self.gui.container.reload_summarizers(api_keys)
         self.gui._summarizer_info = self.gui._get_summarizer_info()
         self.update_summarizer_status_display()
         self.gui._refresh_summarizer_menus()

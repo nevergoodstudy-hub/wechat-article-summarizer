@@ -283,7 +283,9 @@ class SinglePage(ctk.CTkFrame):
         ).pack(anchor="w", padx=20, pady=(20, 10))
 
         info_frame = ctk.CTkFrame(
-            right_card, corner_radius=Spacing.RADIUS_MD, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
+            right_card,
+            corner_radius=Spacing.RADIUS_MD,
+            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
         )
         info_frame.pack(fill="x", padx=20)
 

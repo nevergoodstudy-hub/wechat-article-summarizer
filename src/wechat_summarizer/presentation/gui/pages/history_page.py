@@ -117,7 +117,11 @@ class HistoryPage(ctk.CTkFrame):
 
     def _add_history_item(self, article: Article):
         """添加单条历史记录项"""
-        frame = ctk.CTkFrame(self.history_frame, corner_radius=10, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET))
+        frame = ctk.CTkFrame(
+            self.history_frame,
+            corner_radius=10,
+            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
+        )
         frame.pack(fill="x", pady=4)
         title = article.title[:45] + "..." if len(article.title) > 45 else article.title
         ctk.CTkLabel(frame, text=title, anchor="w", font=ctk.CTkFont(size=13)).pack(
@@ -153,7 +157,7 @@ class HistoryPage(ctk.CTkFrame):
     def _view_history_article(self, article: Article):
         """查看历史文章 — 跨页导航委托给 GUI 控制器"""
         self.gui.current_article = article
-        self.gui._show_page(self.gui.PAGE_SINGLE)
+        self.gui.event_bus.publish("navigate", page_id=self.gui.PAGE_SINGLE, animated=False)
         self.gui._display_result(article)
         self.gui.url_entry.delete(0, "end")
         self.gui.url_entry.insert(0, str(article.url))

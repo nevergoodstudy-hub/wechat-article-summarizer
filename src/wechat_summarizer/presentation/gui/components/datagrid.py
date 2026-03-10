@@ -350,6 +350,7 @@ class DataGrid(tk.Frame):
             # 点击排序
             def on_sort_click(_event: tk.Event[tk.Misc], key: str = col.key) -> None:
                 self._toggle_sort(key)
+
             for widget in [label, content, cell]:
                 widget.bind("<Button-1>", on_sort_click)
                 with contextlib.suppress(Exception):
@@ -439,6 +440,7 @@ class DataGrid(tk.Frame):
         # 点击选择
         def on_row_click(event: tk.Event[tk.Misc], i: int = index) -> None:
             self._select_row(i, event)
+
         if self.selectable:
             row_frame.bind("<Button-1>", on_row_click)
 

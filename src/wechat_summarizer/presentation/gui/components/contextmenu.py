@@ -342,9 +342,8 @@ class ContextMenu:
         if self._window and self._window.winfo_exists():
             try:
                 focus = self._window.focus_get()
-                if (
-                    (focus is None or focus.winfo_toplevel() != self._window)
-                    and not (self._submenu and self._submenu._is_open)
+                if (focus is None or focus.winfo_toplevel() != self._window) and not (
+                    self._submenu and self._submenu._is_open
                 ):
                     self.close()
             except tk.TclError:

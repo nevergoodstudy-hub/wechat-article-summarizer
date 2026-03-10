@@ -13,6 +13,8 @@ from typing import Any
 import httpx
 from loguru import logger
 
+from ...shared.utils.ssrf_protection import create_safe_async_client
+
 
 @dataclass
 class ClientConfig:
@@ -31,7 +33,7 @@ class ClientConfig:
     max_connections: int = 100
     max_keepalive_connections: int = 30  # 优化：增加保活连接数
     keepalive_expiry: float = 60.0  # 优化：延长保活时间
-    follow_redirects: bool = True
+    follow_redirects: bool = False
     http2: bool = False  # 默认关闭，需要 pip install httpx[http2] 才能启用
     proxy: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
@@ -143,7 +145,7 @@ class HttpClientPool:
         if config.proxy:
             kwargs["proxy"] = config.proxy
 
-        return httpx.AsyncClient(**kwargs)
+        return create_safe_async_client(**kwargs)
 
     async def close_client(self, domain: str | None = None) -> None:
         """

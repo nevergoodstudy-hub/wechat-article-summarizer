@@ -7,6 +7,7 @@
 
 import argparse
 
+from ..bootstrap import build_app_runtime
 from .server import run_mcp_server
 
 
@@ -26,10 +27,21 @@ def main():
         default=8000,
         help="HTTP 模式端口 (默认: 8000)",
     )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="HTTP 模式绑定主机 (默认: 127.0.0.1)",
+    )
 
     args = parser.parse_args()
 
-    run_mcp_server(transport=args.transport)
+    runtime = build_app_runtime()
+    run_mcp_server(
+        transport=args.transport,
+        port=args.port,
+        host=args.host,
+        runtime=runtime,
+    )
 
 
 if __name__ == "__main__":

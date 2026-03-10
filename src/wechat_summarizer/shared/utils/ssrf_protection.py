@@ -29,6 +29,58 @@ class SSRFBlockedError(Exception):
     """SSRF 防护拦截异常"""
 
 
+TRANSPORT_KWARGS: frozenset[str] = frozenset(
+    {
+        "cert",
+        "http1",
+        "http2",
+        "limits",
+        "local_address",
+        "proxy",
+        "retries",
+        "socket_options",
+        "trust_env",
+        "uds",
+        "verify",
+    }
+)
+
+
+def _pop_transport_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """提取需要传递给 transport 的参数。"""
+    transport_kwargs: dict[str, Any] = {}
+    for key in TRANSPORT_KWARGS:
+        if key in kwargs:
+            transport_kwargs[key] = kwargs.pop(key)
+    return transport_kwargs
+
+
+def _rewrite_request_to_validated_ip(request: httpx.Request) -> httpx.Request:
+    """将请求重写为“直连已验证 IP + 保留 Host/SNI”的形式。"""
+    hostname = request.url.host
+    if not hostname:
+        raise SSRFBlockedError("Request missing hostname")
+
+    validated_ips = SSRFSafeTransport.resolve_and_validate(hostname, request.url.port)
+    ip = validated_ips[0]
+    host_for_url = f"[{ip}]" if ":" in ip else ip
+
+    new_url = request.url.copy_with(host=host_for_url)
+    headers = httpx.Headers(request.headers)
+    headers["Host"] = hostname
+
+    extensions = dict(request.extensions)
+    extensions["sni_hostname"] = hostname
+
+    return httpx.Request(
+        method=request.method,
+        url=new_url,
+        headers=headers,
+        content=request.content,
+        extensions=extensions,
+    )
+
+
 class SSRFSafeTransport(httpx.AsyncHTTPTransport):
     """自定义 httpx 传输层，防止 DNS 重绑定攻击
 
@@ -198,31 +250,27 @@ class SSRFSafeTransport(httpx.AsyncHTTPTransport):
 
         重写 httpx 传输层的异步请求处理方法。
         """
-        hostname = request.url.host
-        if not hostname:
-            raise SSRFBlockedError("Request missing hostname")
+        return await super().handle_async_request(_rewrite_request_to_validated_ip(request))
 
-        # 解析并验证 IP
-        validated_ips = self.resolve_and_validate(hostname, request.url.port)
 
-        # 使用第一个已验证的 IP 重写请求 URL，保留原始 Host 头
-        ip = validated_ips[0]
+class SSRFSafeSyncTransport(httpx.HTTPTransport):
+    """同步版本的 SSRF 安全传输层。"""
 
-        # 对 IPv6 地址加括号
-        host_for_url = f"[{ip}]" if ":" in ip else ip
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        """拦截同步请求并重写到已验证的 IP。"""
+        return super().handle_request(_rewrite_request_to_validated_ip(request))
 
-        new_url = request.url.copy_with(host=host_for_url)
-        headers = httpx.Headers(request.headers)
-        headers["Host"] = hostname  # 保留原始 Host 头
 
-        request = httpx.Request(
-            method=request.method,
-            url=new_url,
-            headers=headers,
-            content=request.content,
-        )
+def create_safe_client(**kwargs: Any) -> httpx.Client:
+    """创建带有 SSRF 防护的 httpx 同步客户端。"""
+    kwargs.setdefault("follow_redirects", False)
+    kwargs.setdefault("timeout", httpx.Timeout(30.0))
+    transport_kwargs = _pop_transport_kwargs(kwargs)
 
-        return await super().handle_async_request(request)
+    return httpx.Client(
+        transport=SSRFSafeSyncTransport(**transport_kwargs),
+        **kwargs,
+    )
 
 
 def create_safe_async_client(**kwargs: Any) -> httpx.AsyncClient:
@@ -241,9 +289,10 @@ def create_safe_async_client(**kwargs: Any) -> httpx.AsyncClient:
     # 强制禁用自动重定向（手动处理以验证每个重定向目标）
     kwargs.setdefault("follow_redirects", False)
     kwargs.setdefault("timeout", httpx.Timeout(30.0))
+    transport_kwargs = _pop_transport_kwargs(kwargs)
 
     return httpx.AsyncClient(
-        transport=SSRFSafeTransport(),
+        transport=SSRFSafeTransport(**transport_kwargs),
         **kwargs,
     )
 

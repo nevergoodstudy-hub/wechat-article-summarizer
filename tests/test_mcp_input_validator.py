@@ -58,9 +58,7 @@ class TestValidateUrl:
             "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
             return_value="https://example.com/article",
         ):
-            result = MCPInputValidator.validate_url(
-                "https://example.com/\u200barticle"
-            )
+            result = MCPInputValidator.validate_url("https://example.com/\u200barticle")
             assert "\u200b" not in result
 
     def test_accepts_valid_https_url(self):
@@ -69,9 +67,7 @@ class TestValidateUrl:
             "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
             return_value="https://mp.weixin.qq.com/s/abc123",
         ):
-            result = MCPInputValidator.validate_url(
-                "https://mp.weixin.qq.com/s/abc123"
-            )
+            result = MCPInputValidator.validate_url("https://mp.weixin.qq.com/s/abc123")
             assert result == "https://mp.weixin.qq.com/s/abc123"
 
 
@@ -93,9 +89,7 @@ class TestValidateUrls:
     def test_validates_each_url(self):
         """每个 URL 都经过验证"""
         with pytest.raises(MCPValidationError):
-            MCPInputValidator.validate_urls(
-                ["https://example.com/ok", "ftp://evil.com/bad"]
-            )
+            MCPInputValidator.validate_urls(["https://example.com/ok", "ftp://evil.com/bad"])
 
     def test_accepts_valid_url_list(self):
         with patch(
@@ -145,10 +139,13 @@ class TestValidateFilePath:
 
     def test_rejects_prefix_confusion_outside_whitelist(self):
         """拒绝仅前缀相似但不在白名单目录下的路径"""
-        with patch.dict(
-            "wechat_summarizer.mcp.security_config.MCP_SECURITY_CONFIG",
-            {"allowed_dirs": ["output"]},
-        ), pytest.raises(MCPValidationError, match="outside allowed"):
+        with (
+            patch.dict(
+                "wechat_summarizer.mcp.security_config.MCP_SECURITY_CONFIG",
+                {"allowed_dirs": ["output"]},
+            ),
+            pytest.raises(MCPValidationError, match="outside allowed"),
+        ):
             MCPInputValidator.validate_file_path("output_evil/report.md")
 
 

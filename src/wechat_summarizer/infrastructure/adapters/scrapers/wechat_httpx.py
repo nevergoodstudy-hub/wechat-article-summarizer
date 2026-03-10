@@ -14,6 +14,7 @@ from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import USER_AGENTS, WECHAT_CONTENT_SELECTORS
 from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
 from ....shared.utils import retry
+from ....shared.utils.ssrf_protection import create_safe_async_client, create_safe_client
 from .base import BaseScraper
 
 
@@ -42,10 +43,10 @@ class WechatHttpxScraper(BaseScraper):
         self._user_agent_rotation = user_agent_rotation
 
         # 实例级 httpx.Client，复用连接池
-        self._client = httpx.Client(
+        self._client = create_safe_client(
             timeout=self._timeout,
-            follow_redirects=True,
             proxy=self._proxy,
+            follow_redirects=True,
         )
 
         # 基于实例参数创建“可配置”的重试包装（解决装饰器无法使用 self._max_retries 的问题）
@@ -245,10 +246,10 @@ class WechatHttpxScraper(BaseScraper):
         }
 
         try:
-            async with httpx.AsyncClient(
+            async with create_safe_async_client(
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
+                follow_redirects=True,
             ) as client:
                 response = await client.get(str(url), headers=headers)
         except httpx.TimeoutException as e:

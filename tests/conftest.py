@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,11 +19,40 @@ from uuid import uuid4
 
 import pytest
 
-from wechat_summarizer.domain.entities import Article, Summary
-from wechat_summarizer.domain.entities.summary import SummaryMethod, SummaryStyle
-from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
-from wechat_summarizer.infrastructure.config.container import Container
-from wechat_summarizer.shared.utils import utc_now
+
+def _normalize_import_path(path: str) -> str:
+    """标准化导入路径，避免 Windows 大小写/分隔符差异影响比较。"""
+    return os.path.normcase(os.path.normpath(path))
+
+
+def _ensure_repo_src_first() -> Path:
+    """确保测试优先导入当前仓库 src 目录，而不是全局安装包。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    src_dir = repo_root / "src"
+    normalized_src = _normalize_import_path(str(src_dir))
+
+    sys.path[:] = [
+        path for path in sys.path if _normalize_import_path(path or ".") != normalized_src
+    ]
+    sys.path.insert(0, str(src_dir))
+    return src_dir
+
+
+REPO_SRC_DIR = _ensure_repo_src_first()
+
+import wechat_summarizer  # noqa: E402
+from wechat_summarizer.domain.entities import Article, Summary  # noqa: E402
+from wechat_summarizer.domain.entities.summary import SummaryMethod, SummaryStyle  # noqa: E402
+from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL  # noqa: E402
+from wechat_summarizer.infrastructure.config.container import Container  # noqa: E402
+from wechat_summarizer.shared.utils import utc_now  # noqa: E402
+
+PACKAGE_INIT = Path(wechat_summarizer.__file__).resolve()
+if REPO_SRC_DIR not in PACKAGE_INIT.parents:
+    raise RuntimeError(
+        "pytest imported wechat_summarizer from an installed package instead of the repository "
+        f"source tree: {PACKAGE_INIT}"
+    )
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -53,9 +83,7 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     # 对非 integration 测试，patch 全局 get_container 返回最小化容器
     # integration 测试通过标记来 opt-in 使用真实容器
     current_item = _get_current_test_item()
-    if current_item is None or "integration" not in [
-        m.name for m in current_item.iter_markers()
-    ]:
+    if current_item is None or "integration" not in [m.name for m in current_item.iter_markers()]:
         _minimal = Container.create_minimal()
         monkeypatch.setattr(
             "wechat_summarizer.infrastructure.config.container._container",

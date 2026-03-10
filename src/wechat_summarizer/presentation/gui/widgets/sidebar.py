@@ -7,10 +7,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 from .tooltip import create_tooltip
+
+if TYPE_CHECKING:
+    from ..event_bus import GUIEventBus
 
 _ctk_available = True
 try:
@@ -33,7 +37,7 @@ class Sidebar(ctk.CTkFrame):
         master: 父容器
         get_font: 字体工厂函数 (size, weight='normal') -> CTkFont
         nav_items: 导航项列表 [(page_id, icon, text), ...]
-        on_navigate: 页面切换回调 (page_id) -> None
+        event_bus: GUI 事件总线，用于发布导航事件
         on_theme_change: 主题切换回调 (value) -> None
         summarizer_info: 摘要器信息字典
         exporter_info: 导出器信息字典
@@ -46,7 +50,7 @@ class Sidebar(ctk.CTkFrame):
         *,
         get_font: Callable,
         nav_items: list[tuple[str, str, str]],
-        on_navigate: Callable[[str], None],
+        event_bus: GUIEventBus,
         on_theme_change: Callable[[str], None],
         summarizer_info: dict,
         exporter_info: dict,
@@ -62,7 +66,7 @@ class Sidebar(ctk.CTkFrame):
         )
 
         self._get_font = get_font
-        self._on_navigate = on_navigate
+        self._event_bus = event_bus
         self._on_theme_change = on_theme_change
         self._summarizer_info = summarizer_info
         self._exporter_info = exporter_info
@@ -74,6 +78,10 @@ class Sidebar(ctk.CTkFrame):
         self.theme_switch: ctk.CTkSegmentedButton | None = None
 
         self._build(nav_items)
+
+    def _navigate(self, page_id: str, *, animated: bool = True) -> None:
+        """发布导航请求。"""
+        self._event_bus.publish("navigate", page_id=page_id, animated=animated)
 
     def _build(self, nav_items: list[tuple[str, str, str]]):
         """构建侧边栏内容"""
@@ -114,7 +122,7 @@ class Sidebar(ctk.CTkFrame):
                 fg_color="transparent",
                 text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
                 hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-                command=lambda p=page_id: self._on_navigate(p),
+                command=lambda p=page_id: self._navigate(p),
             )
             btn.grid(row=i + 1, column=0, padx=12, pady=4, sticky="ew")
             self.nav_buttons[page_id] = btn
@@ -189,7 +197,7 @@ class Sidebar(ctk.CTkFrame):
             fg_color="transparent",
             text_color=summarizer_color,
             hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-            command=lambda: self._on_navigate("settings"),
+            command=lambda: self._navigate("settings"),
         )
         summarizer_btn.pack(side="left", padx=(0, 4))
         create_tooltip(
@@ -211,7 +219,7 @@ class Sidebar(ctk.CTkFrame):
             fg_color="transparent",
             text_color=exporter_color,
             hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-            command=lambda: self._on_navigate("settings"),
+            command=lambda: self._navigate("settings"),
         )
         exporter_btn.pack(side="left", padx=(0, 4))
         create_tooltip(
@@ -244,7 +252,7 @@ class Sidebar(ctk.CTkFrame):
                 ModernColors.DARK_TEXT_SECONDARY,
             ),
             hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-            command=lambda: self._on_navigate("history"),
+            command=lambda: self._navigate("history"),
         )
         cache_btn.pack(side="left")
         create_tooltip(

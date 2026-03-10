@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
@@ -208,11 +209,21 @@ class LogPanel(ctk.CTkFrame):
             on_complete=on_complete,
         )
 
+    def _get_internal_textbox(self) -> Any | None:
+        """获取 CTkTextbox 底层 tk.Text 控件。"""
+        log_text = self.log_text
+        if log_text is None:
+            return None
+        return getattr(log_text, "_textbox", None)
+
     def _setup_log_tags(self):
         """配置日志级别颜色标签"""
         import contextlib
+
+        tw = self._get_internal_textbox()
+        if tw is None:
+            return
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox  # 内部 tk.Text
             tw.tag_configure("ERROR", foreground=ModernColors.ERROR)
             tw.tag_configure("WARNING", foreground=ModernColors.WARNING)
             tw.tag_configure("SUCCESS", foreground=ModernColors.SUCCESS)
@@ -225,9 +236,12 @@ class LogPanel(ctk.CTkFrame):
     def _on_level_filter(self, _value: str = ""):
         """级别过滤 - 显示/隐藏匹配行"""
         import contextlib
+
         level = self._level_var.get()
+        tw = self._get_internal_textbox()
+        if tw is None:
+            return
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox
             tw.configure(state="normal")
             tw.tag_remove("hidden", "1.0", "end")
             if level != "ALL":
@@ -244,9 +258,12 @@ class LogPanel(ctk.CTkFrame):
     def _on_search(self, _event=None):
         """搜索高亮"""
         import contextlib
+
         query = self._search_var.get().strip()
+        tw = self._get_internal_textbox()
+        if tw is None:
+            return
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox
             tw.tag_remove("SEARCH_HIT", "1.0", "end")
             if not query:
                 return

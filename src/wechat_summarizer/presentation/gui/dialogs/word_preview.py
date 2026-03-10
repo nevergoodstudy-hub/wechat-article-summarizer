@@ -171,7 +171,9 @@ def show_word_preview(gui: WechatSummarizerGUI) -> None:
             text_color="gray",
         ).pack(side="right")
         doc_container = ctk.CTkFrame(
-            preview_window, corner_radius=Spacing.RADIUS_SM, fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_CARD_HOVER)
+            preview_window,
+            corner_radius=Spacing.RADIUS_SM,
+            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_CARD_HOVER),
         )
         doc_container.pack(fill="both", expand=True, padx=15, pady=5)
         doc_scroll = ctk.CTkScrollableFrame(
@@ -389,7 +391,9 @@ def show_batch_word_preview(gui: WechatSummarizerGUI) -> None:
         )
         next_btn.pack(side="right", padx=2)
         doc_container = ctk.CTkFrame(
-            preview_window, corner_radius=Spacing.RADIUS_SM, fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_CARD_HOVER)
+            preview_window,
+            corner_radius=Spacing.RADIUS_SM,
+            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_CARD_HOVER),
         )
         doc_container.pack(fill="both", expand=True, padx=15, pady=5)
         doc_scroll = ctk.CTkScrollableFrame(

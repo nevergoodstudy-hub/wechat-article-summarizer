@@ -12,10 +12,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
 from loguru import logger
 
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import create_safe_client
 from .base import BaseExporter
 from .html import HtmlExporter
 
@@ -188,7 +188,7 @@ class ZipExporter(BaseExporter):
 
             try:
                 # 下载图片
-                with httpx.Client(timeout=self._image_timeout) as client:
+                with create_safe_client(timeout=self._image_timeout) as client:
                     response = client.get(img_url)
                     response.raise_for_status()
                     img_data = response.content

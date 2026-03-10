@@ -301,9 +301,7 @@ class WindowsIntegration:
 
                 csidl_desktopdirectory = 0x0010
                 buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-                ctypes.windll.shell32.SHGetFolderPathW(
-                    None, csidl_desktopdirectory, None, 0, buf
-                )
+                ctypes.windll.shell32.SHGetFolderPathW(None, csidl_desktopdirectory, None, 0, buf)
                 return Path(buf.value)
             except Exception:
                 pass

@@ -12,13 +12,14 @@ from __future__ import annotations
 
 import contextlib
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from ...infrastructure.config import get_container, get_settings
+from ...bootstrap import AppRuntime, build_app_runtime
 from ...shared.constants import GUI_MIN_SIZE, GUI_WINDOW_TITLE
 from ...shared.progress import BatchProgressTracker, ProgressInfo
 
@@ -35,6 +36,8 @@ from .dialogs.word_preview import (
     show_batch_word_preview,
     show_word_preview,
 )
+from .event_bus import GUIEventBus
+from .main_window import MainWindowCoordinator
 from .pages import BatchPage, HistoryPage, HomePage, SettingsPage, SinglePage
 
 # 2026现代化色彩系统
@@ -53,7 +56,6 @@ from .utils.windows_integration import Windows11StyleHelper
 from .viewmodels import MainViewModel
 
 # 提取的 GUI 组件（Phase 2 架构重构）
-from .widgets.animation_helper import TransitionManager
 from .widgets.helpers import (
     LOW_MEMORY_THRESHOLD_GB,
     ExporterInfo,
@@ -137,6 +139,10 @@ class WechatSummarizerGUI:
             self._tips_data: list[str] = []
             self._current_tip_index = 0
             self._tip_auto_switch_id = None
+            self.event_bus = GUIEventBus()
+            self._event_bus_subscriptions: list[Callable[[], None]] = []
+            self._main_window = MainWindowCoordinator(self)
+            self._bind_event_bus()
 
             # 定义启动任务列表
             # 权重根据任务实际耗时估算：
@@ -210,10 +216,7 @@ class WechatSummarizerGUI:
 
     def _show_main_window(self):
         """显示主窗口并播放欢迎动画"""
-        self.root.deiconify()
-        self.root.lift()
-        self.root.focus_force()
-        self._play_welcome_animation()
+        self._get_main_window_coordinator().show_main_window()
 
     def _check_memory_on_startup(self):
         """启动时检测内存，如果低于阈值则提示用户"""
@@ -262,6 +265,14 @@ class WechatSummarizerGUI:
             on_confirm=on_enable,
             on_cancel=on_dismiss,
         )
+
+    def _get_main_window_coordinator(self) -> MainWindowCoordinator:
+        """获取主窗口协调器。"""
+        coordinator = getattr(self, "_main_window", None)
+        if coordinator is None:
+            coordinator = MainWindowCoordinator(self)
+            self._main_window = coordinator
+        return coordinator
 
     def _apply_low_memory_optimizations(self):
         """应用低内存模式优化"""
@@ -476,6 +487,36 @@ class WechatSummarizerGUI:
             self.user_prefs.auto_start_enabled = actual_enabled
             logger.debug(f"开机自启动状态已同步: {('enabled' if actual_enabled else 'disabled')}")
 
+    def _bind_event_bus(self) -> None:
+        """绑定主窗口级事件总线订阅。"""
+        self._event_bus_subscriptions.append(self._get_main_window_coordinator().bind_event_bus())
+
+    def _clear_event_bus_subscriptions(self) -> None:
+        """清理事件总线订阅。"""
+        for unsubscribe in getattr(self, "_event_bus_subscriptions", []):
+            with contextlib.suppress(Exception):
+                unsubscribe()
+        if hasattr(self, "_event_bus_subscriptions"):
+            self._event_bus_subscriptions.clear()
+        if hasattr(self, "event_bus"):
+            self.event_bus.clear()
+
+    def _publish_navigation(self, page_id: str, *, animated: bool = False) -> None:
+        """发布页面切换事件。"""
+        self.event_bus.publish("navigate", page_id=page_id, animated=animated)
+
+    def _handle_navigation_event(
+        self,
+        page_id: str,
+        animated: bool = False,
+        **_: Any,
+    ) -> None:
+        """处理组件发出的导航事件。"""
+        self._get_main_window_coordinator().handle_navigation_event(
+            page_id,
+            animated=animated,
+        )
+
     def _build_ui(self):
         """构建用户界面"""
         self.root.grid_columnconfigure(1, weight=1)
@@ -549,7 +590,7 @@ class WechatSummarizerGUI:
                 id="goto_home",
                 name="跳转首页",
                 keys="Ctrl+1",
-                callback=lambda: self._show_page(self.PAGE_HOME),
+                callback=lambda: self._publish_navigation(self.PAGE_HOME),
                 group="导航",
                 description="跳转到首页",
             ),
@@ -557,7 +598,7 @@ class WechatSummarizerGUI:
                 id="goto_single",
                 name="跳转单篇处理",
                 keys="Ctrl+2",
-                callback=lambda: self._show_page(self.PAGE_SINGLE),
+                callback=lambda: self._publish_navigation(self.PAGE_SINGLE),
                 group="导航",
                 description="跳转到单篇处理页面",
             ),
@@ -565,7 +606,7 @@ class WechatSummarizerGUI:
                 id="goto_batch",
                 name="跳转批量处理",
                 keys="Ctrl+3",
-                callback=lambda: self._show_page(self.PAGE_BATCH),
+                callback=lambda: self._publish_navigation(self.PAGE_BATCH),
                 group="导航",
                 description="跳转到批量处理页面",
             ),
@@ -573,7 +614,7 @@ class WechatSummarizerGUI:
                 id="goto_history",
                 name="跳转历史记录",
                 keys="Ctrl+4",
-                callback=lambda: self._show_page(self.PAGE_HISTORY),
+                callback=lambda: self._publish_navigation(self.PAGE_HISTORY),
                 group="导航",
                 description="跳转到历史记录页面",
             ),
@@ -581,7 +622,7 @@ class WechatSummarizerGUI:
                 id="goto_settings",
                 name="跳转设置",
                 keys="Ctrl+,",
-                callback=lambda: self._show_page(self.PAGE_SETTINGS),
+                callback=lambda: self._publish_navigation(self.PAGE_SETTINGS),
                 group="导航",
                 description="跳转到设置页面",
             ),
@@ -647,7 +688,7 @@ class WechatSummarizerGUI:
             self.root,
             get_font=self._get_font,
             nav_items=nav_items,
-            on_navigate=self._show_page_animated,
+            event_bus=self.event_bus,
             on_theme_change=self._on_theme_change,
             summarizer_info=self._summarizer_info,
             exporter_info=self._exporter_info,
@@ -900,6 +941,7 @@ class WechatSummarizerGUI:
             if self._log_handler_id:
                 with contextlib.suppress(Exception):
                     logger.remove(self._log_handler_id)
+            self._clear_event_bus_subscriptions()
 
             # 关闭窗口
             self.root.destroy()
@@ -914,6 +956,7 @@ class WechatSummarizerGUI:
             if self._log_handler_id:
                 with contextlib.suppress(Exception):
                     logger.remove(self._log_handler_id)
+            self._clear_event_bus_subscriptions()
 
             logger.info("应用正常退出")
             self.root.destroy()
@@ -942,9 +985,7 @@ class WechatSummarizerGUI:
 
     def _restore_from_tray(self):
         """从托盘恢复窗口"""
-        self.root.deiconify()
-        self.root.lift()
-        self.root.focus_force()
+        self._get_main_window_coordinator().restore_from_tray()
 
     def _update_summarizer_status_display(self):
         """更新摘要器状态显示 — 委托给 SettingsPage"""
@@ -982,128 +1023,19 @@ class WechatSummarizerGUI:
 
     def _show_page(self, page_id: str):
         """切换页面"""
-        for frame in self._page_frames.values():
-            frame.grid_forget()
-        if page_id in self._page_frames:
-            self._page_frames[page_id].grid(row=0, column=0, sticky="nsew")
-        # 通知页面已显示（用于剪贴板检测等）
-        page = self._page_frames.get(page_id)
-        if page and hasattr(page, "on_page_shown"):
-            with contextlib.suppress(Exception):
-                page.on_page_shown()
-        for pid, btn in self._nav_buttons.items():
-            if pid == page_id:
-                btn.configure(
-                    fg_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-                    text_color="white",
-                )
-            else:
-                btn.configure(
-                    fg_color="transparent",
-                    text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-                )
-        self._current_page = page_id
+        self._get_main_window_coordinator().show_page(page_id)
 
     def _show_page_animated(self, page_id: str):
         """带平滑滑动动画的页面切换"""
-        if self._current_page == page_id:
-            return None
-
-        old_page = self._page_frames.get(self._current_page)
-        new_page = self._page_frames.get(page_id)
-
-        if not new_page:
-            return None
-
-        # 如果低内存模式，禁用动画
-        if self._is_low_memory_mode():
-            self._show_page(page_id)
-            return
-
-        # 确定滑动方向：基于页面顺序
-        page_order = [
-            self.PAGE_HOME,
-            self.PAGE_SINGLE,
-            self.PAGE_BATCH,
-            self.PAGE_HISTORY,
-            self.PAGE_SETTINGS,
-        ]
-        try:
-            old_idx = page_order.index(self._current_page)
-            new_idx = page_order.index(page_id)
-            direction = (
-                TransitionManager.DIRECTION_LEFT
-                if new_idx > old_idx
-                else TransitionManager.DIRECTION_RIGHT
-            )
-        except ValueError:
-            direction = TransitionManager.DIRECTION_LEFT
-
-        # 更新导航按钮状态 (立即更新，不等动画完成)
-        self._update_nav_buttons_animated(page_id)
-
-        # 记录新页面
-        self._current_page = page_id
-
-        def on_complete():
-            page_names = {
-                self.PAGE_HOME: "首页",
-                self.PAGE_SINGLE: "单篇处理",
-                self.PAGE_BATCH: "批量处理",
-                self.PAGE_HISTORY: "历史记录",
-                self.PAGE_SETTINGS: "设置",
-            }
-            page_name = page_names.get(page_id, page_id)
-            self._animate_status_change(f"已切换到{page_name}")
-            # 通知页面已显示
-            if new_page and hasattr(new_page, "on_page_shown"):
-                with contextlib.suppress(Exception):
-                    new_page.on_page_shown()
-
-        # 执行滑动过渡
-        TransitionManager.slide_transition(
-            self.root,
-            self.content_area,
-            old_page,
-            new_page,
-            direction=direction,
-            on_complete=on_complete,
-        )
+        return self._get_main_window_coordinator().show_page_animated(page_id)
 
     def _fade_in_page(self, page_id: str):
         """淡入新页面并更新导航按钮状态 (兼容旧代码)"""
-        new_page = self._page_frames.get(page_id)
-        if not new_page:
-            return None
-        else:
-            new_page.grid(row=0, column=0, sticky="nsew")
-            self._update_nav_buttons_animated(page_id)
-            self._current_page = page_id
-            page_names = {
-                self.PAGE_HOME: "首页",
-                self.PAGE_SINGLE: "单篇处理",
-                self.PAGE_BATCH: "批量处理",
-                self.PAGE_HISTORY: "历史记录",
-                self.PAGE_SETTINGS: "设置",
-            }
-            page_name = page_names.get(page_id, page_id)
-            self._animate_status_change(f"已切换到{page_name}")
+        return self._get_main_window_coordinator().fade_in_page(page_id)
 
     def _update_nav_buttons_animated(self, active_page_id: str):
         """带平滑过渡动画更新导航按钮状态"""
-        for pid, btn in self._nav_buttons.items():
-            if pid == active_page_id:
-                btn.configure(
-                    fg_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-                    text_color="white",
-                    hover_color=(ModernColors.LIGHT_ACCENT_HOVER, ModernColors.DARK_ACCENT_HOVER),
-                )
-            else:
-                btn.configure(
-                    fg_color="transparent",
-                    text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-                    hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-                )
+        self._get_main_window_coordinator().update_nav_buttons_animated(active_page_id)
 
     def _animate_status_change(self, text: str):
         """动画状态变化"""
@@ -1645,7 +1577,9 @@ class WechatSummarizerGUI:
     def _add_batch_result_item(self, article: Article, success: bool):
         """添加批量结果项"""
         frame = ctk.CTkFrame(
-            self.batch_result_frame, corner_radius=8, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
+            self.batch_result_frame,
+            corner_radius=8,
+            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
         )
         frame.pack(fill="x", pady=3)
         icon = "✓" if success else "✗"
@@ -1658,7 +1592,9 @@ class WechatSummarizerGUI:
     def _add_batch_result_item_error(self, url: str, error: str):
         """添加错误项"""
         frame = ctk.CTkFrame(
-            self.batch_result_frame, corner_radius=8, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
+            self.batch_result_frame,
+            corner_radius=8,
+            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
         )
         frame.pack(fill="x", pady=3)
         short_url = url[:25] + "..." if len(url) > 25 else url
@@ -1937,17 +1873,32 @@ class WechatSummarizerGUI:
         self.root.mainloop()
 
 
-def run_gui():
+def run_gui(
+    runtime: AppRuntime | None = None,
+    *,
+    container: Container | None = None,
+    settings: AppSettings | None = None,
+):
     """启动GUI（组合根 - 创建依赖并注入）"""
     if not _ctk_available:
         print("错误: customtkinter未安装")
         print("请运行: pip install customtkinter")
         return None
+
+    if runtime is not None:
+        if container is not None and runtime.container is not container:
+            raise ValueError("runtime.container 与 container 必须保持一致")
+        if settings is not None and runtime.settings is not settings:
+            raise ValueError("runtime.settings 与 settings 必须保持一致")
+        resolved_runtime = runtime
     else:
-        container = get_container()
-        settings = get_settings()
-        app = WechatSummarizerGUI(container=container, settings=settings)
-        app.run()
+        resolved_runtime = build_app_runtime(settings=settings, container=container)
+
+    app = WechatSummarizerGUI(
+        container=resolved_runtime.container,
+        settings=resolved_runtime.settings,
+    )
+    app.run()
 
 
 if __name__ == "__main__":

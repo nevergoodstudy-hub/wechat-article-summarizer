@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
-import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
 
 from ....domain.entities import Article
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import create_safe_client
 from .base import BaseExporter
 
 if TYPE_CHECKING:
@@ -267,7 +267,7 @@ class WordExporter(BaseExporter):
 
             try:
                 # 下载图片
-                with httpx.Client(timeout=30, follow_redirects=True) as client:
+                with create_safe_client(timeout=30, follow_redirects=True) as client:
                     response = client.get(
                         img_url,
                         headers={
@@ -520,7 +520,7 @@ class WordExporter(BaseExporter):
             img_url = urljoin(base_url, img_url)
 
         try:
-            with httpx.Client(timeout=30, follow_redirects=True) as client:
+            with create_safe_client(timeout=30, follow_redirects=True) as client:
                 response = client.get(
                     img_url,
                     headers={

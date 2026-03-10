@@ -11,6 +11,7 @@ from wechat_summarizer.infrastructure.adapters.http_client_pool import (
     ClientConfig,
     HttpClientPool,
 )
+from wechat_summarizer.shared.utils.ssrf_protection import SSRFSafeTransport
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +31,7 @@ class TestClientConfig:
         assert config.timeout_connect == 5.0
         assert config.timeout_read == 30.0
         assert config.max_connections == 100
-        assert config.follow_redirects is True
+        assert config.follow_redirects is False
         assert config.http2 is False
 
     @pytest.mark.unit
@@ -98,6 +99,8 @@ class TestHttpClientPool:
         client = await pool.get_client("test.com")
 
         assert client is not None
+        assert isinstance(client._transport, SSRFSafeTransport)
+        assert client.follow_redirects is False
         assert pool.active_clients == 1
 
         await pool.close_all()

@@ -1,4 +1,5 @@
 """向量存储适配器"""
+
 from __future__ import annotations
 
 from .base import BaseVectorStore

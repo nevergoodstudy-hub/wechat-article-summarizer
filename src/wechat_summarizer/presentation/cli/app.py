@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from datetime import UTC
+from typing import TYPE_CHECKING
 
 import click
 from rich.console import Console
@@ -11,11 +12,42 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from ...infrastructure.config import get_container, get_settings
+from ...bootstrap import AppRuntime, build_app_runtime
 from ...shared.constants import VERSION
 from ...shared.utils import setup_logger
 
+if TYPE_CHECKING:
+    from ...infrastructure.config import AppSettings, Container
+
 console = Console()
+
+
+def _get_root_context() -> click.Context | None:
+    """获取 Click 根上下文。"""
+    ctx = click.get_current_context(silent=True)
+    return ctx.find_root() if ctx is not None else None
+
+
+def _resolve_runtime() -> AppRuntime:
+    """优先复用显式运行时，否则懒构建默认运行时。"""
+    root_ctx = _get_root_context()
+    if root_ctx is not None and isinstance(root_ctx.obj, AppRuntime):
+        return root_ctx.obj
+
+    runtime = build_app_runtime()
+    if root_ctx is not None:
+        root_ctx.obj = runtime
+    return runtime
+
+
+def get_container() -> Container:
+    """获取当前 CLI 运行时容器。"""
+    return _resolve_runtime().container
+
+
+def get_settings() -> AppSettings:
+    """获取当前 CLI 运行时配置。"""
+    return _resolve_runtime().settings
 
 
 def _process_single(
@@ -69,8 +101,11 @@ def _process_single(
 @click.group()
 @click.version_option(VERSION, prog_name="wechat-summarizer")
 @click.option("--debug", is_flag=True, help="启用调试模式")
-def cli(debug: bool):
+@click.pass_context
+def cli(ctx: click.Context, debug: bool):
     """微信公众号文章总结器 - 命令行工具"""
+    if ctx.obj is not None and not isinstance(ctx.obj, AppRuntime):
+        raise click.ClickException("CLI 上下文对象必须为 AppRuntime")
     log_level = "DEBUG" if debug else "INFO"
     setup_logger(level=log_level)
 
@@ -136,7 +171,7 @@ def gui():
     try:
         from ..gui import run_gui
 
-        run_gui()
+        run_gui(runtime=_resolve_runtime())
     except ImportError as e:
         console.print(f"[red]GUI启动失败: {e}")
         console.print("请先安装GUI依赖: pip install customtkinter")
@@ -622,7 +657,8 @@ def cache_stats():
     help="传输协议 (stdio 用于 AI Agent, http 用于 Web 服务)",
 )
 @click.option("--port", "-p", default=8000, help="HTTP 模式端口 (默认 8000)")
-def mcp_server(transport: str, port: int):
+@click.option("--host", default="127.0.0.1", help="HTTP 模式绑定主机 (默认 127.0.0.1)")
+def mcp_server(transport: str, port: int, host: str):
     """
     启动 MCP (Model Context Protocol) 服务器
 
@@ -641,9 +677,14 @@ def mcp_server(transport: str, port: int):
         )
 
         if transport == "http":
-            console.print(f"[cyan]HTTP 端点: http://localhost:{port}/mcp[/cyan]")
+            console.print(f"[cyan]HTTP 端点: http://{host}:{port}/mcp[/cyan]")
 
-        run_mcp_server(transport=transport, port=port)
+        run_mcp_server(
+            transport=transport,
+            port=port,
+            host=host,
+            container=get_container(),
+        )
     except ImportError as e:
         console.print(f"[red]MCP 服务不可用: {e}[/red]")
         console.print("请安装 MCP 依赖: pip install 'wechat-summarizer[mcp]'")
@@ -721,9 +762,9 @@ except ImportError:
     pass  # 如果导入失败则跳过
 
 
-def run_cli():
+def run_cli(runtime: AppRuntime | None = None):
     """运行CLI"""
-    cli()
+    cli(obj=runtime)
 
 
 if __name__ == "__main__":

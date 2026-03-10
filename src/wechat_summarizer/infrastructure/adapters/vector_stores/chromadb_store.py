@@ -244,8 +244,8 @@ class ChromaDBStore(BaseVectorStore):
             result = cast(
                 dict[str, Any],
                 collection.get(
-                ids=[doc_id],
-                include=["documents", "embeddings", "metadatas"],
+                    ids=[doc_id],
+                    include=["documents", "embeddings", "metadatas"],
                 ),
             )
 

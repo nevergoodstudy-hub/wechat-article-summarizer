@@ -10,10 +10,12 @@ from .base import BaseViewModel, Observable
 if TYPE_CHECKING:
     from ....infrastructure.config import Container
 
+
 @runtime_checkable
 class CacheStatsLike(Protocol):
     total_entries: int
     total_size_bytes: int
+
 
 @runtime_checkable
 class CacheStorageLike(Protocol):
@@ -52,12 +54,16 @@ class SettingsViewModel(BaseViewModel):
         )
 
         # 导出配置状态
-        self._obsidian_configured: Observable[bool] = Observable(bool(settings.export.obsidian_vault_path))
+        self._obsidian_configured: Observable[bool] = Observable(
+            bool(settings.export.obsidian_vault_path)
+        )
         self._notion_configured: Observable[bool] = Observable(
             bool(settings.export.notion_api_key.get_secret_value())
             and bool(settings.export.notion_database_id)
         )
-        self._onenote_configured: Observable[bool] = Observable(bool(settings.export.onenote_client_id))
+        self._onenote_configured: Observable[bool] = Observable(
+            bool(settings.export.onenote_client_id)
+        )
 
         # 缓存信息
         self._cache_size: Observable[str] = Observable("")

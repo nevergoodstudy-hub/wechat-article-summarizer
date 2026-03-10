@@ -13,11 +13,19 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import urlparse
 
 from loguru import logger
 
+from . import security_config
+from .input_validator import MCPInputValidator, MCPValidationError
 from .security import PermissionLevel, require_permission
+
+if TYPE_CHECKING:
+    from ..bootstrap import AppRuntime
+    from ..infrastructure.config import Container
 
 # 延迟导入 MCP SDK（可选依赖）
 _mcp_available = True
@@ -37,6 +45,7 @@ def _get_mcp() -> FastMCP:
 
 # 创建 MCP 实例（延迟初始化）
 mcp: FastMCP | None = None
+_container_resolver: Callable[[], Container] | None = None
 
 
 def _ensure_mcp() -> FastMCP:
@@ -47,6 +56,84 @@ def _ensure_mcp() -> FastMCP:
         _register_tools(mcp)
         _register_resources(mcp)
     return mcp
+
+
+def _set_container_resolver(resolver: Callable[[], Container] | None) -> None:
+    """设置 MCP 当前使用的容器解析器。"""
+    global _container_resolver
+    _container_resolver = resolver
+
+
+def get_container() -> Container:
+    """获取 MCP 当前请求使用的容器。"""
+    resolver = _container_resolver
+    if resolver is not None:
+        return resolver()
+
+    from ..infrastructure.config import get_container as get_global_container
+
+    return get_global_container()
+
+
+def _get_mcp_limit(key: str, default: int) -> int:
+    """读取 MCP 安全配置中的数值上限。"""
+    value = security_config.MCP_SECURITY_CONFIG.get(key, default)
+    return value if isinstance(value, int) else default
+
+
+def _ensure_mcp_host_allowed(url: str) -> str:
+    """确保 URL 主机在 MCP 网络白名单中。"""
+    parsed = urlparse(url)
+    hostname = parsed.hostname.lower() if parsed.hostname else None
+    allowed_hosts = {host.lower() for host in security_config.get_allowed_hosts()}
+
+    if not hostname or hostname not in allowed_hosts:
+        raise MCPValidationError(f"URL host not allowed for MCP: {hostname or 'unknown'}")
+    return url
+
+
+def _validate_mcp_url(url: str) -> str:
+    """执行 MCP URL 校验并附加网络白名单约束。"""
+    validated_url = MCPInputValidator.validate_url(url)
+    return _ensure_mcp_host_allowed(validated_url)
+
+
+def _validate_mcp_urls(urls: list[str], max_count: int | None = None) -> list[str]:
+    """校验 MCP 批量 URL 参数并强制应用主机白名单。"""
+    limit = max_count if max_count is not None else _get_mcp_limit("max_batch_urls", 10)
+    validated_urls = MCPInputValidator.validate_urls(urls, max_count=limit)
+    return [_ensure_mcp_host_allowed(url) for url in validated_urls]
+
+
+def _sanitize_mcp_text(
+    text: str | None,
+    *,
+    max_length_key: str = "max_text_length",
+    max_length: int | None = None,
+    allow_none: bool = True,
+    field_name: str = "Text",
+) -> str | None:
+    """清理 MCP 文本输入并应用长度限制。"""
+    if text is None:
+        if allow_none:
+            return None
+        raise MCPValidationError(f"{field_name} must be a non-empty string")
+
+    resolved_max_length = (
+        max_length if max_length is not None else _get_mcp_limit(max_length_key, 10_000)
+    )
+    sanitized = MCPInputValidator.sanitize_text(text, max_length=resolved_max_length).strip()
+    if not sanitized:
+        raise MCPValidationError(f"{field_name} must be a non-empty string")
+    return sanitized
+
+
+def _validate_summary_length(max_length: int) -> int:
+    """验证摘要长度参数。"""
+    return MCPInputValidator.validate_max_length(
+        max_length,
+        upper=_get_mcp_limit("max_summary_length", 10_000),
+    )
 
 
 def _register_tools(mcp_instance: FastMCP) -> None:
@@ -63,11 +150,9 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             文章信息，包含标题、作者、内容等
         """
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
         try:
-            url = MCPInputValidator.validate_url(url)
+            url = _validate_mcp_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -105,13 +190,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             文章摘要信息
         """
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
         try:
-            url = MCPInputValidator.validate_url(url)
+            url = _validate_mcp_url(url)
             method = MCPInputValidator.validate_method(method)
-            max_length = MCPInputValidator.validate_max_length(max_length)
+            max_length = _validate_summary_length(max_length)
             container = get_container()
 
             # 抓取文章
@@ -157,11 +240,9 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             文章基本信息
         """
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
         try:
-            url = MCPInputValidator.validate_url(url)
+            url = _validate_mcp_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -203,16 +284,13 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             批量摘要结果
         """
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
-        urls = MCPInputValidator.validate_urls(urls)
+        urls = _validate_mcp_urls(urls)
         method = MCPInputValidator.validate_method(method)
-        max_length = MCPInputValidator.validate_max_length(max_length)
+        max_length = _validate_summary_length(max_length)
         container = get_container()
         results = []
-
-        for url in urls[:10]:  # 限制最多 10 篇
+        for url in urls:
             try:
                 article = await asyncio.to_thread(container.fetch_use_case.execute, url)
                 summary = await asyncio.to_thread(
@@ -254,7 +332,6 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             可用摘要方法列表
         """
-        from ..infrastructure.config import get_container
 
         container = get_container()
         methods = list(container.summarizers.keys())
@@ -288,11 +365,9 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             知识图谱分析结果，包含实体、关系、社区信息
         """
         from ..domain.value_objects import ArticleContent
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
         try:
-            url = MCPInputValidator.validate_url(url)
+            url = _validate_mcp_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -386,10 +461,8 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             对比分析结果
         """
         from ..infrastructure.adapters.knowledge_graph import SimpleEntityExtractor
-        from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
 
-        urls = MCPInputValidator.validate_urls(urls, max_count=5)
+        urls = _validate_mcp_urls(urls, max_count=5)
         aspects = MCPInputValidator.validate_aspects(aspects)
 
         if len(urls) < 2:
@@ -433,9 +506,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             word_counts: list[int] = []
             for article_data in articles_data:
                 entities = cast(list[dict[str, str]], article_data.get("entities", []))
-                entity_name_sets.append(
-                    {entity["name"] for entity in entities if "name" in entity}
-                )
+                entity_name_sets.append({entity["name"] for entity in entities if "name" in entity})
                 tags = cast(list[str], article_data.get("tags", []))
                 tag_sets.append(set(tags))
                 word_count_value = article_data.get("word_count")
@@ -482,13 +553,16 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         """
         import re
 
-        from ..infrastructure.config import get_container
+        urls = _validate_mcp_urls(urls)
+        topic = cast(
+            str, _sanitize_mcp_text(topic, max_length=200, allow_none=False, field_name="Topic")
+        )
 
         container = get_container()
         topic_data = []
 
         try:
-            for url in urls[:10]:  # 限制最多 10 篇
+            for url in urls:
                 try:
                     article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -572,9 +646,14 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             摘要质量评估结果
         """
-        from ..infrastructure.config import get_container
 
         try:
+            url = _validate_mcp_url(url)
+            method = MCPInputValidator.validate_method(method)
+            summary_text = _sanitize_mcp_text(
+                summary_text,
+                max_length_key="max_summary_length",
+            )
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -715,9 +794,9 @@ def _register_resources(mcp_instance: FastMCP) -> None:
 
         可用于 RAG 或上下文增强。
         """
-        from ..infrastructure.config import get_container
 
         try:
+            url = _validate_mcp_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -738,13 +817,36 @@ def _register_resources(mcp_instance: FastMCP) -> None:
             return f"获取文章失败: {e}"
 
 
-def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
+def run_mcp_server(
+    transport: str = "stdio",
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    *,
+    runtime: AppRuntime | None = None,
+    container: Container | None = None,
+) -> None:
     """运行 MCP 服务器
 
     Args:
         transport: 传输方式 ("stdio" 或 "http")
         port: HTTP 模式端口号
+        host: HTTP 模式绑定主机（默认仅监听本机回环地址）
+        runtime: 显式应用运行时
+        container: 显式注入的容器（兼容仅传容器的调用方）
     """
+    if runtime is not None and container is not None and runtime.container is not container:
+        raise ValueError("runtime.container 与 container 必须保持一致")
+
+    resolved_container = runtime.container if runtime is not None else container
+    resolver: Callable[[], Container] | None = None
+    if resolved_container is not None:
+
+        def _resolve_container() -> Container:
+            return resolved_container
+
+        resolver = _resolve_container
+
+    _set_container_resolver(resolver)
     mcp_instance = _ensure_mcp()
 
     logger.info(f"启动 MCP 服务器 (transport={transport})")
@@ -762,7 +864,7 @@ def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
                 Mount("/mcp", app=mcp_instance.sse_app()),
             ]
         )
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        uvicorn.run(app, host=host, port=port)
     else:
         raise ValueError(f"不支持的传输方式: {transport}")
 

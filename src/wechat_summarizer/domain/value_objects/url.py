@@ -59,7 +59,8 @@ class ArticleURL:
         private_domains = {
             "localhost",
             "127.0.0.1",
-            "0.0.0.0",
+            # Compared as a blocked address, not used as a bind target.
+            "0.0.0.0",  # nosec B104
             "::1",
             "[::1]",
         }
@@ -186,7 +187,11 @@ def validate_resolved_ip(ip_string: str) -> bool:
             return False
 
     # For IPv4, check for 0.0.0.0
-    return not (isinstance(ip, ipaddress.IPv4Address) and ip == ipaddress.IPv4Address("0.0.0.0"))
+    return not (
+        # Validation-only comparison, not a bind target.
+        isinstance(ip, ipaddress.IPv4Address)
+        and ip == ipaddress.IPv4Address("0.0.0.0")  # nosec B104
+    )
 
 
 def resolve_and_validate_host(hostname: str) -> tuple[bool, str | None]:

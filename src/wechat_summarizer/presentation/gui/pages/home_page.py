@@ -60,6 +60,10 @@ class HomePage(ctk.CTkFrame):
         self._recent_labels: list[Any] = []
         self._build()
 
+    def _navigate(self, page_id: str, *, animated: bool = False) -> None:
+        """通过事件总线请求页面切换。"""
+        self.gui.event_bus.publish("navigate", page_id=page_id, animated=animated)
+
     # ==================================================================
     # 构建
     # ==================================================================
@@ -162,7 +166,7 @@ class HomePage(ctk.CTkFrame):
         if not url:
             return
         # 跳转到单篇页面并填入URL
-        self.gui._show_page(self.PAGE_SINGLE)
+        self._navigate(self.PAGE_SINGLE)
         with contextlib.suppress(Exception):
             self.gui.url_entry.delete(0, "end")
             self.gui.url_entry.insert(0, url)
@@ -190,7 +194,7 @@ class HomePage(ctk.CTkFrame):
                 title=title,
                 desc=desc,
                 color=color,
-                command=lambda p=page: self.gui._show_page(p),
+                command=lambda p=page: self._navigate(p),
             )
             card.grid(row=0, column=i, padx=8, pady=8, sticky="nsew")
 
@@ -259,7 +263,7 @@ class HomePage(ctk.CTkFrame):
                 ModernColors.LIGHT_HOVER_SUBTLE,
                 ModernColors.DARK_HOVER_SUBTLE,
             ),
-            command=lambda: self.gui._show_page(self.PAGE_SETTINGS),
+            command=lambda: self._navigate(self.PAGE_SETTINGS),
         )
         settings_btn.pack(anchor="w", pady=(10, 0))
 
@@ -324,7 +328,7 @@ class HomePage(ctk.CTkFrame):
                 ModernColors.LIGHT_HOVER_SUBTLE,
                 ModernColors.DARK_HOVER_SUBTLE,
             ),
-            command=lambda: self.gui._show_page(self.PAGE_HISTORY),
+            command=lambda: self._navigate(self.PAGE_HISTORY),
         ).pack(side="right")
 
         self._recent_container = inner
@@ -1000,7 +1004,7 @@ class HomePage(ctk.CTkFrame):
                 text_color=color,
                 border_width=1,
                 border_color=color,
-                command=lambda p=page: self.gui._show_page(p),
+                command=lambda p=page: self._navigate(p),
             )
             btn.pack(side="left", padx=(0, 8))
 
