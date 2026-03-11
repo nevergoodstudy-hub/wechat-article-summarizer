@@ -4,7 +4,9 @@
 """
 
 from .article_cache import ArticleListCache
+from .article_package_exporter import MarkdownArticlePackageExporter
 from .article_fetcher import WechatArticleFetcher
+from .account_searcher import WechatOfficialAccountSearcher
 from .auth_manager import FileCredentialStorage, WechatAuthManager
 from .link_exporter import LinkExporter
 from .rate_limiter import AdaptiveRateLimiter, RateLimitConfig, RateLimiter
@@ -14,8 +16,10 @@ __all__ = [
     "ArticleListCache",
     "FileCredentialStorage",
     "LinkExporter",
+    "MarkdownArticlePackageExporter",
     "RateLimitConfig",
     "RateLimiter",
+    "WechatOfficialAccountSearcher",
     "WechatArticleFetcher",
     "WechatAuthManager",
 ]

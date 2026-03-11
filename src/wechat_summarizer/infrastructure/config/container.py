@@ -13,7 +13,10 @@ from loguru import logger
 from ...application.use_cases import (
     BatchProcessUseCase,
     ExportArticleUseCase,
+    ExportRelatedAccountArticlesUseCase,
     FetchArticleUseCase,
+    PreviewRelatedAccountArticlesUseCase,
+    SearchOfficialAccountsUseCase,
     SummarizeArticleUseCase,
 )
 from ...domain.services.summary_evaluator import SummaryEvaluator
@@ -64,6 +67,24 @@ class Container:
     _summarize_use_case: SummarizeArticleUseCase | None = field(default=None, init=False)
     _export_use_case: ExportArticleUseCase | None = field(default=None, init=False)
     _batch_use_case: BatchProcessUseCase | None = field(default=None, init=False)
+    _credential_storage: Any | None = field(default=None, init=False)
+    _wechat_auth_manager: Any | None = field(default=None, init=False)
+    _article_list_cache: Any | None = field(default=None, init=False)
+    _wechat_article_fetcher: Any | None = field(default=None, init=False)
+    _link_exporter: Any | None = field(default=None, init=False)
+    _official_account_searcher: Any | None = field(default=None, init=False)
+    _article_package_exporter: Any | None = field(default=None, init=False)
+    _search_official_accounts_use_case: SearchOfficialAccountsUseCase | None = field(
+        default=None,
+        init=False,
+    )
+    _preview_related_account_articles_use_case: PreviewRelatedAccountArticlesUseCase | None = (
+        field(default=None, init=False)
+    )
+    _export_related_account_articles_use_case: ExportRelatedAccountArticlesUseCase | None = field(
+        default=None,
+        init=False,
+    )
 
     @classmethod
     def create_minimal(cls) -> Container:
@@ -87,6 +108,16 @@ class Container:
         instance._summarize_use_case = None
         instance._export_use_case = None
         instance._batch_use_case = None
+        instance._credential_storage = None
+        instance._wechat_auth_manager = None
+        instance._article_list_cache = None
+        instance._wechat_article_fetcher = None
+        instance._link_exporter = None
+        instance._official_account_searcher = None
+        instance._article_package_exporter = None
+        instance._search_official_accounts_use_case = None
+        instance._preview_related_account_articles_use_case = None
+        instance._export_related_account_articles_use_case = None
         return instance
 
     @property
@@ -213,6 +244,139 @@ class Container:
                         export_use_case=self.export_use_case,
                     )
         return self._batch_use_case
+
+    @property
+    def credential_storage(self):
+        """获取公众号认证凭据存储。"""
+        if self._credential_storage is None:
+            with self._lock:
+                if self._credential_storage is None:
+                    from ..adapters.wechat_batch import FileCredentialStorage
+
+                    self._credential_storage = FileCredentialStorage()
+        return self._credential_storage
+
+    @property
+    def wechat_auth_manager(self):
+        """获取微信公众号后台认证管理器。"""
+        if self._wechat_auth_manager is None:
+            with self._lock:
+                if self._wechat_auth_manager is None:
+                    from ..adapters.wechat_batch import WechatAuthManager
+
+                    self._wechat_auth_manager = WechatAuthManager(self.credential_storage)
+        return self._wechat_auth_manager
+
+    @property
+    def article_list_cache(self):
+        """获取公众号文章列表缓存。"""
+        if self._article_list_cache is None:
+            with self._lock:
+                if self._article_list_cache is None:
+                    from ..adapters.wechat_batch import ArticleListCache
+
+                    self._article_list_cache = ArticleListCache(
+                        cache_dir=self.settings.batch.cache_dir,
+                        ttl_hours=self.settings.batch.cache_ttl_hours,
+                        enabled=self.settings.batch.cache_enabled,
+                    )
+        return self._article_list_cache
+
+    @property
+    def wechat_article_fetcher(self):
+        """获取微信公众号文章列表抓取器。"""
+        if self._wechat_article_fetcher is None:
+            with self._lock:
+                if self._wechat_article_fetcher is None:
+                    from ..adapters.wechat_batch import WechatArticleFetcher
+
+                    self._wechat_article_fetcher = WechatArticleFetcher(
+                        self.wechat_auth_manager,
+                        cache=self.article_list_cache,
+                    )
+        return self._wechat_article_fetcher
+
+    @property
+    def link_exporter(self):
+        """获取公众号链接导出器。"""
+        if self._link_exporter is None:
+            with self._lock:
+                if self._link_exporter is None:
+                    from ..adapters.wechat_batch import LinkExporter
+
+                    self._link_exporter = LinkExporter(
+                        output_dir=self.settings.export.default_output_dir,
+                    )
+        return self._link_exporter
+
+    @property
+    def official_account_searcher(self):
+        """获取公众号搜索适配器。"""
+        if self._official_account_searcher is None:
+            with self._lock:
+                if self._official_account_searcher is None:
+                    from ..adapters.wechat_batch import WechatOfficialAccountSearcher
+
+                    self._official_account_searcher = WechatOfficialAccountSearcher(
+                        self.wechat_auth_manager,
+                    )
+        return self._official_account_searcher
+
+    @property
+    def article_package_exporter(self):
+        """获取 Markdown 内容包导出器。"""
+        if self._article_package_exporter is None:
+            with self._lock:
+                if self._article_package_exporter is None:
+                    from ..adapters.wechat_batch import MarkdownArticlePackageExporter
+
+                    markdown_exporter = cast(Any, self.exporters.get("markdown"))
+                    if markdown_exporter is None:
+                        self._article_package_exporter = MarkdownArticlePackageExporter()
+                    else:
+                        self._article_package_exporter = MarkdownArticlePackageExporter(
+                            markdown_exporter=markdown_exporter,
+                        )
+        return self._article_package_exporter
+
+    @property
+    def search_official_accounts_use_case(self) -> SearchOfficialAccountsUseCase:
+        """获取公众号搜索用例。"""
+        if self._search_official_accounts_use_case is None:
+            with self._lock:
+                if self._search_official_accounts_use_case is None:
+                    self._search_official_accounts_use_case = SearchOfficialAccountsUseCase(
+                        self.official_account_searcher,
+                    )
+        return self._search_official_accounts_use_case
+
+    @property
+    def preview_related_account_articles_use_case(self) -> PreviewRelatedAccountArticlesUseCase:
+        """获取公众号相关文章预览用例。"""
+        if self._preview_related_account_articles_use_case is None:
+            with self._lock:
+                if self._preview_related_account_articles_use_case is None:
+                    self._preview_related_account_articles_use_case = (
+                        PreviewRelatedAccountArticlesUseCase(self.wechat_article_fetcher)
+                    )
+        return self._preview_related_account_articles_use_case
+
+    @property
+    def export_related_account_articles_use_case(self) -> ExportRelatedAccountArticlesUseCase:
+        """获取公众号相关文章导出用例。"""
+        if self._export_related_account_articles_use_case is None:
+            with self._lock:
+                if self._export_related_account_articles_use_case is None:
+                    self._export_related_account_articles_use_case = (
+                        ExportRelatedAccountArticlesUseCase(
+                            fetch_use_case=self.fetch_use_case,
+                            summarize_use_case=self.summarize_use_case,
+                            link_exporter=self.link_exporter,
+                            package_exporter=self.article_package_exporter,
+                            output_root=self.settings.export.default_output_dir,
+                        )
+                    )
+        return self._export_related_account_articles_use_case
 
     def _create_scrapers(self) -> list[ScraperPort]:
         """创建抓取器列表"""
@@ -518,6 +682,13 @@ class Container:
         all_resources.extend((self._vector_stores or {}).values())
         if self._storage is not None:
             all_resources.append(self._storage)
+        for resource in (
+            self._wechat_auth_manager,
+            self._wechat_article_fetcher,
+            self._official_account_searcher,
+        ):
+            if resource is not None:
+                all_resources.append(resource)
 
         for resource in all_resources:
             try:
@@ -553,6 +724,18 @@ class Container:
                 except Exception as e:
                     logger.debug(f"关闭 summarizer 失败: {e}")
 
+        for resource in (
+            self._wechat_auth_manager,
+            self._wechat_article_fetcher,
+            self._official_account_searcher,
+        ):
+            close_fn = getattr(resource, "close", None)
+            if callable(close_fn):
+                try:
+                    close_fn()
+                except Exception as e:
+                    logger.debug(f"关闭批处理资源失败: {e}")
+
         logger.debug("容器资源已关闭")
 
     def reload_summarizers(self, api_keys: dict[str, str]) -> None:
@@ -565,6 +748,7 @@ class Container:
         # 重建依赖 summarizers 的用例
         self._summarize_use_case = None
         self._batch_use_case = None
+        self._export_related_account_articles_use_case = None
         logger.info(f"摘要器已重新加载，当前可用: {list(self._summarizers.keys())}")
 
     def _create_storage(self) -> StoragePort | None:

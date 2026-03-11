@@ -10,6 +10,7 @@ MVVM 架构中的视图模型，负责：
 from .base import BaseViewModel
 from .batch_process_viewmodel import BatchProcessViewModel
 from .main_viewmodel import MainViewModel
+from .official_account_workflow_viewmodel import OfficialAccountWorkflowViewModel
 from .settings_viewmodel import SettingsViewModel
 from .single_process_viewmodel import SingleProcessViewModel
 
@@ -17,6 +18,7 @@ __all__ = [
     "BaseViewModel",
     "BatchProcessViewModel",
     "MainViewModel",
+    "OfficialAccountWorkflowViewModel",
     "SettingsViewModel",
     "SingleProcessViewModel",
 ]

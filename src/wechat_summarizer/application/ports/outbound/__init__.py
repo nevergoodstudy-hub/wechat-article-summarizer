@@ -13,6 +13,7 @@ from .knowledge_graph_port import (
     KnowledgeGraph,
     Relationship,
 )
+from .official_account_search_port import OfficialAccountSearchPort
 from .scraper_port import AsyncScraperPort, ScraperPort
 from .storage_port import StoragePort
 from .summarizer_port import AsyncSummarizerPort, SummarizerPort
@@ -40,6 +41,7 @@ __all__ = [
     "ExtractionResult",
     "GraphBuilderPort",
     "KnowledgeGraph",
+    "OfficialAccountSearchPort",
     "Relationship",
     "ScraperPort",
     "SearchResult",
