@@ -21,14 +21,10 @@ from loguru import logger
 
 from ...bootstrap import AppRuntime, build_app_runtime
 from ...shared.constants import GUI_MIN_SIZE, GUI_WINDOW_TITLE
-from ...shared.progress import BatchProgressTracker, ProgressInfo
-
-# 2026现代化GUI组件
 from .components.button import ButtonSize, ButtonVariant, ModernButton
 from .components.card import CardStyle, ModernCard, ShadowDepth
 from .components.input import ModernInput
 from .components.toast import init_toast_manager
-from .dialogs.batch_archive_export import BatchArchiveExportDialog
 from .dialogs.exit_confirm import ExitConfirmDialog
 from .dialogs.word_preview import (
     build_content_preview_with_images,
@@ -39,23 +35,16 @@ from .dialogs.word_preview import (
 from .event_bus import GUIEventBus
 from .main_window import MainWindowCoordinator
 from .pages import BatchPage, HistoryPage, HomePage, SettingsPage, SinglePage
-
-# 2026现代化色彩系统
 from .styles.colors import ModernColors
 from .styles.spacing import Spacing
 from .styles.typography import ChineseFonts
+from .url_batch_workflow import UrlBatchWorkflowCoordinator
 from .utils.i18n import set_language
-
-# 性能监控与快捷键系统 (2026 UI)
 from .utils.performance import PerformanceMonitor
-
-# 响应式布局系统 (2026 UI)
 from .utils.responsive import Breakpoint, BreakpointManager, ResponsiveLayout
 from .utils.shortcuts import KeyboardShortcutManager, Shortcut
 from .utils.windows_integration import Windows11StyleHelper
 from .viewmodels import MainViewModel
-
-# 提取的 GUI 组件（Phase 2 架构重构）
 from .widgets.helpers import (
     LOW_MEMORY_THRESHOLD_GB,
     ExporterInfo,
@@ -74,6 +63,7 @@ from .widgets.tooltip import create_tooltip
 if TYPE_CHECKING:
     from ...domain.entities import Article
     from ...infrastructure.config import AppSettings, Container
+    from ...shared.progress import BatchProgressTracker
 _ctk_available = True
 try:
     import customtkinter as ctk
@@ -134,6 +124,12 @@ class WechatSummarizerGUI:
             self._batch_processing_active = False
             self._batch_export_active = False
             self._single_processing_active = False
+            self._batch_cancel_requested = False
+            self._batch_progress_tracker: BatchProgressTracker | None = None
+            self._archive_progress_tracker: BatchProgressTracker | None = None
+            self._zip_progress_tracker: BatchProgressTracker | None = None
+            self._export_progress_tracker: BatchProgressTracker | None = None
+            self._archive_export_articles: list[Any] = []
 
             # 提示轮播组件状态
             self._tips_data: list[str] = []
@@ -142,6 +138,7 @@ class WechatSummarizerGUI:
             self.event_bus = GUIEventBus()
             self._event_bus_subscriptions: list[Callable[[], None]] = []
             self._main_window = MainWindowCoordinator(self)
+            self.url_batch_workflow = UrlBatchWorkflowCoordinator(self)
             self._bind_event_bus()
 
             # 定义启动任务列表
@@ -1439,414 +1436,24 @@ class WechatSummarizerGUI:
             messagebox.showerror("错误", f"导出失败: {message}")
 
     def _on_import_urls(self):
-        """导入URL"""
-        path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if not path:
-            return None
-        else:
-            try:
-                with open(path, encoding="utf-8") as f:
-                    content = f.read()
-                self.batch_url_text.delete("1.0", "end")
-                self.batch_url_text.insert("1.0", content)
-                logger.info(f"已导入URL文件: {path}")
-            except Exception as e:
-                messagebox.showerror("错误", f"读取失败: {e}")
+        """导入URL。"""
+        return self.url_batch_workflow.on_import_urls()
 
     def _on_paste_urls(self):
-        """粘贴URL"""
-        try:
-            content = self.root.clipboard_get()
-            self.batch_url_text.insert("end", content)
-        except Exception:
-            messagebox.showwarning("提示", "剪贴板为空")
+        """粘贴URL。"""
+        return self.url_batch_workflow.on_paste_urls()
 
     def _on_batch_process(self):
-        """批量处理"""
-        content = self.batch_url_text.get("1.0", "end").strip()
-        if not content:
-            messagebox.showwarning("提示", "请输入URL")
-            return None
-        else:
-            urls = [line.strip() for line in content.split("\n") if line.strip()]
-            if not urls:
-                messagebox.showwarning("提示", "未找到有效URL")
-                return None
-            else:
-                self._start_batch_processing(urls)
-
-    def _start_batch_processing(self, urls: list[str]):
-        """开始批量处理"""
-        self.batch_urls = urls
-        self.batch_results = []
-        self._batch_cancel_requested = False
-        self._batch_progress_tracker = BatchProgressTracker(
-            total=len(urls), smoothing_factor=0.3, log_interval=1
-        )
-        self._batch_progress_tracker.set_callback(self._on_batch_progress_update)
-        # 切换开始/停止按钮状态
-        if hasattr(self, "batch_page"):
-            self.batch_page.set_processing_state(True)
-        else:
-            self.batch_start_btn.configure(state="disabled")
-        self.batch_progress.set(0)
-        self.batch_status_label.configure(text=f"正在处理 0/{len(urls)} 篇...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_processing_active = True
-
-        logger.info(f"🚀 开始批量处理 {len(urls)} 篇文章")
-        for widget in self.batch_result_frame.winfo_children():
-            widget.destroy()
-        threading.Thread(target=self._batch_process_worker, daemon=True).start()
-
-    def _on_batch_progress_update(self, info: ProgressInfo):
-        """进度更新回调（在工作线程中调用）"""
-        self.root.after(0, lambda: self._update_batch_progress_ui(info))
-
-    def _update_batch_progress_ui(self, info: ProgressInfo):
-        """更新批量处理的GUI进度显示（在主线程中调用）"""
-        progress_value = info.percentage / 100.0
-        self.batch_progress.set(progress_value)
-        self.batch_status_label.configure(
-            text=f"正在处理 {info.progress_text} ({info.percentage_text})"
-        )
-        self.batch_elapsed_label.configure(text=info.elapsed_formatted)
-        self.batch_eta_label.configure(text=info.eta_formatted)
-        self.batch_rate_label.configure(text=info.rate_formatted)
-        if hasattr(self, "_batch_progress_tracker"):
-            tracker = self._batch_progress_tracker
-            self.batch_count_label.configure(
-                text=f"{tracker.success_count} / {tracker.failure_count}"
-            )
-
-    def _batch_process_worker(self):
-        """批量处理工作线程"""
-        method = self.batch_method_var.get()
-        len(self.batch_urls)
-        tracker = self._batch_progress_tracker
-        for _i, url in enumerate(self.batch_urls):
-            # 检查取消标志
-            if getattr(self, "_batch_cancel_requested", False):
-                logger.info("ℹ️ 用户取消了批量处理")
-                break
-            short_url = url[:50] + "..." if len(url) > 50 else url
-            try:
-                article = self.container.fetch_use_case.execute(url)
-                try:
-                    summary = self.container.summarize_use_case.execute(article, method=method)
-                    article.attach_summary(summary)
-                except Exception as e:
-                    logger.warning(f"摘要失败: {e}")
-                self.batch_results.append(article)
-                tracker.update_success(current_item=article.title[:30])
-                self.root.after(0, lambda a=article: self._add_batch_result_item(a, True))
-            except Exception as e:
-                logger.error(f"处理失败 {short_url}: {e}")
-                tracker.update_failure(current_item=short_url, error=str(e))
-                self.root.after(
-                    0, lambda u=url, err=str(e): self._add_batch_result_item_error(u, err)
-                )
-        tracker.finish()
-        self.root.after(0, self._batch_process_complete)
-
-    def _update_batch_progress(self, value: float, status: str):
-        """更新批量进度（兼容旧接口）"""
-        self.batch_progress.set(value)
-        self.batch_status_label.configure(text=status)
-
-    def _add_batch_result_item(self, article: Article, success: bool):
-        """添加批量结果项"""
-        frame = ctk.CTkFrame(
-            self.batch_result_frame,
-            corner_radius=8,
-            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
-        )
-        frame.pack(fill="x", pady=3)
-        icon = "✓" if success else "✗"
-        color = ModernColors.SUCCESS if success else ModernColors.ERROR
-        title = article.title[:35] + "..." if len(article.title) > 35 else article.title
-        ctk.CTkLabel(frame, text=f"{icon} {title}", anchor="w", text_color=color).pack(
-            side="left", padx=10, pady=8, fill="x", expand=True
-        )
-
-    def _add_batch_result_item_error(self, url: str, error: str):
-        """添加错误项"""
-        frame = ctk.CTkFrame(
-            self.batch_result_frame,
-            corner_radius=8,
-            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
-        )
-        frame.pack(fill="x", pady=3)
-        short_url = url[:25] + "..." if len(url) > 25 else url
-        ctk.CTkLabel(frame, text=f"✗ {short_url}", anchor="w", text_color=ModernColors.ERROR).pack(
-            side="left", padx=10, pady=8
-        )
-        ctk.CTkLabel(frame, text=error[:30], text_color="gray", font=ctk.CTkFont(size=11)).pack(
-            side="right", padx=10, pady=8
-        )
-
-    def _batch_process_complete(self):
-        """批量处理完成"""
-        # 清除任务状态
-        self._batch_processing_active = False
-        self._batch_cancel_requested = False
-
-        # 恢复按钮状态
-        if hasattr(self, "batch_page"):
-            self.batch_page.set_processing_state(False)
-        else:
-            self.batch_start_btn.configure(state="normal")
-        self.batch_progress.set(1.0)
-        success_count = len(self.batch_results)
-        total = len(self.batch_urls)
-        self.batch_status_label.configure(text=f"完成: {success_count}/{total} 篇成功")
-        logger.success(f"批量处理完成: {success_count}/{total}")
-        if self.batch_results:
-            self.batch_export_btn.configure(state="normal")
-            self.batch_export_md_btn.configure(state="normal")
-            self.batch_export_word_btn.configure(state="normal")
-            self.batch_export_html_btn.configure(state="normal")
+        """批量处理。"""
+        return self.url_batch_workflow.on_batch_process()
 
     def _on_batch_export(self):
-        """批量压缩导出 - 支持多格式和文章选择"""
-        if not self.batch_results:
-            return None
-
-        # 检查导出目录配置
-        if not self._check_export_dir_configured():
-            return None
-
-        # 显示批量压缩导出对话框
-        dialog = BatchArchiveExportDialog(self.root, self.batch_results)
-        result = dialog.get()
-
-        if not result:
-            return None  # 用户取消
-
-        # 执行多格式压缩导出
-        self._do_archive_export(
-            articles=result["articles"], archive_format=result["format"], path=result["path"]
-        )
-
-    def _do_archive_export(self, articles: list, archive_format: str, path: str):
-        """执行多格式压缩导出（带进度跟踪）
-
-        Args:
-            articles: 要导出的文章列表
-            archive_format: 压缩格式 ('zip', '7z', 'rar')
-            path: 输出路径
-        """
-        self._disable_export_buttons()
-        self._archive_export_articles = articles  # 保存要导出的文章
-        self._archive_progress_tracker = BatchProgressTracker(
-            total=len(articles), smoothing_factor=0.3, log_interval=1
-        )
-        self._archive_progress_tracker.set_callback(self._on_export_progress_update)
-        self.batch_progress.set(0)
-
-        format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
-        format_name = format_names.get(archive_format, archive_format.upper())
-
-        self.batch_status_label.configure(text=f"正在打包 0/{len(articles)} 篇为 {format_name}...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_export_active = True
-
-        logger.info(f"📦 开始导出 {len(articles)} 篇文章为 {format_name} 压缩包")
-        threading.Thread(
-            target=self._archive_export_worker, args=(articles, archive_format, path), daemon=True
-        ).start()
-
-    def _archive_export_worker(self, articles: list, archive_format: str, path: str):
-        """工作线程：执行多格式压缩导出"""
-        try:
-            from ...infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
-            tracker = self._archive_progress_tracker
-
-            def progress_callback(current: int, total: int, item_name: str):
-                if current > tracker.current:
-                    tracker.update_success(current_item=item_name)
-
-            # 创建多格式压缩导出器
-            exporter = MultiFormatArchiveExporter()
-            result = exporter.export_batch(
-                articles=articles,
-                path=path,
-                archive_format=archive_format,
-                progress_callback=progress_callback,
-            )
-
-            tracker.finish()
-            self.root.after(0, lambda: self._archive_export_complete(result, archive_format))
-        except Exception as e:
-            logger.error(f"压缩导出失败: {e}")
-            error_msg = str(e)
-            self.root.after(0, lambda msg=error_msg: self._archive_export_error(msg))
-
-    def _archive_export_complete(self, result: str, archive_format: str):
-        """处理压缩导出完成"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_progress.set(1.0)
-
-        format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
-        format_name = format_names.get(archive_format, archive_format.upper())
-
-        self.batch_status_label.configure(text=f"{format_name} 导出完成")
-        logger.success(f"批量导出成功: {result}")
-        messagebox.showinfo("成功", f"导出成功: {result}")
-
-    def _archive_export_error(self, error: str):
-        """处理压缩导出错误"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_status_label.configure(text="压缩导出失败")
-        messagebox.showerror("错误", f"导出失败: {error}")
+        """批量压缩导出。"""
+        return self.url_batch_workflow.on_batch_export()
 
     def _on_batch_export_format(self, target: str):
-        """批量导出指定格式"""
-        if not self.batch_results:
-            return None
-
-        # 检查导出目录配置
-        if not self._check_export_dir_configured():
-            return None
-
-        if target == "word":
-            self._show_batch_word_preview()
-            return None
-        else:
-            dir_path = filedialog.askdirectory(title="选择输出目录")
-            if not dir_path:
-                return None
-            else:
-                self._do_batch_export(target, dir_path)
-
-    def _do_batch_export(self, target: str, dir_path: str):
-        """执行批量导出（在后台线程中执行）"""
-        self._disable_export_buttons()
-        self._export_progress_tracker = BatchProgressTracker(
-            total=len(self.batch_results), smoothing_factor=0.3, log_interval=1
-        )
-        self._export_progress_tracker.set_callback(self._on_export_progress_update)
-        self.batch_progress.set(0)
-        self.batch_status_label.configure(text=f"正在导出 0/{len(self.batch_results)} 篇...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_export_active = True
-
-        logger.info(f"📤 开始批量导出 {len(self.batch_results)} 篇文章为 {target.upper()} 格式")
-        threading.Thread(
-            target=self._batch_export_worker, args=(target, dir_path), daemon=True
-        ).start()
-
-    def _on_export_progress_update(self, info: ProgressInfo):
-        """导出进度更新回调"""
-        self.root.after(0, lambda: self._update_export_progress_ui(info))
-
-    def _update_export_progress_ui(self, info: ProgressInfo):
-        """更新导出进度GUI显示"""
-        progress_value = info.percentage / 100.0
-        self.batch_progress.set(progress_value)
-        self.batch_status_label.configure(
-            text=f"正在导出 {info.progress_text} ({info.percentage_text})"
-        )
-        self.batch_elapsed_label.configure(text=info.elapsed_formatted)
-        self.batch_eta_label.configure(text=info.eta_formatted)
-        self.batch_rate_label.configure(text=info.rate_formatted)
-        if hasattr(self, "_export_progress_tracker"):
-            tracker = self._export_progress_tracker
-            self.batch_count_label.configure(
-                text=f"{tracker.success_count} / {tracker.failure_count}"
-            )
-
-    def _batch_export_worker(self, target: str, dir_path: str):
-        """批量导出工作线程"""
-        try:
-            output_dir = Path(dir_path)
-            tracker = self._export_progress_tracker
-            ext_map = {"markdown": ".md", "html": ".html", "word": ".docx"}
-            ext = ext_map.get(target, ".html")
-            for article in self.batch_results:
-                try:
-                    safe_title = "".join(
-                        c for c in article.title[:50] if c.isalnum() or c in " _-"
-                    ).strip()
-                    file_path = output_dir / f"{safe_title}{ext}"
-                    self.container.export_use_case.execute(
-                        article, target=target, path=str(file_path)
-                    )
-                    tracker.update_success(current_item=article.title[:30])
-                except Exception as e:
-                    logger.warning(f"导出失败 {article.title}: {e}")
-                    tracker.update_failure(current_item=article.title[:30], error=str(e))
-            tracker.finish()
-            self.root.after(
-                0,
-                lambda: self._batch_export_complete(
-                    tracker.success_count, tracker.failure_count, dir_path
-                ),
-            )
-        except Exception as e:
-            logger.error(f"导出失败: {e}")
-            error_msg = str(e)
-            self.root.after(0, lambda msg=error_msg: self._batch_export_error(msg))
-
-    def _batch_export_complete(self, success_count: int, failure_count: int, dir_path: str):
-        """批量导出完成"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_progress.set(1.0)
-        self.batch_status_label.configure(
-            text=f"导出完成: {success_count} 成功, {failure_count} 失败"
-        )
-        total = success_count + failure_count
-        logger.success(f"批量导出完成: {success_count}/{total}")
-        messagebox.showinfo("成功", f"导出完成: {success_count}/{total} 篇\n输出目录: {dir_path}")
-
-    def _batch_export_error(self, error: str):
-        """批量导出出错"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_status_label.configure(text="导出失败")
-        messagebox.showerror("错误", f"导出失败: {error}")
-
-    def _disable_export_buttons(self):
-        """禁用所有导出按钮"""
-        self.batch_export_btn.configure(state="disabled")
-        self.batch_export_md_btn.configure(state="disabled")
-        self.batch_export_word_btn.configure(state="disabled")
-        self.batch_export_html_btn.configure(state="disabled")
-
-    def _enable_export_buttons(self):
-        """启用所有导出按钮"""
-        if self.batch_results:
-            self.batch_export_btn.configure(state="normal")
-            self.batch_export_md_btn.configure(state="normal")
-            self.batch_export_word_btn.configure(state="normal")
-            self.batch_export_html_btn.configure(state="normal")
+        """批量导出指定格式。"""
+        return self.url_batch_workflow.on_batch_export_format(target)
 
     def _refresh_history(self):
         """刷新历史 — 委托给 HistoryPage"""

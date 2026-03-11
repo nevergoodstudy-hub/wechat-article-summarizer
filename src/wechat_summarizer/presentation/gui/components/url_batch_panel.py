@@ -102,7 +102,7 @@ class UrlBatchPanel(ctk.CTkFrame):
         import_btn = self.gui._create_modern_button(
             btn_frame,
             text=tr("📂 导入文件"),
-            command=self.gui._on_import_urls,
+            command=self.gui.url_batch_workflow.on_import_urls,
             variant="ghost",
             size="small",
         )
@@ -111,7 +111,7 @@ class UrlBatchPanel(ctk.CTkFrame):
         paste_btn = self.gui._create_modern_button(
             btn_frame,
             text=tr("📋 粘贴"),
-            command=self.gui._on_paste_urls,
+            command=self.gui.url_batch_workflow.on_paste_urls,
             variant="ghost",
             size="small",
         )
@@ -159,7 +159,7 @@ class UrlBatchPanel(ctk.CTkFrame):
         self.batch_start_btn = self.gui._create_modern_button(
             start_stop_frame,
             text=tr("🚀 开始批量处理"),
-            command=self.gui._on_batch_process,
+            command=self.gui.url_batch_workflow.on_batch_process,
             variant="primary",
             size="large",
         )
@@ -314,7 +314,7 @@ class UrlBatchPanel(ctk.CTkFrame):
             corner_radius=Spacing.RADIUS_MD,
             fg_color=ModernColors.INFO,
             state="disabled",
-            command=lambda: self.gui._on_batch_export_format("word"),
+            command=lambda: self.gui.url_batch_workflow.on_batch_export_format("word"),
         )
         self.batch_export_word_btn.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=(0, 5))
 
@@ -325,7 +325,7 @@ class UrlBatchPanel(ctk.CTkFrame):
             corner_radius=Spacing.RADIUS_MD,
             fg_color=ModernColors.SUCCESS,
             state="disabled",
-            command=lambda: self.gui._on_batch_export_format("markdown"),
+            command=lambda: self.gui.url_batch_workflow.on_batch_export_format("markdown"),
         )
         self.batch_export_md_btn.grid(row=0, column=1, sticky="ew", padx=(3, 0), pady=(0, 5))
 
@@ -336,7 +336,7 @@ class UrlBatchPanel(ctk.CTkFrame):
             corner_radius=Spacing.RADIUS_MD,
             fg_color=ModernColors.GRADIENT_MID,
             state="disabled",
-            command=self.gui._on_batch_export,
+            command=self.gui.url_batch_workflow.on_batch_export,
         )
         self.batch_export_btn.grid(row=1, column=0, sticky="ew", padx=(0, 3), pady=(5, 0))
 
@@ -347,7 +347,7 @@ class UrlBatchPanel(ctk.CTkFrame):
             corner_radius=Spacing.RADIUS_MD,
             fg_color=ModernColors.NEUTRAL_BTN_DISABLED,
             state="disabled",
-            command=lambda: self.gui._on_batch_export_format("html"),
+            command=lambda: self.gui.url_batch_workflow.on_batch_export_format("html"),
         )
         self.batch_export_html_btn.grid(row=1, column=1, sticky="ew", padx=(3, 0), pady=(5, 0))
 
