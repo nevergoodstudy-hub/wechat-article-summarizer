@@ -1,16 +1,24 @@
 """主窗口协调器。
 
-封装 GUI 壳层中的窗口显示、托盘恢复和页面导航逻辑，
+封装 GUI 壳层中的窗口显示、托盘恢复、页面导航与主题广播逻辑，
 作为从 ``app.py`` 继续下沉职责的第一层脚手架。
 """
 
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from .styles.colors import ModernColors
+from .utils.windows_integration import Windows11StyleHelper
 from .widgets.animation_helper import TransitionManager
+
+_ctk_available = True
+try:
+    import customtkinter as ctk
+except ImportError:
+    _ctk_available = False
 
 if TYPE_CHECKING:
     from .app import WechatSummarizerGUI
@@ -30,9 +38,23 @@ class MainWindowCoordinator:
     def __init__(self, gui: WechatSummarizerGUI) -> None:
         self.gui = gui
 
-    def bind_event_bus(self):
+    def bind_event_bus(self) -> Callable[[], None]:
         """绑定主窗口层的事件总线订阅。"""
-        return self.gui.event_bus.subscribe("navigate", self.handle_navigation_event)
+        unsubscribe_navigate = self.gui.event_bus.subscribe(
+            "navigate", self.handle_navigation_event
+        )
+        unsubscribe_theme = self.gui.event_bus.subscribe(
+            "theme_changed",
+            self.handle_theme_change_event,
+        )
+
+        def _unsubscribe_all() -> None:
+            with contextlib.suppress(Exception):
+                unsubscribe_navigate()
+            with contextlib.suppress(Exception):
+                unsubscribe_theme()
+
+        return _unsubscribe_all
 
     def handle_navigation_event(
         self,
@@ -45,6 +67,10 @@ class MainWindowCoordinator:
             self.gui._show_page_animated(page_id)
         else:
             self.gui._show_page(page_id)
+
+    def handle_theme_change_event(self, value: str, **_: Any) -> None:
+        """处理主题切换事件。"""
+        self.apply_theme(value)
 
     def show_main_window(self) -> None:
         """显示主窗口并播放欢迎动画。"""
@@ -99,7 +125,7 @@ class MainWindowCoordinator:
         self.gui._current_page = page_id
 
         def on_complete() -> None:
-            self.gui._animate_status_change(f"已切换到{self._page_name(page_id)}")
+            self.animate_status_change(f"已切换到{self._page_name(page_id)}")
             self._notify_page_shown(new_page)
 
         TransitionManager.slide_transition(
@@ -120,7 +146,7 @@ class MainWindowCoordinator:
         new_page.grid(row=0, column=0, sticky="nsew")
         self.gui._update_nav_buttons_animated(page_id)
         self.gui._current_page = page_id
-        self.gui._animate_status_change(f"已切换到{self._page_name(page_id)}")
+        self.animate_status_change(f"已切换到{self._page_name(page_id)}")
         return None
 
     def update_nav_buttons_animated(self, active_page_id: str) -> None:
@@ -138,6 +164,32 @@ class MainWindowCoordinator:
                     text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
                     hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
                 )
+
+    def animate_status_change(self, text: str) -> None:
+        """动画状态变化。"""
+        self.gui._set_status(text, ModernColors.INFO)
+        self.gui.root.after(
+            1500,
+            lambda: self.gui._set_status("就绪", ModernColors.SUCCESS),
+        )
+
+    def apply_theme(self, value: str) -> None:
+        """主题切换。"""
+        mode = "light" if value == "浅色" else "dark"
+        if _ctk_available:
+            ctk.set_appearance_mode(mode)
+        self.gui._appearance_mode = mode
+        Windows11StyleHelper.update_titlebar_color(self.gui.root, mode)
+        self.broadcast_theme(mode)
+        self.animate_status_change(f"已切换到{value}主题")
+
+    def broadcast_theme(self, mode: str) -> None:
+        """递归广播主题到所有自定义组件。"""
+        for page in self.gui._page_frames.values():
+            self.update_widget_theme_recursive(page, mode)
+        sidebar = getattr(self.gui, "sidebar", None)
+        if sidebar is not None:
+            self.update_widget_theme_recursive(sidebar, mode)
 
     def _resolve_transition_direction(self, page_id: str):
         page_order = [
@@ -164,6 +216,19 @@ class MainWindowCoordinator:
         if page and hasattr(page, "on_page_shown"):
             with contextlib.suppress(Exception):
                 page.on_page_shown()
+
+    @staticmethod
+    def update_widget_theme_recursive(widget: Any, mode: str) -> None:
+        """深度优先遍历组件树，调用 update_theme。"""
+        if hasattr(widget, "update_theme") and callable(widget.update_theme):
+            with contextlib.suppress(Exception):
+                widget.update_theme(mode)
+        winfo_children = getattr(widget, "winfo_children", None)
+        if not callable(winfo_children):
+            return None
+        for child in winfo_children():
+            MainWindowCoordinator.update_widget_theme_recursive(child, mode)
+        return None
 
     @staticmethod
     def _page_name(page_id: str) -> str:

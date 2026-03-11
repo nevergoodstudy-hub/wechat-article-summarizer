@@ -1,7 +1,7 @@
 """Sidebar 侧边栏组件
 
 从 WechatSummarizerGUI 提取的侧边导航栏和底部状态栏。
-采用 CustomTkinter CTkFrame 子类化模式，接收回调函数实现解耦。
+采用 CustomTkinter CTkFrame 子类化模式，通过事件总线实现解耦。
 """
 
 from __future__ import annotations
@@ -38,7 +38,6 @@ class Sidebar(ctk.CTkFrame):
         get_font: 字体工厂函数 (size, weight='normal') -> CTkFont
         nav_items: 导航项列表 [(page_id, icon, text), ...]
         event_bus: GUI 事件总线，用于发布导航事件
-        on_theme_change: 主题切换回调 (value) -> None
         summarizer_info: 摘要器信息字典
         exporter_info: 导出器信息字典
         container: 依赖注入容器（用于获取缓存状态）
@@ -51,7 +50,6 @@ class Sidebar(ctk.CTkFrame):
         get_font: Callable,
         nav_items: list[tuple[str, str, str]],
         event_bus: GUIEventBus,
-        on_theme_change: Callable[[str], None],
         summarizer_info: dict,
         exporter_info: dict,
         container,
@@ -67,7 +65,6 @@ class Sidebar(ctk.CTkFrame):
 
         self._get_font = get_font
         self._event_bus = event_bus
-        self._on_theme_change = on_theme_change
         self._summarizer_info = summarizer_info
         self._exporter_info = exporter_info
         self._container = container
@@ -82,6 +79,10 @@ class Sidebar(ctk.CTkFrame):
     def _navigate(self, page_id: str, *, animated: bool = True) -> None:
         """发布导航请求。"""
         self._event_bus.publish("navigate", page_id=page_id, animated=animated)
+
+    def _publish_theme_change(self, value: str) -> None:
+        """发布主题切换请求。"""
+        self._event_bus.publish("theme_changed", value=value)
 
     def _build(self, nav_items: list[tuple[str, str, str]]):
         """构建侧边栏内容"""
@@ -145,7 +146,7 @@ class Sidebar(ctk.CTkFrame):
         self.theme_switch = ctk.CTkSegmentedButton(
             settings_frame,
             values=["浅色", "深色"],
-            command=self._on_theme_change,
+            command=self._publish_theme_change,
             font=self._get_font(12),
         )
         self.theme_switch.set("深色")

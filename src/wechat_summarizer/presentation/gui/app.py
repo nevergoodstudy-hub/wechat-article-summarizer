@@ -505,6 +505,10 @@ class WechatSummarizerGUI:
         """发布页面切换事件。"""
         self.event_bus.publish("navigate", page_id=page_id, animated=animated)
 
+    def _publish_theme_change(self, value: str) -> None:
+        """发布主题切换事件。"""
+        self.event_bus.publish("theme_changed", value=value)
+
     def _handle_navigation_event(
         self,
         page_id: str,
@@ -644,7 +648,7 @@ class WechatSummarizerGUI:
         current = self.theme_switch.get()
         new_theme = "浅色" if current == "深色" else "深色"
         self.theme_switch.set(new_theme)
-        self._on_theme_change(new_theme)
+        self._publish_theme_change(new_theme)
 
     def _create_modern_input(
         self,
@@ -689,7 +693,6 @@ class WechatSummarizerGUI:
             get_font=self._get_font,
             nav_items=nav_items,
             event_bus=self.event_bus,
-            on_theme_change=self._on_theme_change,
             summarizer_info=self._summarizer_info,
             exporter_info=self._exporter_info,
             container=self.container,
@@ -1039,38 +1042,20 @@ class WechatSummarizerGUI:
 
     def _animate_status_change(self, text: str):
         """动画状态变化"""
-        self._set_status(text, ModernColors.INFO)
-        self.root.after(1500, lambda: self._set_status("就绪", ModernColors.SUCCESS))
+        self._get_main_window_coordinator().animate_status_change(text)
 
     def _on_theme_change(self, value: str):
         """主题切换 - 全链路联动"""
-        mode = "light" if value == "浅色" else "dark"
-        ctk.set_appearance_mode(mode)
-        self._appearance_mode = mode
-
-        # 同步更新 Windows 11 标题栏颜色
-        Windows11StyleHelper.update_titlebar_color(self.root, mode)
-
-        # 递归更新所有自定义组件的主题（ModernButton/Card/Input/Progress）
-        self._broadcast_theme(mode)
-
-        self._animate_status_change(f"已切换到{value}主题")
+        self._get_main_window_coordinator().apply_theme(value)
 
     def _broadcast_theme(self, mode: str) -> None:
         """递归广播主题到所有自定义组件"""
-        for page in self._page_frames.values():
-            self._update_widget_theme_recursive(page, mode)
-        if hasattr(self, "sidebar") and self.sidebar:
-            self._update_widget_theme_recursive(self.sidebar, mode)
+        self._get_main_window_coordinator().broadcast_theme(mode)
 
     @staticmethod
     def _update_widget_theme_recursive(widget, mode: str) -> None:
         """深度优先遍历组件树，调用 update_theme"""
-        if hasattr(widget, "update_theme") and callable(widget.update_theme):
-            with contextlib.suppress(Exception):
-                widget.update_theme(mode)
-        for child in widget.winfo_children():
-            WechatSummarizerGUI._update_widget_theme_recursive(child, mode)
+        MainWindowCoordinator.update_widget_theme_recursive(widget, mode)
 
     def _set_status(self, text: str, color: str = ModernColors.SUCCESS, pulse: bool = False):
         """设置状态 - 支持脉冲动画效果\n        \n        Args:\n            text: 状态文本\n            color: 状态颜色\n            pulse: 是否启用脉冲动画（用于进行中的状态）\n"""
