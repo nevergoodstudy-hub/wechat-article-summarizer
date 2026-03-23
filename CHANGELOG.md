@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-03-23
+
+### Added
+- 新增文档发布质量门禁：CI 增加 `docs` 作业并执行 `mkdocs build --strict`。
+- 新增 `docs` 可选依赖组（MkDocs、Material、mkdocstrings、pymdown-extensions）。
+- MCP HTTP 模式新增可选请求头鉴权：`X-MCP-Token`。
+- MSIX 打包脚本新增 Partner Center 严格模式：`--store`（缺失资源即失败）。
+
+### Changed
+- MCP HTTP 服务默认监听地址改为 `127.0.0.1`，降低默认暴露面。
+- 远程监听需显式开启 `--allow-remote`，并输出安全告警。
+- `run_mcp_server` 与 CLI 参数支持 `host/auth_token/allow_remote`。
+- MSIX 构建身份参数改为环境变量驱动：
+  - `MSIX_IDENTITY_NAME`
+  - `MSIX_PUBLISHER`
+  - `MSIX_VERSION`
+- CI 质量门禁收紧：`mypy`、`pip-audit`、`bandit` 改为失败即阻断。
+- `mkdocs.yml` 清理无效配置并修正搜索语言配置格式。
+
+### Fixed
+- 修复 MCP URL 校验中主机名误杀问题，保留 SSRF 防护前提下提升兼容性。
+- 修复 MSIX Manifest 与打包资源命名不一致问题（`Square71x71Logo` / `Square310x310Logo`）。
+- 修复 MSIX 构建流程缺少 Manifest 资产一致性检查的问题。
+
+### Security
+- 默认禁止 MCP HTTP 对外监听，减少误暴露风险。
+- 增强远程模式使用提示与最小鉴权能力（token header）。
+
 ## [2.4.0] - 2026-01-28
 
 ### Added
@@ -68,6 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 简单摘要生成
 - HTML 导出
 
-[Unreleased]: https://github.com/your-username/wechat-article-summarizer/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/your-username/wechat-article-summarizer/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/your-username/wechat-article-summarizer/releases/tag/v1.0.0
+[Unreleased]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.0.0...v2.4.0
+[2.0.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/releases/tag/v1.0.0
