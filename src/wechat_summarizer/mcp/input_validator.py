@@ -33,7 +33,7 @@ class MCPInputValidator:
     # 路径遍历检测模式
     PATH_TRAVERSAL_PATTERN: re.Pattern[str] = re.compile(r"\.\.[/\\]")
 
-    # Shell 危险字符
+    # Shell 危险字符（用于普通文本字段，不用于 URL 主机名校验）
     SHELL_DANGEROUS_CHARS: frozenset[str] = frozenset(";|&`$(){}[]!#~<>'\"\\")
 
     # 不可见 Unicode 控制字符（可能用于隐藏指令）
@@ -105,10 +105,21 @@ class MCPInputValidator:
         if not parsed.hostname:
             raise MCPValidationError("URL missing hostname")
 
-        # Shell 注入检查（URL 中不应包含 shell 元字符）
-        for char in cls.SHELL_DANGEROUS_CHARS:
-            if char in parsed.netloc:
-                raise MCPValidationError(f"Suspicious character in URL hostname: {char!r}")
+        # URL 主机名格式校验（允许 IPv6 bracket 形式）
+        netloc = parsed.netloc
+
+        # 优先检测典型命令注入分隔符，便于给出明确安全错误
+        suspicious_host_chars = set(";|&`$(){}!~")
+        if any(ch in suspicious_host_chars for ch in netloc):
+            raise MCPValidationError("Suspicious character in URL hostname")
+
+        if any(c.isspace() for c in netloc):
+            raise MCPValidationError("Invalid whitespace in URL hostname")
+
+        # 明显非法字符（RFC 主机名场景下不应出现）
+        invalid_host_chars = set('"\'<>\\^')
+        if any(ch in invalid_host_chars for ch in netloc):
+            raise MCPValidationError("Invalid character in URL hostname")
 
         # SSRF 防护（延迟导入避免循环依赖）
         from ..shared.utils.ssrf_protection import SSRFBlockedError, SSRFSafeTransport

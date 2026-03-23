@@ -1,0 +1,89 @@
+# Project documentation configuration
+site_name: "WeChat Article Summarizer"
+site_description: "微信公众号文章总结器 - AI-powered article summarization tool"
+site_author: "WeChatSummarizer Team"
+site_url: "https://github.com/wechat-summarizer/wechat-article-summarizer"
+
+# Repository
+repo_name: "wechat-summarizer/wechat-article-summarizer"
+repo_url: "https://github.com/wechat-summarizer/wechat-article-summarizer"
+
+# Navigation
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting-started.md
+      - Installation: installation.md
+  - User Guide:
+      - GUI Usage: gui-usage.md
+      - CLI Usage: cli-usage.md
+      - Configuration: configuration.md
+  - Development:
+      - Architecture: architecture.md
+      - Contributing: contributing.md
+      - API Reference: api/
+  - Release Notes: changelog.md
+
+# Theme
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.magiclink
+  - pymdownx.tasklist
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+# Plugins
+plugins:
+  - search:
+      lang: [en, zh]
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+      watch:
+        - src/wechat_summarizer
+
+# Footer
+copyright: "Copyright © 2024-2026 WeChatSummarizer Team"
+
+# Extra
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/wechat-summarizer
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/wechat-summarizer

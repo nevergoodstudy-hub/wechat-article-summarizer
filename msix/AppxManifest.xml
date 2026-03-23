@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 rescap">
+
+  <Identity
+    Name="WeChatSummarizer"
+    Publisher="CN=WeChatSummarizer"
+    Version="2.4.1.0"
+    ProcessorArchitecture="x64"/>
+
+  <Properties>
+    <DisplayName>WeChat Article Summarizer</DisplayName>
+    <PublisherDisplayName>WeChatSummarizer</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>A powerful tool to summarize WeChat articles with AI, supporting multiple export formats including HTML, Markdown, Obsidian, Notion, and OneNote.</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0"/>
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us"/>
+    <Resource Language="zh-cn"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="WeChatSummarizer" Executable="WeChatArticleSummarizer.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="WeChat Article Summarizer"
+        Description="AI-powered WeChat article summarizer"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\Square71x71Logo.png" Square310x310Logo="Assets\Square310x310Logo.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo"/>
+            <uap:ShowOn Tile="wide310x150Logo"/>
+            <uap:ShowOn Tile="square310x310Logo"/>
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+        <uap:SplashScreen Image="Assets\SplashScreen.png"/>
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- URL Protocol Handler for wechat:// -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="wechat">
+            <uap:Logo>Assets\Square44x44Logo.png</uap:Logo>
+            <uap:DisplayName>WeChat Article Summarizer Protocol</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+
+        <!-- File Association for .md files -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="markdown">
+            <uap:SupportedFileTypes>
+              <uap:FileType>.md</uap:FileType>
+              <uap:FileType>.markdown</uap:FileType>
+            </uap:SupportedFileTypes>
+            <uap:DisplayName>Markdown File</uap:DisplayName>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust"/>
+    <Capability Name="internetClient"/>
+    <Capability Name="privateNetworkClientServer"/>
+  </Capabilities>
+</Package>

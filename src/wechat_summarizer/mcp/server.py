@@ -738,12 +738,21 @@ def _register_resources(mcp_instance: FastMCP) -> None:
             return f"获取文章失败: {e}"
 
 
-def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
+def run_mcp_server(
+    transport: str = "stdio",
+    port: int = 8000,
+    host: str = "127.0.0.1",
+    auth_token: str | None = None,
+    allow_remote: bool = False,
+) -> None:
     """运行 MCP 服务器
 
     Args:
         transport: 传输方式 ("stdio" 或 "http")
         port: HTTP 模式端口号
+        host: HTTP 监听地址（默认仅本机 127.0.0.1）
+        auth_token: HTTP 模式鉴权 token（远程访问建议必填）
+        allow_remote: 是否允许远程监听（0.0.0.0 或非本机地址）
     """
     mcp_instance = _ensure_mcp()
 
@@ -752,17 +761,41 @@ def run_mcp_server(transport: str = "stdio", port: int = 8000) -> None:
     if transport == "stdio":
         mcp_instance.run(transport="stdio")
     elif transport == "http":
-        # HTTP 模式需要额外配置
         import uvicorn
         from starlette.applications import Starlette
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.requests import Request
+        from starlette.responses import JSONResponse
         from starlette.routing import Mount
+
+        is_remote_host = host not in {"127.0.0.1", "localhost", "::1"}
+        if is_remote_host and not allow_remote:
+            raise ValueError(
+                "远程监听已被禁止。若确需远程访问，请显式传入 --allow-remote。"
+            )
+
+        if is_remote_host:
+            logger.warning("MCP HTTP 正在远程监听，请确保网络隔离与鉴权配置。")
+
+        class TokenAuthMiddleware(BaseHTTPMiddleware):
+            async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+                if auth_token:
+                    req_token = request.headers.get("x-mcp-token")
+                    if req_token != auth_token:
+                        return JSONResponse(
+                            {"success": False, "error": "Unauthorized"},
+                            status_code=401,
+                        )
+                return await call_next(request)
 
         app = Starlette(
             routes=[
                 Mount("/mcp", app=mcp_instance.sse_app()),
             ]
         )
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        app.add_middleware(TokenAuthMiddleware)
+
+        uvicorn.run(app, host=host, port=port)
     else:
         raise ValueError(f"不支持的传输方式: {transport}")
 

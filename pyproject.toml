@@ -135,6 +135,13 @@ build = [
     "build>=1.0.0",
     "twine>=4.0.0",
 ]
+# 文档
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.25.0",
+    "pymdown-extensions>=10.8.0",
+]
 # 开发
 dev = [
     "pytest>=7.0.0",
@@ -173,7 +180,7 @@ python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
-plugins = ["pydantic.mypy"]
+plugins = []  # Disabled due to pydantic-core version incompatibility
 
 [[tool.mypy.overrides]]
 module = [

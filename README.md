@@ -123,8 +123,12 @@ pip install -e .[mcp]
 # 启动 MCP 服务器 (stdio 模式)
 python -m wechat_summarizer.mcp
 
-# HTTP 模式
-python -m wechat_summarizer.mcp --transport http
+# HTTP 模式（默认仅监听本机）
+python -m wechat_summarizer.mcp --transport http --host 127.0.0.1 --port 8000
+
+# 远程监听（高风险，必须显式允许）
+python -m wechat_summarizer.mcp --transport http --host 0.0.0.0 --allow-remote --auth-token your_token
+# 也可通过环境变量提供 token：WECHAT_SUMMARIZER_MCP_AUTH_TOKEN
 ```
 
 **提供的 MCP 工具：**
@@ -150,6 +154,9 @@ python -m wechat_summarizer.mcp --transport http
 - ✅ 审计日志（记录所有调用）
 - ✅ 速率限制（令牌桶算法）
 - ✅ 参数脱敏（敏感信息过滤）
+- ✅ HTTP 模式默认本机监听（127.0.0.1）
+- ✅ 远程监听需显式 `--allow-remote`
+- ✅ 支持 `X-MCP-Token` 请求头鉴权
 
 **A2A 协议支持**：
 - 🤝 Agent Card 能力发现
