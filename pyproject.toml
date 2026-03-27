@@ -212,6 +212,7 @@ markers = [
     "unit: marks tests as unit tests",
 ]
 asyncio_mode = "auto"
+timeout = 30
 
 [tool.coverage.run]
 source = ["src/wechat_summarizer"]

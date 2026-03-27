@@ -89,7 +89,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # 排除不需要的模块以减小体积
+        # 排除不需要或可选的超重模块以减小体积并缩短构建时间
         'matplotlib',
         'numpy',
         'pandas',
@@ -99,6 +99,13 @@ a = Analysis(
         'pytest',
         'unittest',
         '_pytest',
+        # NLP/ML 可选依赖（默认 GUI 主流程不依赖）
+        'sklearn',
+        'scikit_learn',
+        'nltk',
+        'sympy',
+        'numba',
+        'llvmlite',
     ],
     noarchive=False,
 )
