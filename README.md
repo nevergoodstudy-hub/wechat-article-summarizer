@@ -276,6 +276,20 @@ OUTPUT_DIR=./output
 - 🌓 高对比度模式 - WCAG AA/AAA级刹色对比度
 - 🌐 RTL布局支持 - 阿拉伯语/希伯来语
 
+## 🆕 最新发布 (v2.4.2)
+
+### 中文更新摘要
+- 🔒 安全加固：在抓取器真实请求前新增 DNS 解析与安全校验，增强 DNS Rebinding / SSRF 防护。
+- 🧪 测试增强：新增 DNS Rebinding 集成测试，并完成安全与核心路径定向回归测试。
+- 🧱 稳定性提升：修复结构化日志事件处理与上下文绑定类型一致性问题。
+- 📦 发布同步：版本升级至 `2.4.2`，同步更新打包配置（含 MSIX 默认版本）。
+
+### English Release Notes
+- Security hardening: added pre-request DNS resolution and safety checks in scraper paths to improve DNS rebinding / SSRF protection.
+- Test enhancement: added DNS rebinding integration tests and completed targeted regression runs for security-critical modules.
+- Reliability improvements: fixed structured logging event processing and context-binding type consistency.
+- Release sync: bumped project version to `2.4.2` and aligned packaging defaults (including MSIX version).
+
 ## 📝 更新日志
 
 详细变更请查看 [CHANGELOG.md](./CHANGELOG.md)。

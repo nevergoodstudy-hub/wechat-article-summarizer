@@ -10,6 +10,7 @@ from loguru import logger
 
 from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
+from ....domain.value_objects.url import resolve_and_validate_host
 from ....shared.constants import USER_AGENTS
 from ....shared.exceptions import ScraperError, ScraperTimeoutError
 from .base import BaseScraper
@@ -52,6 +53,17 @@ class GenericHttpxScraper(BaseScraper):
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
+
+        from urllib.parse import urlparse
+
+        parsed = urlparse(str(url))
+        host = parsed.hostname
+        if not host:
+            raise ScraperError("无效URL: 缺少主机名")
+
+        is_safe, resolved_ip = resolve_and_validate_host(host)
+        if not is_safe or not resolved_ip:
+            raise ScraperError(f"SSRF防护拦截：目标主机不安全 ({host})")
 
         try:
             with httpx.Client(
@@ -168,7 +180,18 @@ class GenericHttpxScraper(BaseScraper):
 
     async def scrape_async(self, url: ArticleURL) -> Article:
         """异步抓取通用网页"""
+        from urllib.parse import urlparse
+
         logger.debug(f"通用抓取器异步抓取: {url}")
+
+        parsed = urlparse(str(url))
+        host = parsed.hostname
+        if not host:
+            raise ScraperError("无效URL: 缺少主机名")
+
+        is_safe, resolved_ip = resolve_and_validate_host(host)
+        if not is_safe or not resolved_ip:
+            raise ScraperError(f"SSRF防护拦截：目标主机不安全 ({host})")
 
         headers = {
             "User-Agent": self._choose_user_agent(),

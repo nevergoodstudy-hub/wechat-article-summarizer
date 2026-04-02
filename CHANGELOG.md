@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-04-02
+
+### Added
+- 新增 DNS Rebinding 集成测试：覆盖抓取器在请求前主机解析与安全校验流程。
+- 新增英文发布摘要段落，便于国际用户快速了解本次安全加固与回归范围。
+
+### Changed
+- 抓取器网络请求链路增加“连接前 DNS 解析与安全校验”：
+  - `wechat_httpx` 同步/异步请求路径均执行主机解析安全检查。
+  - `generic_httpx` 同步/异步请求路径均执行主机解析安全检查。
+- 结构化日志处理器与上下文绑定返回类型进一步收敛，降低类型歧义并提升稳定性。
+- 版本号升级至 `2.4.2`（MSIX 默认版本升级至 `2.4.2.0`）。
+
+### Fixed
+- 修复结构化日志事件字段重复覆盖问题，避免日志消息内容被后续赋值覆盖。
+- 修复结构化日志上下文绑定返回值在不同运行环境下可能出现的类型不一致问题。
+
+### Security
+- 强化 SSRF/DNS Rebinding 防护：抓取器在真正发起 HTTP 请求前执行主机解析与安全验证，拦截不安全目标主机。
+
+### Tests
+- 目标回归测试通过：`125 passed, 2 skipped`（含 `ssrf_protection`、`scrapers`、`mcp`、`security`、`summary_evaluator`、`dns_rebinding_integration`）。
+
+### English Summary
+- Hardened pre-request DNS rebinding checks in both sync/async scraper paths.
+- Improved structured logging type safety and event processing correctness.
+- Added integration tests for DNS rebinding protection and completed targeted regression validation.
+
 ## [2.4.1] - 2026-03-23
 
 ### Added
@@ -96,7 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 简单摘要生成
 - HTML 导出
 
-[Unreleased]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.0.0...v2.4.0
 [2.0.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v1.0.0...v2.0.0

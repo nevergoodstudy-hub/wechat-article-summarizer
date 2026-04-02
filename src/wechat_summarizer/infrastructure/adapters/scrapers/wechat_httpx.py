@@ -11,6 +11,7 @@ from loguru import logger
 
 from ....domain.entities import Article, ArticleSource
 from ....domain.value_objects import ArticleContent, ArticleURL
+from ....domain.value_objects.url import resolve_and_validate_host
 from ....shared.constants import USER_AGENTS, WECHAT_CONTENT_SELECTORS
 from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
 from ....shared.utils import retry
@@ -107,6 +108,18 @@ class WechatHttpxScraper(BaseScraper):
         self._client.close()
 
     def _get(self, url: str, headers: dict[str, str]) -> httpx.Response:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        host = parsed.hostname
+        if not host:
+            raise ScraperError("无效URL: 缺少主机名")
+
+        is_safe, resolved_ip = resolve_and_validate_host(host)
+        if not is_safe or not resolved_ip:
+            raise ScraperBlockedError(f"SSRF防护拦截：目标主机不安全 ({host})")
+
+        # 连接前做 DNS rebinding 防护（验证解析后的IP），再发起请求
         return self._client.get(url, headers=headers)
 
     def _parse_html(self, html: str, url: ArticleURL) -> Article:
@@ -234,7 +247,18 @@ class WechatHttpxScraper(BaseScraper):
 
     async def scrape_async(self, url: ArticleURL) -> Article:
         """异步抓取微信公众号文章"""
+        from urllib.parse import urlparse
+
         logger.debug(f"开始异步抓取: {url}")
+
+        parsed = urlparse(str(url))
+        host = parsed.hostname
+        if not host:
+            raise ScraperError("无效URL: 缺少主机名")
+
+        is_safe, resolved_ip = resolve_and_validate_host(host)
+        if not is_safe or not resolved_ip:
+            raise ScraperBlockedError(f"SSRF防护拦截：目标主机不安全 ({host})")
 
         headers = {
             "User-Agent": self._choose_user_agent(),
