@@ -52,6 +52,11 @@ class BatchPage(ctk.CTkFrame):
         self.batch_export_md_btn = None
         self.batch_export_btn = None
         self.batch_export_html_btn = None
+        self._unsubscribe_navigate = None
+        if hasattr(self.gui, "event_bus"):
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe(
+                "navigate", self._on_navigate_event
+            )
 
         self._build()
 
@@ -352,6 +357,12 @@ class BatchPage(ctk.CTkFrame):
             command=lambda: self.gui._on_batch_export_format("html"),
         )
         self.batch_export_html_btn.grid(row=1, column=1, sticky="ew", padx=(3, 0), pady=(5, 0))
+
+    def _on_navigate_event(self, *, from_page: str, to_page: str) -> None:
+        """响应导航事件（保留扩展点）。"""
+        _ = from_page
+        if to_page == self.gui.PAGE_BATCH:
+            return None
 
     def _on_stop_batch(self) -> None:
         """停止批量处理"""

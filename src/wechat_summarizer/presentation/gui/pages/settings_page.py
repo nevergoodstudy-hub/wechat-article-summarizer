@@ -56,6 +56,11 @@ class SettingsPage(ctk.CTkFrame):
         self.language_var = None
         self.settings_status_label = None
         self.memory_status_label = None
+        self._unsubscribe_navigate = None
+        if hasattr(self.gui, "event_bus"):
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe(
+                "navigate", self._on_navigate_event
+            )
 
         self._build()
 
@@ -730,6 +735,12 @@ class SettingsPage(ctk.CTkFrame):
                 text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
                 anchor="w",
             ).pack(side="left", padx=(10, 0))
+
+    def _on_navigate_event(self, *, from_page: str, to_page: str) -> None:
+        """响应导航事件。"""
+        _ = from_page
+        if to_page == self.gui.PAGE_SETTINGS:
+            self.update_summarizer_status_display()
 
     def _toggle_key_visibility(self, provider: str):
         """切换API密钥可见性"""

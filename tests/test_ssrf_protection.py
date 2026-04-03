@@ -120,6 +120,12 @@ class TestResolveAndValidate:
         with pytest.raises(SSRFBlockedError, match="Blocked IP"):
             SSRFSafeTransport.resolve_and_validate("10.0.0.1")
 
+    @pytest.mark.parametrize("host", ["2130706433", "0177.0.0.1"])
+    def test_blocks_alternative_ip_notation(self, host: str):
+        """阻断替代 IP 表示法（十进制整型/前导零）"""
+        with pytest.raises(SSRFBlockedError, match="alternative IP notation"):
+            SSRFSafeTransport.resolve_and_validate(host)
+
     def test_allows_public_ip_literal(self):
         """直接输入公网 IP 时允许"""
         ips = SSRFSafeTransport.resolve_and_validate("8.8.8.8")

@@ -10,9 +10,9 @@ from loguru import logger
 
 from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
-from ....domain.value_objects.url import resolve_and_validate_host
 from ....shared.constants import USER_AGENTS
-from ....shared.exceptions import ScraperError, ScraperTimeoutError
+from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
+from ....shared.utils.ssrf_protection import SSRFBlockedError, safe_fetch, safe_fetch_sync
 from .base import BaseScraper
 
 
@@ -54,27 +54,20 @@ class GenericHttpxScraper(BaseScraper):
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
 
-        from urllib.parse import urlparse
-
-        parsed = urlparse(str(url))
-        host = parsed.hostname
-        if not host:
-            raise ScraperError("无效URL: 缺少主机名")
-
-        is_safe, resolved_ip = resolve_and_validate_host(host)
-        if not is_safe or not resolved_ip:
-            raise ScraperError(f"SSRF防护拦截：目标主机不安全 ({host})")
-
         try:
-            with httpx.Client(
+            response = safe_fetch_sync(
+                str(url),
+                method="GET",
+                headers=headers,
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
-            ) as client:
-                response = client.get(str(url), headers=headers)
-                response.raise_for_status()
+                max_redirects=5,
+            )
+            response.raise_for_status()
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
+        except SSRFBlockedError as e:
+            raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
         except httpx.HTTPStatusError as e:
             raise ScraperError(f"HTTP错误 ({e.response.status_code})") from e
         except Exception as e:
@@ -180,18 +173,7 @@ class GenericHttpxScraper(BaseScraper):
 
     async def scrape_async(self, url: ArticleURL) -> Article:
         """异步抓取通用网页"""
-        from urllib.parse import urlparse
-
         logger.debug(f"通用抓取器异步抓取: {url}")
-
-        parsed = urlparse(str(url))
-        host = parsed.hostname
-        if not host:
-            raise ScraperError("无效URL: 缺少主机名")
-
-        is_safe, resolved_ip = resolve_and_validate_host(host)
-        if not is_safe or not resolved_ip:
-            raise ScraperError(f"SSRF防护拦截：目标主机不安全 ({host})")
 
         headers = {
             "User-Agent": self._choose_user_agent(),
@@ -200,15 +182,19 @@ class GenericHttpxScraper(BaseScraper):
         }
 
         try:
-            async with httpx.AsyncClient(
+            response = await safe_fetch(
+                str(url),
+                method="GET",
+                headers=headers,
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
-            ) as client:
-                response = await client.get(str(url), headers=headers)
-                response.raise_for_status()
+                max_redirects=5,
+            )
+            response.raise_for_status()
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
+        except SSRFBlockedError as e:
+            raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
         except httpx.HTTPStatusError as e:
             raise ScraperError(f"HTTP错误 ({e.response.status_code})") from e
         except Exception as e:

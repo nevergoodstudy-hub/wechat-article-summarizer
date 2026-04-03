@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.3] - 2026-04-02
+
+### Added
+- 新增中/英文发布说明同步，统一展示安全修复、测试验证与打包产物说明。
+
+### Changed
+- 版本号升级至 `2.4.3`，同步更新 MSIX 默认版本为 `2.4.3.0`。
+- 发布流程扩展为全量构建产物：`sdist`、`wheel`、`PyInstaller`、`MSIX`。
+
+### Packaging
+- 生成 Python 安装包：`dist/*.tar.gz`（sdist）与 `dist/*.whl`（wheel）。
+- 生成 Windows 可执行安装产物：PyInstaller 单文件 EXE 与 MSIX 包。
+
+### English Summary
+- Bumped release to `2.4.3` and aligned default MSIX version to `2.4.3.0`.
+- Synced bilingual release notes and built all package types (sdist/wheel/PyInstaller/MSIX).
+
 ## [2.4.2] - 2026-04-02
 
 ### Added
@@ -124,7 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 简单摘要生成
 - HTML 导出
 
-[Unreleased]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.2...HEAD
+[Unreleased]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.3...HEAD
+[2.4.3]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/nevergoodstudy-hub/wechat-article-summarizer/compare/v2.0.0...v2.4.0

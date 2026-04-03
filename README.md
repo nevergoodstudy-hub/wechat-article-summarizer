@@ -37,7 +37,7 @@ src/wechat_summarizer/
 
 ```bash
 # 克隆项目
-cd wechat-article-summarizer
+cd Newidea-warp
 
 # 安装依赖
 pip install -e .
@@ -238,12 +238,20 @@ OUTPUT_DIR=./output
 
 ### 🌟 新手入门
 - **[🚀 新手教程](./docs/GETTING_STARTED.md)** - 从零开始，手把手教你使用本工具
+- **[📚 文档总导航](./docs/README.md)** - docs 目录全量导航
 
 ### 📚 开发文档
-- **[AGENTS.md](./AGENTS.md)** - 🤖 **AI 编码助手指引** (新增)
-- [docs/ITERATION_ROADMAP.md](./docs/ITERATION_ROADMAP.md) - 🚀 **迭代改进路线图**
-- [IMPROVEMENT_PLAN.md](./IMPROVEMENT_PLAN.md) - 项目改进开发计划
-- [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) - 安全审查报告
+- **[AGENTS.md](./AGENTS.md)** - 🤖 **AI 编码助手指引**
+- [docs/README.md](./docs/README.md) - 📚 docs 总导航
+- [docs/MIGRATION_INDEX.md](./docs/MIGRATION_INDEX.md) - 📚 文档迁移索引
+- [docs/PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md) - 🧭 项目目录边界约定
+- [docs/ITERATION_ROADMAP.md](./docs/ITERATION_ROADMAP.md) - 🚀 迭代改进路线图
+- [docs/plans/IMPROVEMENT_PLAN.md](./docs/plans/IMPROVEMENT_PLAN.md) - 项目改进开发计划
+- [docs/plans/ARCHITECTURE_RENOVATION_PLAN.md](./docs/plans/ARCHITECTURE_RENOVATION_PLAN.md) - 架构重整计划
+- [docs/plans/ARCHITECTURE_RENEWAL_CHECKLIST.md](./docs/plans/ARCHITECTURE_RENEWAL_CHECKLIST.md) - 架构焕新执行清单
+- [docs/audits/SECURITY_AUDIT.md](./docs/audits/SECURITY_AUDIT.md) - 安全审查报告
+- [docs/audits/DEEP_AUDIT_ISSUES.md](./docs/audits/DEEP_AUDIT_ISSUES.md) - 深度审计问题清单
+- [docs/audits/DEEP_AUDIT_IMPROVEMENTS.md](./docs/audits/DEEP_AUDIT_IMPROVEMENTS.md) - 深度审计改进建议
 - [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - 贡献指南
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 架构文档
 - [docs/GUI_REFACTORING.md](./docs/GUI_REFACTORING.md) - GUI 重构指南
@@ -276,19 +284,19 @@ OUTPUT_DIR=./output
 - 🌓 高对比度模式 - WCAG AA/AAA级刹色对比度
 - 🌐 RTL布局支持 - 阿拉伯语/希伯来语
 
-## 🆕 最新发布 (v2.4.2)
+## 🆕 最新发布 (v2.4.3)
 
 ### 中文更新摘要
 - 🔒 安全加固：在抓取器真实请求前新增 DNS 解析与安全校验，增强 DNS Rebinding / SSRF 防护。
 - 🧪 测试增强：新增 DNS Rebinding 集成测试，并完成安全与核心路径定向回归测试。
 - 🧱 稳定性提升：修复结构化日志事件处理与上下文绑定类型一致性问题。
-- 📦 发布同步：版本升级至 `2.4.2`，同步更新打包配置（含 MSIX 默认版本）。
+- 📦 发布同步：版本升级至 `2.4.3`，同步更新打包配置（含 MSIX 默认版本）。
 
 ### English Release Notes
 - Security hardening: added pre-request DNS resolution and safety checks in scraper paths to improve DNS rebinding / SSRF protection.
 - Test enhancement: added DNS rebinding integration tests and completed targeted regression runs for security-critical modules.
 - Reliability improvements: fixed structured logging event processing and context-binding type consistency.
-- Release sync: bumped project version to `2.4.2` and aligned packaging defaults (including MSIX version).
+- Release sync: bumped project version to `2.4.3` and aligned packaging defaults (including MSIX version).
 
 ## 📝 更新日志
 

@@ -18,9 +18,49 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from ...infrastructure.config import get_container, get_settings
+from ...infrastructure.config import get_settings
+from .main_window import MainWindow
+from .runtime_batch import (
+    add_batch_result_item,
+    add_batch_result_item_error,
+    batch_process_complete,
+    batch_process_worker,
+    on_batch_process,
+    on_batch_progress_update,
+    on_import_urls,
+    on_paste_urls,
+    start_batch_processing,
+    update_batch_progress,
+    update_batch_progress_ui,
+)
+from .runtime_export import (
+    archive_export_complete,
+    archive_export_error,
+    archive_export_worker,
+    batch_export_complete,
+    batch_export_error,
+    batch_export_worker,
+    disable_export_buttons,
+    do_archive_export,
+    do_batch_export,
+    do_export,
+    enable_export_buttons,
+    export_complete,
+    on_batch_export,
+    on_batch_export_format,
+    on_export,
+    on_export_progress_update,
+    update_export_progress_ui,
+)
+from .runtime_optimizations import (
+    apply_low_memory_optimizations,
+    check_memory_on_startup,
+    is_low_memory_mode,
+    show_low_memory_warning,
+)
+from .startup import register_startup_tasks, run_startup_sequence
 from ...shared.constants import GUI_MIN_SIZE, GUI_WINDOW_TITLE
-from ...shared.progress import BatchProgressTracker, ProgressInfo
+from ...shared.progress import ProgressInfo
 
 # 2026现代化GUI组件
 from .components.button import ButtonSize, ButtonVariant, ModernButton
@@ -28,6 +68,7 @@ from .components.card import CardStyle, ModernCard, ShadowDepth
 from .components.input import ModernInput
 from .components.toast import init_toast_manager
 from .dialogs.batch_archive_export import BatchArchiveExportDialog
+from .event_bus import GUIEventBus
 from .dialogs.exit_confirm import ExitConfirmDialog
 from .dialogs.word_preview import (
     build_content_preview_with_images,
@@ -55,18 +96,15 @@ from .viewmodels import MainViewModel
 # 提取的 GUI 组件（Phase 2 架构重构）
 from .widgets.animation_helper import TransitionManager
 from .widgets.helpers import (
-    LOW_MEMORY_THRESHOLD_GB,
     ExporterInfo,
     GUILogHandler,
     SummarizerInfo,
     UserPreferences,
     adjust_color_brightness,
-    get_available_memory_gb,
 )
 from .widgets.log_panel import LogPanel
 from .widgets.sidebar import Sidebar
 from .widgets.splash_screen import SplashScreen
-from .widgets.toast_notification import ToastNotification
 from .widgets.tooltip import create_tooltip
 
 if TYPE_CHECKING:
@@ -138,75 +176,35 @@ class WechatSummarizerGUI:
             self._current_tip_index = 0
             self._tip_auto_switch_id = None
 
-            # 定义启动任务列表
-            # 权重根据任务实际耗时估算：
-            # - 简单操作(内存操作)：权重 1
-            # - 中等操作(文件/配置)：权重 2
-            # - 耗时操作(网络请求)：权重 4-5
+            # 事件总线（页面间松耦合通信）
+            self.event_bus = GUIEventBus()
 
-            def task_apply_window_style():
-                """应用窗口样式"""
-                Windows11StyleHelper.apply_window_style(self.root, self._appearance_mode)
-
-            def task_init_container():
-                """初始化依赖注入容器"""
-                # Container 已通过参数注入，加载用户偏好中的 API 密钥
-                saved_api_keys = self.user_prefs.get_all_api_keys()
-                if any(saved_api_keys.values()):
-                    self.container.reload_summarizers(saved_api_keys)
-                # 创建主视图模型（MVVM 架构）
-                self.main_viewmodel = MainViewModel(self.container)
-
-            def task_detect_summarizers():
-                """检测可用的摘要服务"""
-                self._summarizer_info = self._get_summarizer_info()
-
-            def task_detect_exporters():
-                """检测可用的导出器"""
-                self._exporter_info = self._get_exporter_info()
-
-            def task_build_ui():
-                """构建用户界面"""
-                self._build_ui()
-
-            def task_setup_logging():
-                """设置日志处理器"""
-                self._setup_log_handler()
-
-            def task_init_system():
-                """初始化系统设置"""
-                self._init_system_settings()
-
-            def task_show_home():
-                """显示主页"""
-                self._show_page(self.PAGE_HOME)
-
-            # 注册任务（名称, 权重, 函数, 详细描述）
-            splash.add_task("正在应用窗口样式", 1, task_apply_window_style, "配置 Windows 11 风格")
-            splash.add_task("正在初始化容器", 2, task_init_container, "加载依赖注入框架")
-            splash.add_task(
-                "正在检测摘要服务", 5, task_detect_summarizers, "检测 Ollama、OpenAI 等服务状态"
-            )
-            splash.add_task("正在检测导出器", 2, task_detect_exporters, "检测 Word、PDF 导出支持")
-            splash.add_task("正在构建用户界面", 4, task_build_ui, "创建页面和控件")
-            splash.add_task("正在配置日志系统", 1, task_setup_logging, "设置日志输出")
-            splash.add_task("正在初始化系统", 2, task_init_system, "加载用户偏好设置")
-            splash.add_task("正在准备主页", 1, task_show_home, "切换到主页视图")
-
-            # 显示启动画面并执行任务
-            splash.show()
-            success = splash.run_tasks()
-
-            if success:
-                splash.set_complete("启动完成！")
-            else:
-                splash.set_complete("启动完成（部分服务不可用）")
-
-            # 关闭启动画面，显示主窗口
-            splash.close(delay_ms=400)
-            self.root.after(450, self._show_main_window)
+            # 启动任务注册与执行（拆分到 startup.py）
+            register_startup_tasks(self, splash)
+            run_startup_sequence(self, splash)
 
             self._check_memory_on_startup()
+
+    def _apply_window_style(self) -> None:
+        """应用窗口样式（启动任务）。"""
+        Windows11StyleHelper.apply_window_style(self.root, self._appearance_mode)
+
+    def _init_container_and_viewmodel(self) -> None:
+        """初始化容器与主视图模型（启动任务）。"""
+        # Container 已通过参数注入，加载用户偏好中的 API 密钥
+        saved_api_keys = self.user_prefs.get_all_api_keys()
+        if any(saved_api_keys.values()):
+            self.container.reload_summarizers(saved_api_keys)
+        # 创建主视图模型（MVVM 架构）
+        self.main_viewmodel = MainViewModel(self.container)
+
+    def _detect_summarizers(self) -> None:
+        """检测可用摘要服务（启动任务）。"""
+        self._summarizer_info = self._get_summarizer_info()
+
+    def _detect_exporters(self) -> None:
+        """检测可用导出器（启动任务）。"""
+        self._exporter_info = self._get_exporter_info()
 
     def _show_main_window(self):
         """显示主窗口并播放欢迎动画"""
@@ -217,66 +215,19 @@ class WechatSummarizerGUI:
 
     def _check_memory_on_startup(self):
         """启动时检测内存，如果低于阈值则提示用户"""
-        if self.user_prefs.low_memory_mode or self.user_prefs.low_memory_prompt_dismissed:
-            return
-        available_gb = get_available_memory_gb()
-        if available_gb is None:
-            logger.debug("无法检测系统内存（psutil 未安装）")
-            return
-        logger.info(f"系统可用内存: {available_gb:.2f} GB")
-        if available_gb < LOW_MEMORY_THRESHOLD_GB:
-            self.root.after(1500, lambda: self._show_low_memory_warning(available_gb))
+        check_memory_on_startup(self)
 
     def _show_low_memory_warning(self, available_gb: float):
         """显示低内存警告弹窗"""
-
-        def on_enable():
-            self.user_prefs.low_memory_mode = True
-            if hasattr(self, "low_memory_var"):
-                self.low_memory_var.set(True)
-            self._apply_low_memory_optimizations()
-            logger.info("✅ 已启用低内存模式")
-            # 使用新ToastManager (2026 UI组件)
-            if hasattr(self, "_toast_manager") and self._toast_manager:
-                self._toast_manager.success("已启用低内存模式，应用将减少内存占用")
-            else:
-                ToastNotification(
-                    self.root,
-                    "低内存模式",
-                    "已启用低内存模式，应用将减少内存占用",
-                    toast_type="success",
-                    duration_ms=3000,
-                )
-
-        def on_dismiss():
-            self.user_prefs.low_memory_prompt_dismissed = True
-            logger.info("用户选择忽略低内存提示")
-
-        ToastNotification(
-            self.root,
-            "⚠️ 内存不足",
-            f"检测到系统可用内存仅 {available_gb:.1f} GB（低于 {LOW_MEMORY_THRESHOLD_GB:.0f} GB）\n\n建议启用「低内存模式」以获得更好的体验。",
-            toast_type="warning",
-            duration_ms=0,
-            show_buttons=True,
-            on_confirm=on_enable,
-            on_cancel=on_dismiss,
-        )
+        show_low_memory_warning(self, available_gb)
 
     def _apply_low_memory_optimizations(self):
         """应用低内存模式优化"""
-        # 1. 减少日志缓存行数
-        if hasattr(self, "_log_handler") and self._log_handler:
-            self._log_handler.set_low_memory_mode(True)
-        # 2. 禁用动画效果
-        self._animation_running = False
-        # 3. 记录低内存模式状态，供其他组件检查
-        self._low_memory_mode_active = True
-        logger.debug("已应用低内存优化：减少日志缓存 (200行)、禁用动画效果")
+        apply_low_memory_optimizations(self)
 
     def _is_low_memory_mode(self) -> bool:
         """检查是否处于低内存模式"""
-        return getattr(self, "_low_memory_mode_active", False) or self.user_prefs.low_memory_mode
+        return is_low_memory_mode(self)
 
     def _get_font(self, size: int = 14, weight: str = "normal") -> ctk.CTkFont:
         """获取配置好的中文字体"""
@@ -692,75 +643,26 @@ class WechatSummarizerGUI:
         """构建单篇处理页面 - 委托给 SinglePage 组件"""
         self.single_page = SinglePage(self.content_area, gui=self)
         self._page_frames[self.PAGE_SINGLE] = self.single_page
-        # 向后兼容的属性别名
-        self.url_entry = self.single_page.url_entry
-        self.url_status_label = self.single_page.url_status_label
-        self.method_var = self.single_page.method_var
-        self.method_menu = self.single_page.method_menu
-        self.summarize_var = self.single_page.summarize_var
-        self.fetch_btn = self.single_page.fetch_btn
-        self.export_btn = self.single_page.export_btn
-        self.preview_text = self.single_page.preview_text
-        self.title_label = self.single_page.title_label
-        self.author_label = self.single_page.author_label
-        self.word_count_label = self.single_page.word_count_label
-        self.summary_text = self.single_page.summary_text
-        self.points_text = self.single_page.points_text
 
     def _build_batch_page(self):
         """构建批量处理页面 - 委托给 BatchPage 组件"""
         self.batch_page = BatchPage(self.content_area, gui=self)
         self._page_frames[self.PAGE_BATCH] = self.batch_page
-        # 向后兼容的属性别名
-        self.batch_url_text = self.batch_page.batch_url_text
-        self.batch_url_status_label = self.batch_page.batch_url_status_label
-        self.batch_method_var = self.batch_page.batch_method_var
-        self.concurrency_var = self.batch_page.concurrency_var
-        self.batch_start_btn = self.batch_page.batch_start_btn
-        self.batch_result_frame = self.batch_page.batch_result_frame
-        self.batch_progress = self.batch_page.batch_progress
-        self.batch_status_label = self.batch_page.batch_status_label
-        self.batch_elapsed_label = self.batch_page.batch_elapsed_label
-        self.batch_eta_label = self.batch_page.batch_eta_label
-        self.batch_rate_label = self.batch_page.batch_rate_label
-        self.batch_count_label = self.batch_page.batch_count_label
-        self.batch_export_word_btn = self.batch_page.batch_export_word_btn
-        self.batch_export_md_btn = self.batch_page.batch_export_md_btn
-        self.batch_export_btn = self.batch_page.batch_export_btn
-        self.batch_export_html_btn = self.batch_page.batch_export_html_btn
 
     def _build_history_page(self):
         """构建历史记录页面 - 委托给 HistoryPage 组件"""
         self.history_page = HistoryPage(self.content_area, gui=self)
         self._page_frames[self.PAGE_HISTORY] = self.history_page
-        # 向后兼容的属性别名
-        self.cache_stats_label = self.history_page.cache_stats_label
-        self.history_frame = self.history_page.history_frame
-        # 刷新历史记录（必须在 history_frame 别名设置之后调用）
-        self.history_page._refresh_history()
+        # 初始化历史页显示态
+        self.history_page.on_page_shown()
 
     def _build_settings_page(self):
         """构建设置页面 - 委托给 SettingsPage 组件"""
         self.settings_page = SettingsPage(self.content_area, gui=self)
         self._page_frames[self.PAGE_SETTINGS] = self.settings_page
-        # 向后兼容的属性别名
-        self.summarizer_status_frame = self.settings_page.summarizer_status_frame
-        self._api_key_entries = self.settings_page._api_key_entries
-        self._openai_show_var = self.settings_page._openai_show_var
-        self._deepseek_show_var = self.settings_page._deepseek_show_var
-        self._anthropic_show_var = self.settings_page._anthropic_show_var
-        self._zhipu_show_var = self.settings_page._zhipu_show_var
-        self.api_status_label = self.settings_page.api_status_label
-        self.export_dir_entry = self.settings_page.export_dir_entry
-        self.remember_dir_var = self.settings_page.remember_dir_var
-        self.default_format_var = self.settings_page.default_format_var
-        self.autostart_var = self.settings_page.autostart_var
-        self.minimize_tray_var = self.settings_page.minimize_tray_var
+        # 仅保留仍被 app.py 直接使用的引用
         self.low_memory_var = self.settings_page.low_memory_var
-        self.language_var = self.settings_page.language_var
-        self.settings_status_label = self.settings_page.settings_status_label
-        self.memory_status_label = self.settings_page.memory_status_label
-        # 初始化摘要器状态显示（必须在别名设置之后调用）
+        # 初始化摘要器状态显示
         self.settings_page.update_summarizer_status_display()
 
     def _add_status_indicator(self, parent, label: str, value: str, is_ok: bool):
@@ -946,11 +848,6 @@ class WechatSummarizerGUI:
         self.root.lift()
         self.root.focus_force()
 
-    def _update_summarizer_status_display(self):
-        """更新摘要器状态显示 — 委托给 SettingsPage"""
-        if hasattr(self, "settings_page"):
-            self.settings_page.update_summarizer_status_display()
-
     def _refresh_summarizer_menus(self):
         """刷新摘要方法下拉菜单"""
         available_methods = [name for name, info in self._summarizer_info.items() if info.available]
@@ -982,15 +879,13 @@ class WechatSummarizerGUI:
 
     def _show_page(self, page_id: str):
         """切换页面"""
+        from_page = self._current_page
+
         for frame in self._page_frames.values():
             frame.grid_forget()
         if page_id in self._page_frames:
             self._page_frames[page_id].grid(row=0, column=0, sticky="nsew")
-        # 通知页面已显示（用于剪贴板检测等）
-        page = self._page_frames.get(page_id)
-        if page and hasattr(page, "on_page_shown"):
-            with contextlib.suppress(Exception):
-                page.on_page_shown()
+
         for pid, btn in self._nav_buttons.items():
             if pid == page_id:
                 btn.configure(
@@ -1002,7 +897,12 @@ class WechatSummarizerGUI:
                     fg_color="transparent",
                     text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
                 )
+
         self._current_page = page_id
+
+        # 发布页面切换事件，供页面/组件订阅
+        with contextlib.suppress(Exception):
+            self.event_bus.publish("navigate", from_page=from_page, to_page=page_id)
 
     def _show_page_animated(self, page_id: str):
         """带平滑滑动动画的页面切换"""
@@ -1042,6 +942,7 @@ class WechatSummarizerGUI:
         # 更新导航按钮状态 (立即更新，不等动画完成)
         self._update_nav_buttons_animated(page_id)
 
+        old_page_id = self._current_page
         # 记录新页面
         self._current_page = page_id
 
@@ -1055,10 +956,10 @@ class WechatSummarizerGUI:
             }
             page_name = page_names.get(page_id, page_id)
             self._animate_status_change(f"已切换到{page_name}")
-            # 通知页面已显示
-            if new_page and hasattr(new_page, "on_page_shown"):
-                with contextlib.suppress(Exception):
-                    new_page.on_page_shown()
+            with contextlib.suppress(Exception):
+                self.event_bus.publish("navigate", from_page=self._current_page, to_page=page_id)
+            with contextlib.suppress(Exception):
+                self.event_bus.publish("navigate", from_page=old_page_id, to_page=page_id)
 
         # 执行滑动过渡
         TransitionManager.slide_transition(
@@ -1076,6 +977,7 @@ class WechatSummarizerGUI:
         if not new_page:
             return None
         else:
+            old_page_id = self._current_page
             new_page.grid(row=0, column=0, sticky="nsew")
             self._update_nav_buttons_animated(page_id)
             self._current_page = page_id
@@ -1088,6 +990,8 @@ class WechatSummarizerGUI:
             }
             page_name = page_names.get(page_id, page_id)
             self._animate_status_change(f"已切换到{page_name}")
+            with contextlib.suppress(Exception):
+                self.event_bus.publish("navigate", from_page=old_page_id, to_page=page_id)
 
     def _update_nav_buttons_animated(self, active_page_id: str):
         """带平滑过渡动画更新导航按钮状态"""
@@ -1193,8 +1097,8 @@ class WechatSummarizerGUI:
         """刷新可用性"""
         self._summarizer_info = self._get_summarizer_info()
         self._exporter_info = self._get_exporter_info()
-        if hasattr(self, "summarizer_status_frame"):
-            self._update_summarizer_status_display()
+        if hasattr(self, "settings_page"):
+            self.settings_page.update_summarizer_status_display()
         self._refresh_summarizer_menus()
         logger.info("已刷新服务状态")
         self._set_status("已刷新", ModernColors.SUCCESS)
@@ -1211,7 +1115,7 @@ class WechatSummarizerGUI:
 
     def _on_url_input_change(self, event=None):
         """单篇处理URL输入变化时的验证"""
-        url = self.url_entry.get().strip()
+        url = self.single_page.url_entry.get().strip()
         if not url:
             self.url_status_label.configure(text="", text_color="gray")
             return None
@@ -1227,7 +1131,7 @@ class WechatSummarizerGUI:
 
     def _on_batch_url_input_change(self, event=None):
         """批量处理URL输入变化时的验证和去重"""
-        content = self.batch_url_text.get("1.0", "end").strip()
+        content = self.batch_page.batch_url_text.get("1.0", "end").strip()
         if not content:
             self.batch_url_status_label.configure(text="", text_color="gray")
             return None
@@ -1330,7 +1234,7 @@ class WechatSummarizerGUI:
 
         self.title_label.configure(text=f"标题: {article.title}")
         self.author_label.configure(text=f"公众号: {article.account_name or '未知'}")
-        self.word_count_label.configure(text=f"字数: {article.word_count}")
+        self.single_page.word_count_label.configure(text=f"字数: {article.word_count}")
         self.preview_text.delete("1.0", "end")
         preview = (
             article.content_text[:2000] + "..."
@@ -1341,7 +1245,7 @@ class WechatSummarizerGUI:
         self.summary_text.delete("1.0", "end")
         if article.summary:
             self.summary_text.insert("1.0", article.summary.content)
-            self.points_text.delete("1.0", "end")
+            self.single_page.points_text.delete("1.0", "end")
             if article.summary.key_points:
                 points = "\n".join(f"• {p}" for p in article.summary.key_points)
                 self.points_text.insert("1.0", points)
@@ -1398,47 +1302,7 @@ class WechatSummarizerGUI:
 
     def _on_export(self):
         """导出"""
-        if not self.current_article:
-            return None
-
-        # 检查导出目录配置
-        if not self._check_export_dir_configured():
-            return None
-
-        export_window = ctk.CTkToplevel(self.root)
-        export_window.title("导出选项")
-        export_window.geometry("400x350")
-        export_window.transient(self.root)
-        ctk.CTkLabel(
-            export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")
-        ).pack(pady=20)
-
-        def export_as(target: str):
-            export_window.destroy()
-            if target == "word":
-                self._show_word_preview()
-            else:
-                self._do_export(target)
-
-        for name, info in self._exporter_info.items():
-            btn_text = f"{('✓' if info.available else '✗')} {name.upper()}"
-            if name == "word" and info.available:
-                btn_text += " (预览)"
-            btn = ctk.CTkButton(
-                export_window,
-                text=btn_text,
-                font=ctk.CTkFont(size=14),
-                height=45,
-                corner_radius=10,
-                fg_color=ModernColors.INFO if info.available else ModernColors.NEUTRAL_BTN_DISABLED,
-                state="normal" if info.available else "disabled",
-                command=lambda t=name: export_as(t),
-            )
-            btn.pack(fill="x", padx=30, pady=5)
-            if not info.available and info.reason:
-                ctk.CTkLabel(
-                    export_window, text=info.reason, font=ctk.CTkFont(size=11), text_color="gray"
-                ).pack()
+        on_export(self)
 
     def _show_word_preview(self):
         """Word预览 - 委托给 dialogs.word_preview"""
@@ -1458,479 +1322,111 @@ class WechatSummarizerGUI:
 
     def _do_export(self, target: str):
         """执行导出"""
-        if not self.current_article:
-            return None
-        else:
-            logger.info(f"开始导出: {target}")
-            ext_map = {
-                "html": (".html", "HTML文件", "*.html"),
-                "markdown": (".md", "Markdown文件", "*.md"),
-                "word": (".docx", "Word文档", "*.docx"),
-                "zip": (".zip", "ZIP文件", "*.zip"),
-            }
-            ext_info = ext_map.get(target, (".html", "HTML文件", "*.html"))
-            initial_dir = None
-            if self.user_prefs.remember_export_dir and self.user_prefs.export_dir:
-                dir_path = Path(self.user_prefs.export_dir)
-                if dir_path.exists():
-                    initial_dir = str(dir_path)
-            if not initial_dir:
-                default_dir = self.settings.export.default_output_dir
-                if default_dir and Path(default_dir).exists():
-                    initial_dir = default_dir
-            path = filedialog.asksaveasfilename(
-                defaultextension=ext_info[0],
-                filetypes=[(ext_info[1], ext_info[2])],
-                initialfile=f"{self.current_article.title[:30]}{ext_info[0]}",
-                initialdir=initial_dir,
-            )
-            if not path:
-                logger.info("导出已取消")
-                return None
-            else:
-                if self.user_prefs.remember_export_dir:
-                    export_dir = str(Path(path).parent)
-                    if export_dir != self.user_prefs.export_dir:
-                        self.user_prefs.export_dir = export_dir
-                        logger.info(f"已记住导出目录: {export_dir}")
-                self.export_btn.configure(state="disabled")
-                self._set_status("正在导出...", ModernColors.INFO)
-
-                def do_export():
-                    try:
-                        logger.info(f"导出路径: {path}")
-                        result = self.container.export_use_case.execute(
-                            self.current_article, target=target, path=path
-                        )
-                        logger.success(f"导出成功: {result}")
-                        self.root.after(0, lambda: self._export_complete(True, str(result)))
-                    except Exception as e:
-                        logger.error(f"导出失败: {e}")
-                        error_msg = str(e)
-                        self.root.after(0, lambda msg=error_msg: self._export_complete(False, msg))
-
-                threading.Thread(target=do_export, daemon=True).start()
+        do_export(self, target)
 
     def _export_complete(self, success: bool, message: str):
         """导出完成"""
-        self.export_btn.configure(state="normal")
-        if success:
-            self._set_status("导出完成", ModernColors.SUCCESS)
-            messagebox.showinfo("成功", f"导出成功: {message}")
-        else:
-            self._set_status("导出失败", ModernColors.ERROR)
-            messagebox.showerror("错误", f"导出失败: {message}")
+        export_complete(self, success, message)
 
     def _on_import_urls(self):
         """导入URL"""
-        path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
-        if not path:
-            return None
-        else:
-            try:
-                with open(path, encoding="utf-8") as f:
-                    content = f.read()
-                self.batch_url_text.delete("1.0", "end")
-                self.batch_url_text.insert("1.0", content)
-                logger.info(f"已导入URL文件: {path}")
-            except Exception as e:
-                messagebox.showerror("错误", f"读取失败: {e}")
+        on_import_urls(self)
 
     def _on_paste_urls(self):
         """粘贴URL"""
-        try:
-            content = self.root.clipboard_get()
-            self.batch_url_text.insert("end", content)
-        except Exception:
-            messagebox.showwarning("提示", "剪贴板为空")
+        on_paste_urls(self)
 
     def _on_batch_process(self):
         """批量处理"""
-        content = self.batch_url_text.get("1.0", "end").strip()
-        if not content:
-            messagebox.showwarning("提示", "请输入URL")
-            return None
-        else:
-            urls = [line.strip() for line in content.split("\n") if line.strip()]
-            if not urls:
-                messagebox.showwarning("提示", "未找到有效URL")
-                return None
-            else:
-                self._start_batch_processing(urls)
+        on_batch_process(self)
 
     def _start_batch_processing(self, urls: list[str]):
         """开始批量处理"""
-        self.batch_urls = urls
-        self.batch_results = []
-        self._batch_cancel_requested = False
-        self._batch_progress_tracker = BatchProgressTracker(
-            total=len(urls), smoothing_factor=0.3, log_interval=1
-        )
-        self._batch_progress_tracker.set_callback(self._on_batch_progress_update)
-        # 切换开始/停止按钮状态
-        if hasattr(self, "batch_page"):
-            self.batch_page.set_processing_state(True)
-        else:
-            self.batch_start_btn.configure(state="disabled")
-        self.batch_progress.set(0)
-        self.batch_status_label.configure(text=f"正在处理 0/{len(urls)} 篇...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_processing_active = True
-
-        logger.info(f"🚀 开始批量处理 {len(urls)} 篇文章")
-        for widget in self.batch_result_frame.winfo_children():
-            widget.destroy()
-        threading.Thread(target=self._batch_process_worker, daemon=True).start()
+        start_batch_processing(self, urls)
 
     def _on_batch_progress_update(self, info: ProgressInfo):
         """进度更新回调（在工作线程中调用）"""
-        self.root.after(0, lambda: self._update_batch_progress_ui(info))
+        on_batch_progress_update(self, info)
 
     def _update_batch_progress_ui(self, info: ProgressInfo):
         """更新批量处理的GUI进度显示（在主线程中调用）"""
-        progress_value = info.percentage / 100.0
-        self.batch_progress.set(progress_value)
-        self.batch_status_label.configure(
-            text=f"正在处理 {info.progress_text} ({info.percentage_text})"
-        )
-        self.batch_elapsed_label.configure(text=info.elapsed_formatted)
-        self.batch_eta_label.configure(text=info.eta_formatted)
-        self.batch_rate_label.configure(text=info.rate_formatted)
-        if hasattr(self, "_batch_progress_tracker"):
-            tracker = self._batch_progress_tracker
-            self.batch_count_label.configure(
-                text=f"{tracker.success_count} / {tracker.failure_count}"
-            )
+        update_batch_progress_ui(self, info)
 
     def _batch_process_worker(self):
         """批量处理工作线程"""
-        method = self.batch_method_var.get()
-        len(self.batch_urls)
-        tracker = self._batch_progress_tracker
-        for _i, url in enumerate(self.batch_urls):
-            # 检查取消标志
-            if getattr(self, "_batch_cancel_requested", False):
-                logger.info("ℹ️ 用户取消了批量处理")
-                break
-            short_url = url[:50] + "..." if len(url) > 50 else url
-            try:
-                article = self.container.fetch_use_case.execute(url)
-                try:
-                    summary = self.container.summarize_use_case.execute(article, method=method)
-                    article.attach_summary(summary)
-                except Exception as e:
-                    logger.warning(f"摘要失败: {e}")
-                self.batch_results.append(article)
-                tracker.update_success(current_item=article.title[:30])
-                self.root.after(0, lambda a=article: self._add_batch_result_item(a, True))
-            except Exception as e:
-                logger.error(f"处理失败 {short_url}: {e}")
-                tracker.update_failure(current_item=short_url, error=str(e))
-                self.root.after(
-                    0, lambda u=url, err=str(e): self._add_batch_result_item_error(u, err)
-                )
-        tracker.finish()
-        self.root.after(0, self._batch_process_complete)
+        batch_process_worker(self)
 
     def _update_batch_progress(self, value: float, status: str):
         """更新批量进度（兼容旧接口）"""
-        self.batch_progress.set(value)
-        self.batch_status_label.configure(text=status)
+        update_batch_progress(self, value, status)
 
     def _add_batch_result_item(self, article: Article, success: bool):
         """添加批量结果项"""
-        frame = ctk.CTkFrame(
-            self.batch_result_frame, corner_radius=8, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
-        )
-        frame.pack(fill="x", pady=3)
-        icon = "✓" if success else "✗"
-        color = ModernColors.SUCCESS if success else ModernColors.ERROR
-        title = article.title[:35] + "..." if len(article.title) > 35 else article.title
-        ctk.CTkLabel(frame, text=f"{icon} {title}", anchor="w", text_color=color).pack(
-            side="left", padx=10, pady=8, fill="x", expand=True
-        )
+        add_batch_result_item(self, article, success)
 
     def _add_batch_result_item_error(self, url: str, error: str):
         """添加错误项"""
-        frame = ctk.CTkFrame(
-            self.batch_result_frame, corner_radius=8, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
-        )
-        frame.pack(fill="x", pady=3)
-        short_url = url[:25] + "..." if len(url) > 25 else url
-        ctk.CTkLabel(frame, text=f"✗ {short_url}", anchor="w", text_color=ModernColors.ERROR).pack(
-            side="left", padx=10, pady=8
-        )
-        ctk.CTkLabel(frame, text=error[:30], text_color="gray", font=ctk.CTkFont(size=11)).pack(
-            side="right", padx=10, pady=8
-        )
+        add_batch_result_item_error(self, url, error)
 
     def _batch_process_complete(self):
         """批量处理完成"""
-        # 清除任务状态
-        self._batch_processing_active = False
-        self._batch_cancel_requested = False
-
-        # 恢复按钮状态
-        if hasattr(self, "batch_page"):
-            self.batch_page.set_processing_state(False)
-        else:
-            self.batch_start_btn.configure(state="normal")
-        self.batch_progress.set(1.0)
-        success_count = len(self.batch_results)
-        total = len(self.batch_urls)
-        self.batch_status_label.configure(text=f"完成: {success_count}/{total} 篇成功")
-        logger.success(f"批量处理完成: {success_count}/{total}")
-        if self.batch_results:
-            self.batch_export_btn.configure(state="normal")
-            self.batch_export_md_btn.configure(state="normal")
-            self.batch_export_word_btn.configure(state="normal")
-            self.batch_export_html_btn.configure(state="normal")
+        batch_process_complete(self)
 
     def _on_batch_export(self):
         """批量压缩导出 - 支持多格式和文章选择"""
-        if not self.batch_results:
-            return None
-
-        # 检查导出目录配置
-        if not self._check_export_dir_configured():
-            return None
-
-        # 显示批量压缩导出对话框
-        dialog = BatchArchiveExportDialog(self.root, self.batch_results)
-        result = dialog.get()
-
-        if not result:
-            return None  # 用户取消
-
-        # 执行多格式压缩导出
-        self._do_archive_export(
-            articles=result["articles"], archive_format=result["format"], path=result["path"]
-        )
+        on_batch_export(self)
 
     def _do_archive_export(self, articles: list, archive_format: str, path: str):
-        """执行多格式压缩导出（带进度跟踪）
-
-        Args:
-            articles: 要导出的文章列表
-            archive_format: 压缩格式 ('zip', '7z', 'rar')
-            path: 输出路径
-        """
-        self._disable_export_buttons()
-        self._archive_export_articles = articles  # 保存要导出的文章
-        self._archive_progress_tracker = BatchProgressTracker(
-            total=len(articles), smoothing_factor=0.3, log_interval=1
-        )
-        self._archive_progress_tracker.set_callback(self._on_export_progress_update)
-        self.batch_progress.set(0)
-
-        format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
-        format_name = format_names.get(archive_format, archive_format.upper())
-
-        self.batch_status_label.configure(text=f"正在打包 0/{len(articles)} 篇为 {format_name}...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_export_active = True
-
-        logger.info(f"📦 开始导出 {len(articles)} 篇文章为 {format_name} 压缩包")
-        threading.Thread(
-            target=self._archive_export_worker, args=(articles, archive_format, path), daemon=True
-        ).start()
+        """执行多格式压缩导出（带进度跟踪）"""
+        do_archive_export(self, articles, archive_format, path)
 
     def _archive_export_worker(self, articles: list, archive_format: str, path: str):
         """工作线程：执行多格式压缩导出"""
-        try:
-            from ...infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
-            tracker = self._archive_progress_tracker
-
-            def progress_callback(current: int, total: int, item_name: str):
-                if current > tracker.current:
-                    tracker.update_success(current_item=item_name)
-
-            # 创建多格式压缩导出器
-            exporter = MultiFormatArchiveExporter()
-            result = exporter.export_batch(
-                articles=articles,
-                path=path,
-                archive_format=archive_format,
-                progress_callback=progress_callback,
-            )
-
-            tracker.finish()
-            self.root.after(0, lambda: self._archive_export_complete(result, archive_format))
-        except Exception as e:
-            logger.error(f"压缩导出失败: {e}")
-            error_msg = str(e)
-            self.root.after(0, lambda msg=error_msg: self._archive_export_error(msg))
+        archive_export_worker(self, articles, archive_format, path)
 
     def _archive_export_complete(self, result: str, archive_format: str):
         """处理压缩导出完成"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_progress.set(1.0)
-
-        format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
-        format_name = format_names.get(archive_format, archive_format.upper())
-
-        self.batch_status_label.configure(text=f"{format_name} 导出完成")
-        logger.success(f"批量导出成功: {result}")
-        messagebox.showinfo("成功", f"导出成功: {result}")
+        archive_export_complete(self, result, archive_format)
 
     def _archive_export_error(self, error: str):
         """处理压缩导出错误"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_status_label.configure(text="压缩导出失败")
-        messagebox.showerror("错误", f"导出失败: {error}")
+        archive_export_error(self, error)
 
     def _on_batch_export_format(self, target: str):
         """批量导出指定格式"""
-        if not self.batch_results:
-            return None
-
-        # 检查导出目录配置
-        if not self._check_export_dir_configured():
-            return None
-
-        if target == "word":
-            self._show_batch_word_preview()
-            return None
-        else:
-            dir_path = filedialog.askdirectory(title="选择输出目录")
-            if not dir_path:
-                return None
-            else:
-                self._do_batch_export(target, dir_path)
+        on_batch_export_format(self, target)
 
     def _do_batch_export(self, target: str, dir_path: str):
         """执行批量导出（在后台线程中执行）"""
-        self._disable_export_buttons()
-        self._export_progress_tracker = BatchProgressTracker(
-            total=len(self.batch_results), smoothing_factor=0.3, log_interval=1
-        )
-        self._export_progress_tracker.set_callback(self._on_export_progress_update)
-        self.batch_progress.set(0)
-        self.batch_status_label.configure(text=f"正在导出 0/{len(self.batch_results)} 篇...")
-        self.batch_elapsed_label.configure(text="00:00")
-        self.batch_eta_label.configure(text="--:--")
-        self.batch_rate_label.configure(text="计算中...")
-        self.batch_count_label.configure(text="0 / 0")
-
-        # 设置任务状态（用于退出确认）
-        self._batch_export_active = True
-
-        logger.info(f"📤 开始批量导出 {len(self.batch_results)} 篇文章为 {target.upper()} 格式")
-        threading.Thread(
-            target=self._batch_export_worker, args=(target, dir_path), daemon=True
-        ).start()
+        do_batch_export(self, target, dir_path)
 
     def _on_export_progress_update(self, info: ProgressInfo):
         """导出进度更新回调"""
-        self.root.after(0, lambda: self._update_export_progress_ui(info))
+        on_export_progress_update(self, info)
 
     def _update_export_progress_ui(self, info: ProgressInfo):
         """更新导出进度GUI显示"""
-        progress_value = info.percentage / 100.0
-        self.batch_progress.set(progress_value)
-        self.batch_status_label.configure(
-            text=f"正在导出 {info.progress_text} ({info.percentage_text})"
-        )
-        self.batch_elapsed_label.configure(text=info.elapsed_formatted)
-        self.batch_eta_label.configure(text=info.eta_formatted)
-        self.batch_rate_label.configure(text=info.rate_formatted)
-        if hasattr(self, "_export_progress_tracker"):
-            tracker = self._export_progress_tracker
-            self.batch_count_label.configure(
-                text=f"{tracker.success_count} / {tracker.failure_count}"
-            )
+        update_export_progress_ui(self, info)
 
     def _batch_export_worker(self, target: str, dir_path: str):
         """批量导出工作线程"""
-        try:
-            output_dir = Path(dir_path)
-            tracker = self._export_progress_tracker
-            ext_map = {"markdown": ".md", "html": ".html", "word": ".docx"}
-            ext = ext_map.get(target, ".html")
-            for article in self.batch_results:
-                try:
-                    safe_title = "".join(
-                        c for c in article.title[:50] if c.isalnum() or c in " _-"
-                    ).strip()
-                    file_path = output_dir / f"{safe_title}{ext}"
-                    self.container.export_use_case.execute(
-                        article, target=target, path=str(file_path)
-                    )
-                    tracker.update_success(current_item=article.title[:30])
-                except Exception as e:
-                    logger.warning(f"导出失败 {article.title}: {e}")
-                    tracker.update_failure(current_item=article.title[:30], error=str(e))
-            tracker.finish()
-            self.root.after(
-                0,
-                lambda: self._batch_export_complete(
-                    tracker.success_count, tracker.failure_count, dir_path
-                ),
-            )
-        except Exception as e:
-            logger.error(f"导出失败: {e}")
-            error_msg = str(e)
-            self.root.after(0, lambda msg=error_msg: self._batch_export_error(msg))
+        batch_export_worker(self, target, dir_path)
 
     def _batch_export_complete(self, success_count: int, failure_count: int, dir_path: str):
         """批量导出完成"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_progress.set(1.0)
-        self.batch_status_label.configure(
-            text=f"导出完成: {success_count} 成功, {failure_count} 失败"
-        )
-        total = success_count + failure_count
-        logger.success(f"批量导出完成: {success_count}/{total}")
-        messagebox.showinfo("成功", f"导出完成: {success_count}/{total} 篇\n输出目录: {dir_path}")
+        batch_export_complete(self, success_count, failure_count, dir_path)
 
     def _batch_export_error(self, error: str):
         """批量导出出错"""
-        # 清除任务状态
-        self._batch_export_active = False
-
-        self._enable_export_buttons()
-        self.batch_status_label.configure(text="导出失败")
-        messagebox.showerror("错误", f"导出失败: {error}")
+        batch_export_error(self, error)
 
     def _disable_export_buttons(self):
         """禁用所有导出按钮"""
-        self.batch_export_btn.configure(state="disabled")
-        self.batch_export_md_btn.configure(state="disabled")
-        self.batch_export_word_btn.configure(state="disabled")
-        self.batch_export_html_btn.configure(state="disabled")
+        disable_export_buttons(self)
 
     def _enable_export_buttons(self):
         """启用所有导出按钮"""
-        if self.batch_results:
-            self.batch_export_btn.configure(state="normal")
-            self.batch_export_md_btn.configure(state="normal")
-            self.batch_export_word_btn.configure(state="normal")
-            self.batch_export_html_btn.configure(state="normal")
-
-    def _refresh_history(self):
-        """刷新历史 — 委托给 HistoryPage"""
-        if hasattr(self, "history_page"):
-            self.history_page._refresh_history()
+        enable_export_buttons(self)
 
     def run(self):
         """运行GUI"""
@@ -1938,16 +1434,14 @@ class WechatSummarizerGUI:
 
 
 def run_gui():
-    """启动GUI（组合根 - 创建依赖并注入）"""
+    """启动GUI（通过 MainWindow 协调器）"""
     if not _ctk_available:
         print("错误: customtkinter未安装")
         print("请运行: pip install customtkinter")
         return None
-    else:
-        container = get_container()
-        settings = get_settings()
-        app = WechatSummarizerGUI(container=container, settings=settings)
-        app.run()
+
+    window = MainWindow(WechatSummarizerGUI, settings=get_settings())
+    window.run()
 
 
 if __name__ == "__main__":

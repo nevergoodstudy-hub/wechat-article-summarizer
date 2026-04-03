@@ -46,7 +46,7 @@ BUILD_DIR = PROJECT_ROOT / "build"
 # 打包配置
 APP_NAME = "WeChatArticleSummarizer"
 EXE_NAME = f"{APP_NAME}.exe"
-VERSION = os.environ.get("MSIX_VERSION", "2.4.2.0")
+VERSION = os.environ.get("MSIX_VERSION", "2.4.3.0")
 PUBLISHER = os.environ.get("MSIX_PUBLISHER", "CN=WeChatSummarizer")
 PACKAGE_NAME = os.environ.get("MSIX_IDENTITY_NAME", "WeChatSummarizer")
 
