@@ -26,6 +26,8 @@
   - `ARCHITECTURE_RENOVATION_PLAN.md`
   - `ARCHITECTURE_RENEWAL_CHECKLIST.md`
   - `REPO_HYGIENE_CYCLE.md`
+  - `DEEP_RENEWAL_FEASIBILITY_PLAN.md`
+  - `CORE_SCOPE_VIEW.md`
 - `api/`：API 相关文档
 - `new_stack_program/`：新技术栈方案材料
 - `project_focused/`：项目聚焦类文档

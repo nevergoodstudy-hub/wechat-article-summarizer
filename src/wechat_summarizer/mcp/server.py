@@ -228,7 +228,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             container = get_container()
             results = []
 
-            for url in urls[:10]:  # 限制最多 10 篇
+            for url in urls:
                 try:
                     article = await asyncio.to_thread(container.fetch_use_case.execute, url)
                     summary = await asyncio.to_thread(
@@ -523,7 +523,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             container = get_container()
             topic_data = []
 
-            for url in urls[:10]:  # 限制最多 10 篇
+            for url in urls:
                 try:
                     article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -711,14 +711,16 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             审计日志列表
         """
-        from .input_validator import MCPValidationError
+        from .input_validator import MCPInputValidator, MCPValidationError
         from .security import get_security_manager
 
         try:
-            if not isinstance(limit, int):
-                raise MCPValidationError("limit 必须为整数")
-            if limit < 1 or limit > 100:
-                raise MCPValidationError("limit 必须在 1 到 100 之间")
+            limit = MCPInputValidator.validate_int_range(
+                limit,
+                field_name="limit",
+                lower=1,
+                upper=100,
+            )
             manager = get_security_manager()
             if manager.audit_logger is None:
                 return {

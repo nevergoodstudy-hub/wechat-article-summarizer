@@ -106,6 +106,19 @@ class TestValidateUrls:
             result = MCPInputValidator.validate_urls(urls)
             assert len(result) == 2
 
+    def test_accepts_url_list_at_max_count_boundary(self):
+        with patch(
+            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+            side_effect=lambda u: u,
+        ):
+            urls = [f"https://example.com/{i}" for i in range(10)]
+            result = MCPInputValidator.validate_urls(urls, max_count=10)
+            assert len(result) == 10
+
+    def test_accepts_empty_url_list(self):
+        result = MCPInputValidator.validate_urls([], max_count=10)
+        assert result == []
+
 
 # ── validate_file_path ─────────────────────────────────
 
@@ -252,6 +265,33 @@ class TestValidateMaxLength:
     def test_rejects_float(self):
         with pytest.raises(MCPValidationError, match="must be integer"):
             MCPInputValidator.validate_max_length(100.5)
+
+
+# ── validate_int_range ─────────────────────────────────
+
+
+class TestValidateIntRange:
+    """通用整数范围验证测试"""
+
+    def test_accepts_boundary_values(self):
+        assert MCPInputValidator.validate_int_range(
+            1, field_name="limit", lower=1, upper=100
+        ) == 1
+        assert MCPInputValidator.validate_int_range(
+            100, field_name="limit", lower=1, upper=100
+        ) == 100
+
+    def test_rejects_non_integer(self):
+        with pytest.raises(MCPValidationError, match="limit must be an integer"):
+            MCPInputValidator.validate_int_range(
+                "50", field_name="limit", lower=1, upper=100
+            )
+
+    def test_rejects_out_of_range_with_field_name(self):
+        with pytest.raises(MCPValidationError, match=r"limit must be in \[1, 100\]"):
+            MCPInputValidator.validate_int_range(
+                101, field_name="limit", lower=1, upper=100
+            )
 
 
 # ── validate_no_shell_injection ────────────────────────

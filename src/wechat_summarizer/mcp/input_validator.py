@@ -279,6 +279,22 @@ class MCPInputValidator:
         return value
 
     @classmethod
+    def validate_int_range(
+        cls,
+        value: int,
+        *,
+        field_name: str,
+        lower: int,
+        upper: int,
+    ) -> int:
+        """验证整数参数在指定范围内"""
+        if not isinstance(value, int):
+            raise MCPValidationError(f"{field_name} must be an integer")
+        if value < lower or value > upper:
+            raise MCPValidationError(f"{field_name} must be in [{lower}, {upper}]")
+        return value
+
+    @classmethod
     def validate_no_shell_injection(cls, value: str) -> str:
         """确保值不包含 shell 注入字符
 
