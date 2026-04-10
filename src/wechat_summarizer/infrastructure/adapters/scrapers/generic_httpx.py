@@ -12,6 +12,7 @@ from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import USER_AGENTS
 from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
+from ....shared.utils.retry import async_retry, retry
 from ....shared.utils.ssrf_protection import SSRFBlockedError, safe_fetch, safe_fetch_sync
 from .base import BaseScraper
 
@@ -35,6 +36,15 @@ class GenericHttpxScraper(BaseScraper):
         self._max_retries = max_retries
         self._proxy = proxy
         self._user_agent_rotation = user_agent_rotation
+        transport_exceptions = (httpx.TimeoutException, httpx.TransportError)
+        self._fetch_sync_with_retry = retry(
+            max_attempts=self._max_retries,
+            exceptions=transport_exceptions,
+        )(self._get)
+        self._fetch_async_with_retry = async_retry(
+            max_attempts=self._max_retries,
+            exceptions=transport_exceptions,
+        )(self._aget)
 
     @property
     def name(self) -> str:
@@ -43,6 +53,28 @@ class GenericHttpxScraper(BaseScraper):
     def can_handle(self, url: ArticleURL) -> bool:
         """支持所有非微信公众号的 HTTP/HTTPS URL（作为后备抓取器）"""
         return url.scheme in ("http", "https") and not url.is_wechat
+
+    def _get(self, url: str, headers: dict[str, str]) -> httpx.Response:
+        """同步获取页面，供重试装饰器调用。"""
+        return safe_fetch_sync(
+            url,
+            method="GET",
+            headers=headers,
+            timeout=self._timeout,
+            proxy=self._proxy,
+            max_redirects=5,
+        )
+
+    async def _aget(self, url: str, headers: dict[str, str]) -> httpx.Response:
+        """异步获取页面，供重试装饰器调用。"""
+        return await safe_fetch(
+            url,
+            method="GET",
+            headers=headers,
+            timeout=self._timeout,
+            proxy=self._proxy,
+            max_redirects=5,
+        )
 
     def scrape(self, url: ArticleURL) -> Article:
         """抓取通用网页"""
@@ -55,14 +87,7 @@ class GenericHttpxScraper(BaseScraper):
         }
 
         try:
-            response = safe_fetch_sync(
-                str(url),
-                method="GET",
-                headers=headers,
-                timeout=self._timeout,
-                proxy=self._proxy,
-                max_redirects=5,
-            )
+            response = self._fetch_sync_with_retry(str(url), headers)
             response.raise_for_status()
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
@@ -70,6 +95,8 @@ class GenericHttpxScraper(BaseScraper):
             raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
         except httpx.HTTPStatusError as e:
             raise ScraperError(f"HTTP错误 ({e.response.status_code})") from e
+        except httpx.TransportError as e:
+            raise ScraperError(f"网络错误: {e}") from e
         except Exception as e:
             raise ScraperError(f"网络错误: {e}") from e
 
@@ -182,14 +209,7 @@ class GenericHttpxScraper(BaseScraper):
         }
 
         try:
-            response = await safe_fetch(
-                str(url),
-                method="GET",
-                headers=headers,
-                timeout=self._timeout,
-                proxy=self._proxy,
-                max_redirects=5,
-            )
+            response = await self._fetch_async_with_retry(str(url), headers)
             response.raise_for_status()
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
@@ -197,6 +217,8 @@ class GenericHttpxScraper(BaseScraper):
             raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
         except httpx.HTTPStatusError as e:
             raise ScraperError(f"HTTP错误 ({e.response.status_code})") from e
+        except httpx.TransportError as e:
+            raise ScraperError(f"网络错误: {e}") from e
         except Exception as e:
             raise ScraperError(f"网络错误: {e}") from e
 

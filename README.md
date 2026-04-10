@@ -86,6 +86,8 @@ wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m simple -e notion
 wechat-summarizer onenote-auth
 wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m simple -e onenote
 
+# 说明：word 始终可用；obsidian / notion / onenote 仅在对应导出器成功加载且配置完成时可用
+
 # 使用 RAG 增强摘要（需安装 rag 依赖）
 wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m rag-openai -e markdown
 

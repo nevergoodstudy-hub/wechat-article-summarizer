@@ -16,6 +16,7 @@ from ...shared.constants import VERSION
 from ...shared.utils import setup_logger
 
 console = Console()
+EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote")
 
 
 def _process_single(
@@ -87,7 +88,7 @@ def cli(debug: bool):
 @click.option(
     "--export",
     "-e",
-    type=click.Choice(["html", "markdown", "word"]),
+    type=click.Choice(EXPORT_CHOICES),
     help="导出格式",
 )
 @click.option("--output", "-o", type=click.Path(), help="输出文件路径")
@@ -114,7 +115,7 @@ def fetch(url: str, method: str, no_summary: bool, export: str | None, output: s
 @click.option(
     "--export",
     "-e",
-    type=click.Choice(["html", "markdown", "word"]),
+    type=click.Choice(EXPORT_CHOICES),
     help="导出格式",
 )
 @click.option("--output", "-o", type=click.Path(), help="输出文件路径")
@@ -149,7 +150,7 @@ def gui():
 @click.option(
     "--export",
     "-e",
-    type=click.Choice(["html", "markdown", "word"]),
+    type=click.Choice(EXPORT_CHOICES),
     help="导出格式",
 )
 @click.option("--output-dir", "-o", type=click.Path(), help="输出目录")
@@ -453,7 +454,7 @@ def onenote_logout():
 @click.option(
     "--export",
     "-e",
-    type=click.Choice(["html", "markdown", "obsidian", "notion", "onenote"]),
+    type=click.Choice(EXPORT_CHOICES),
     help="导出格式",
 )
 @click.option("--output-dir", "-o", type=click.Path(), help="输出目录")
