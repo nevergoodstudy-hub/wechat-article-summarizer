@@ -28,12 +28,11 @@ except ImportError:
 
 def _loguru_sink_processor(
     logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> str | dict[str, Any]:
+) -> str:
     """将 structlog 事件转发到 loguru 的处理器"""
     from loguru import logger as loguru_logger
     level = str(event_dict.pop("level", method_name)).upper()
     event = str(event_dict.pop("event", ""))
-    event = event_dict.pop("event", "")
 
     # 构建 key=value 后缀
     extra_parts = []
@@ -121,18 +120,19 @@ def get_struct_logger(name: str | None = None, **initial_bindings: Any) -> Any:
     return log
 
 
-def bind_contextvars(**kwargs: Any) -> Any:
+def bind_contextvars(**kwargs: Any) -> dict[str, Any]:
     """绑定上下文变量到当前任务/线程
 
     Args:
         **kwargs: 要绑定的上下文数据（如 request_id, user_id）
 
     Returns:
-        之前绑定的上下文（用于恢复），类型为 dict[str, Token[Any]]
+        上下文绑定结果（structlog 不可用时返回空字典）
     """
     if not _structlog_available:
         return {}
-    return structlog.contextvars.bind_contextvars(**kwargs)
+    bound = structlog.contextvars.bind_contextvars(**kwargs)
+    return bound if isinstance(bound, dict) else {}
 
 
 def unbind_contextvars(*keys: str) -> None:

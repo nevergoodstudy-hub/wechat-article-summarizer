@@ -14,6 +14,7 @@ from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import USER_AGENTS, WECHAT_CONTENT_SELECTORS
 from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
 from ....shared.utils import retry
+from ....shared.utils.ssrf_protection import SSRFBlockedError, safe_fetch, safe_fetch_sync
 from .base import BaseScraper
 
 
@@ -40,13 +41,6 @@ class WechatHttpxScraper(BaseScraper):
         self._max_retries = max_retries
         self._proxy = proxy
         self._user_agent_rotation = user_agent_rotation
-
-        # 实例级 httpx.Client，复用连接池
-        self._client = httpx.Client(
-            timeout=self._timeout,
-            follow_redirects=True,
-            proxy=self._proxy,
-        )
 
         # 基于实例参数创建“可配置”的重试包装（解决装饰器无法使用 self._max_retries 的问题）
         self._get_with_retry = retry(
@@ -81,6 +75,8 @@ class WechatHttpxScraper(BaseScraper):
             response = self._get_with_retry(str(url), headers=headers)
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
+        except SSRFBlockedError as e:
+            raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
         except httpx.TransportError as e:
             raise ScraperError(f"网络错误: {e}") from e
 
@@ -103,11 +99,21 @@ class WechatHttpxScraper(BaseScraper):
         return USER_AGENTS[0]
 
     def close(self) -> None:
-        """关闭底层 httpx.Client 连接池"""
-        self._client.close()
+        """关闭资源（当前无持久连接）"""
+        return
 
     def _get(self, url: str, headers: dict[str, str]) -> httpx.Response:
-        return self._client.get(url, headers=headers)
+        try:
+            return safe_fetch_sync(
+                url,
+                method="GET",
+                headers=headers,
+                timeout=self._timeout,
+                proxy=self._proxy,
+                max_redirects=5,
+            )
+        except SSRFBlockedError as e:
+            raise ScraperBlockedError(f"SSRF防护拦截：{e}") from e
 
     def _parse_html(self, html: str, url: ArticleURL) -> Article:
         """解析HTML内容"""
@@ -245,12 +251,14 @@ class WechatHttpxScraper(BaseScraper):
         }
 
         try:
-            async with httpx.AsyncClient(
+            response = await safe_fetch(
+                str(url),
+                method="GET",
+                headers=headers,
                 timeout=self._timeout,
-                follow_redirects=True,
                 proxy=self._proxy,
-            ) as client:
-                response = await client.get(str(url), headers=headers)
+                max_redirects=5,
+            )
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
         except httpx.TransportError as e:

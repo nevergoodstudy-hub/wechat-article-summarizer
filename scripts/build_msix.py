@@ -46,7 +46,7 @@ BUILD_DIR = PROJECT_ROOT / "build"
 # 打包配置
 APP_NAME = "WeChatArticleSummarizer"
 EXE_NAME = f"{APP_NAME}.exe"
-VERSION = os.environ.get("MSIX_VERSION", "2.4.1.0")
+VERSION = os.environ.get("MSIX_VERSION", "2.4.3.0")
 PUBLISHER = os.environ.get("MSIX_PUBLISHER", "CN=WeChatSummarizer")
 PACKAGE_NAME = os.environ.get("MSIX_IDENTITY_NAME", "WeChatSummarizer")
 
@@ -62,7 +62,12 @@ def print_header(title: str) -> None:
 
 
 def print_status(icon: str, msg: str) -> None:
-    print(f"  {icon} {msg}")
+    text = f"  {icon} {msg}"
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        safe = text.encode("gbk", errors="replace").decode("gbk", errors="replace")
+        print(safe)
 
 
 def run_cmd(cmd: list[str], cwd: Path = PROJECT_ROOT, check: bool = True) -> subprocess.CompletedProcess:

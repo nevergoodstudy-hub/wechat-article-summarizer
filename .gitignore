@@ -134,3 +134,16 @@ build/wechat_summarizer/
 # Backup directories
 backup_*/
 wechat-article-summarizer/
+
+# Local skillhub / external assets (do not commit)
+.warp/skills/
+.warp/skills_backup_before_overwrite_20260328/
+.tmp_skillhub_sync/
+
+# Local caches / large generated artifacts
+.chromadb/
+.benchmarks/
+target/
+apps/desktop/node_modules/
+apps/desktop/.vite/
+*.tsbuildinfo

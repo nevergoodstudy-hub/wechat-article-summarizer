@@ -64,7 +64,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             文章信息，包含标题、作者、内容等
         """
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
             url = MCPInputValidator.validate_url(url)
@@ -80,6 +80,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                 "word_count": article.word_count,
                 "content": article.content_text[:10000],  # 限制长度
                 "content_truncated": len(article.content_text) > 10000,
+            }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
             }
         except Exception as e:
             logger.error(f"抓取文章失败: {e}")
@@ -106,7 +111,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             文章摘要信息
         """
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
             url = MCPInputValidator.validate_url(url)
@@ -139,6 +144,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                     "model_name": summary.model_name,
                 },
             }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
         except Exception as e:
             logger.error(f"摘要生成失败: {e}")
             return {
@@ -158,7 +168,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             文章基本信息
         """
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
             url = MCPInputValidator.validate_url(url)
@@ -178,6 +188,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                 "publish_time": article.publish_time_str,
                 "word_count": article.word_count,
                 "preview": preview,
+            }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
             }
         except Exception as e:
             logger.error(f"获取文章信息失败: {e}")
@@ -204,47 +219,53 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             批量摘要结果
         """
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
+        from .input_validator import MCPInputValidator, MCPValidationError
 
-        urls = MCPInputValidator.validate_urls(urls)
-        method = MCPInputValidator.validate_method(method)
-        max_length = MCPInputValidator.validate_max_length(max_length)
-        container = get_container()
-        results = []
+        try:
+            urls = MCPInputValidator.validate_urls(urls)
+            method = MCPInputValidator.validate_method(method)
+            max_length = MCPInputValidator.validate_max_length(max_length)
+            container = get_container()
+            results = []
 
-        for url in urls[:10]:  # 限制最多 10 篇
-            try:
-                article = await asyncio.to_thread(container.fetch_use_case.execute, url)
-                summary = await asyncio.to_thread(
-                    container.summarize_use_case.execute,
-                    article,
-                    method=method,
-                    max_length=max_length,
-                )
+            for url in urls:
+                try:
+                    article = await asyncio.to_thread(container.fetch_use_case.execute, url)
+                    summary = await asyncio.to_thread(
+                        container.summarize_use_case.execute,
+                        article,
+                        method=method,
+                        max_length=max_length,
+                    )
 
-                results.append(
-                    {
-                        "url": url,
-                        "success": True,
-                        "title": article.title,
-                        "summary": summary.content,
-                        "tags": list(summary.tags),
-                    }
-                )
-            except Exception as e:
-                results.append(
-                    {
-                        "url": url,
-                        "success": False,
-                        "error": str(e),
-                    }
-                )
+                    results.append(
+                        {
+                            "url": url,
+                            "success": True,
+                            "title": article.title,
+                            "summary": summary.content,
+                            "tags": list(summary.tags),
+                        }
+                    )
+                except Exception as e:
+                    results.append(
+                        {
+                            "url": url,
+                            "success": False,
+                            "error": str(e),
+                        }
+                    )
 
-        return {
-            "total": len(urls),
-            "processed": len(results),
-            "results": results,
-        }
+            return {
+                "total": len(urls),
+                "processed": len(results),
+                "results": results,
+            }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -289,7 +310,7 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         """
         from ..domain.value_objects import ArticleContent
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
             url = MCPInputValidator.validate_url(url)
@@ -361,6 +382,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                     for c in list(kg.communities.values())[:10]
                 ],
             }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
         except Exception as e:
             logger.error(f"知识图谱分析失败: {e}")
             return {
@@ -387,20 +413,20 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         """
         from ..infrastructure.adapters.knowledge_graph import SimpleEntityExtractor
         from ..infrastructure.config import get_container
-        from .input_validator import MCPInputValidator
-
-        urls = MCPInputValidator.validate_urls(urls, max_count=5)
-        aspects = MCPInputValidator.validate_aspects(aspects)
-
-        if len(urls) < 2:
-            return {"success": False, "error": "至少需要 2 篇文章进行对比"}
-
-        container = get_container()
-        extractor = SimpleEntityExtractor()
-
-        articles_data = []
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
+            urls = MCPInputValidator.validate_urls(urls, max_count=5)
+            aspects = MCPInputValidator.validate_aspects(aspects)
+            _ = aspects
+
+            if len(urls) < 2:
+                return {"success": False, "error": "至少需要 2 篇文章进行对比"}
+
+            container = get_container()
+            extractor = SimpleEntityExtractor()
+
+            articles_data = []
             for url in urls:
                 article = await asyncio.to_thread(container.fetch_use_case.execute, url)
                 extraction = await asyncio.to_thread(extractor.extract, article.content_text)
@@ -456,6 +482,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                     "avg_word_count": total_word_count // len(articles_data),
                 },
             }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
         except Exception as e:
             logger.error(f"文章对比分析失败: {e}")
             return {
@@ -483,12 +514,16 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         import re
 
         from ..infrastructure.config import get_container
-
-        container = get_container()
-        topic_data = []
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
-            for url in urls[:10]:  # 限制最多 10 篇
+            urls = MCPInputValidator.validate_urls(urls)
+            topic = MCPInputValidator.sanitize_text(topic, max_length=200)
+
+            container = get_container()
+            topic_data = []
+
+            for url in urls:
                 try:
                     article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -546,6 +581,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                 "total_occurrences": total_occurrences,
                 "results": sorted_data,
             }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
         except Exception as e:
             logger.error(f"主题追踪失败: {e}")
             return {
@@ -573,8 +613,14 @@ def _register_tools(mcp_instance: FastMCP) -> None:
             摘要质量评估结果
         """
         from ..infrastructure.config import get_container
+        from .input_validator import MCPInputValidator, MCPValidationError
 
         try:
+            url = MCPInputValidator.validate_url(url)
+            method = MCPInputValidator.validate_method(method)
+            if summary_text is not None:
+                summary_text = MCPInputValidator.sanitize_text(summary_text, max_length=20_000)
+
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 
@@ -640,6 +686,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                     keyword_coverage, conciseness_score, compression_ratio
                 ),
             }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
+            }
         except Exception as e:
             logger.error(f"摘要评估失败: {e}")
             return {
@@ -660,9 +711,16 @@ def _register_tools(mcp_instance: FastMCP) -> None:
         Returns:
             审计日志列表
         """
+        from .input_validator import MCPInputValidator, MCPValidationError
         from .security import get_security_manager
 
         try:
+            limit = MCPInputValidator.validate_int_range(
+                limit,
+                field_name="limit",
+                lower=1,
+                upper=100,
+            )
             manager = get_security_manager()
             if manager.audit_logger is None:
                 return {
@@ -675,6 +733,11 @@ def _register_tools(mcp_instance: FastMCP) -> None:
                 "success": True,
                 "count": len(logs),
                 "logs": logs,
+            }
+        except MCPValidationError as e:
+            return {
+                "success": False,
+                "error": f"参数校验失败: {e}",
             }
         except Exception as e:
             logger.error(f"获取审计日志失败: {e}")
@@ -716,8 +779,10 @@ def _register_resources(mcp_instance: FastMCP) -> None:
         可用于 RAG 或上下文增强。
         """
         from ..infrastructure.config import get_container
+        from .input_validator import MCPInputValidator
 
         try:
+            url = MCPInputValidator.validate_url(url)
             container = get_container()
             article = await asyncio.to_thread(container.fetch_use_case.execute, url)
 

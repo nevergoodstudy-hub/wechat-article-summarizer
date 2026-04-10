@@ -58,6 +58,12 @@ class HomePage(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.gui = gui
         self._recent_labels: list[Any] = []
+
+        # 订阅导航事件（用于后续页面可见性统计/埋点）
+        self._unsubscribe_navigate = None
+        if hasattr(self.gui, "event_bus"):
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe("navigate", self._on_navigate_event)
+
         self._build()
 
     # ==================================================================
@@ -417,6 +423,11 @@ class HomePage(ctk.CTkFrame):
             ),
             anchor="w",
         ).pack(fill="x")
+
+    def _on_navigate_event(self, *, from_page: str, to_page: str):
+        """接收导航事件（为后续埋点和惰性刷新预留）。"""
+        _ = from_page
+        _ = to_page
 
     # ------------------------------------------------------------------
     # 动画卡片

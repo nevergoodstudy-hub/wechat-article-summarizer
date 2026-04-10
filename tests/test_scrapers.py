@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -99,13 +99,10 @@ class TestGenericHttpxScraper:
         mock_response.text = generic_html_response
         mock_response.raise_for_status = MagicMock()
 
-        with patch("httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_response
-            mock_client_class.return_value = mock_client
-
+        with patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+            return_value=mock_response,
+        ):
             article = scraper.scrape(generic_url)
 
             assert article is not None
@@ -117,15 +114,15 @@ class TestGenericHttpxScraper:
         self, scraper: GenericHttpxScraper, generic_url: ArticleURL
     ) -> None:
         """测试请求超时错误"""
-        with patch("httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.side_effect = httpx.TimeoutException("Connection timeout")
-            mock_client_class.return_value = mock_client
-
-            with pytest.raises(ScraperTimeoutError):
-                scraper.scrape(generic_url)
+        with (
+            patch(
+                "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+                side_effect=httpx.TimeoutException("Connection timeout"),
+            ),
+            patch("wechat_summarizer.shared.utils.retry.time.sleep", return_value=None),
+            pytest.raises(ScraperTimeoutError),
+        ):
+            scraper.scrape(generic_url)
 
     def test_scrape_http_error(self, scraper: GenericHttpxScraper, generic_url: ArticleURL) -> None:
         """测试 HTTP 错误 (404)"""
@@ -137,13 +134,10 @@ class TestGenericHttpxScraper:
             response=mock_response,
         )
 
-        with patch("httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_response
-            mock_client_class.return_value = mock_client
-
+        with patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+            return_value=mock_response,
+        ):
             with pytest.raises(ScraperError) as exc_info:
                 scraper.scrape(generic_url)
 
@@ -163,15 +157,101 @@ class TestGenericHttpxScraper:
         mock_response.text = html
         mock_response.raise_for_status = MagicMock()
 
-        with patch("httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client.__enter__ = MagicMock(return_value=mock_client)
-            mock_client.__exit__ = MagicMock(return_value=False)
-            mock_client.get.return_value = mock_response
-            mock_client_class.return_value = mock_client
-
+        with patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+            return_value=mock_response,
+        ):
             article = scraper.scrape(generic_url)
             assert article.title == "OG标题"
+    def test_scrape_retries_timeout_then_success(
+        self,
+        scraper: GenericHttpxScraper,
+        generic_url: ArticleURL,
+        generic_html_response: str,
+    ) -> None:
+        """timeout should succeed after one retry."""
+        mock_response = MagicMock(spec=httpx.Response)
+        mock_response.text = generic_html_response
+        mock_response.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+                side_effect=[httpx.TimeoutException("Connection timeout"), mock_response],
+            ) as mock_fetch,
+            patch("wechat_summarizer.shared.utils.retry.time.sleep", return_value=None),
+        ):
+            article = scraper.scrape(generic_url)
+
+        assert article is not None
+        assert article.url == generic_url
+        assert mock_fetch.call_count == 2
+
+    def test_scrape_retries_transport_error_then_raises_scraper_error(
+        self, scraper: GenericHttpxScraper, generic_url: ArticleURL
+    ) -> None:
+        """transport errors should retry and then map to ScraperError."""
+        transport_error = httpx.ConnectError("Connection error", request=MagicMock())
+
+        with (
+            patch(
+                "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+                side_effect=transport_error,
+            ) as mock_fetch,
+            patch("wechat_summarizer.shared.utils.retry.time.sleep", return_value=None),
+            pytest.raises(ScraperError),
+        ):
+            scraper.scrape(generic_url)
+
+        assert mock_fetch.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_scrape_async_retries_timeout_then_success(
+        self,
+        scraper: GenericHttpxScraper,
+        generic_url: ArticleURL,
+        generic_html_response: str,
+    ) -> None:
+        """async timeout should succeed after one retry."""
+        mock_response = MagicMock(spec=httpx.Response)
+        mock_response.text = generic_html_response
+        mock_response.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch",
+                new_callable=AsyncMock,
+            ) as mock_fetch,
+            patch(
+                "wechat_summarizer.shared.utils.retry.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_fetch.side_effect = [httpx.TimeoutException("Connection timeout"), mock_response]
+            article = await scraper.scrape_async(generic_url)
+
+        assert article is not None
+        assert article.url == generic_url
+        assert mock_fetch.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_scrape_async_timeout_error(
+        self, scraper: GenericHttpxScraper, generic_url: ArticleURL
+    ) -> None:
+        """async timeout should surface as ScraperTimeoutError after retries."""
+        with (
+            patch(
+                "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch",
+                new_callable=AsyncMock,
+                side_effect=httpx.TimeoutException("Connection timeout"),
+            ),
+            patch(
+                "wechat_summarizer.shared.utils.retry.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+            pytest.raises(ScraperTimeoutError),
+        ):
+            await scraper.scrape_async(generic_url)
 
 
 @pytest.mark.unit

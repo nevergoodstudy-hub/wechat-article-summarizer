@@ -1,0 +1,116 @@
+{
+  "synced_at": "2026-03-25",
+  "sources": [
+    {
+      "url": "https://github.com/obra/superpowers/tree/main/skills",
+      "repo": "obra/superpowers",
+      "status": "fetched_via_github_api",
+      "skills": [
+        "brainstorming",
+        "dispatching-parallel-agents",
+        "executing-plans",
+        "finishing-a-development-branch",
+        "receiving-code-review",
+        "requesting-code-review",
+        "subagent-driven-development",
+        "systematic-debugging",
+        "test-driven-development",
+        "using-git-worktrees",
+        "using-superpowers",
+        "verification-before-completion",
+        "writing-plans",
+        "writing-skills"
+      ]
+    },
+    {
+      "url": "https://github.com/ComposioHQ/awesome-claude-skills",
+      "repo": "ComposioHQ/awesome-claude-skills",
+      "status": "fetched_repo_root",
+      "notes": "root-level skill directories detected",
+      "sample_skills": [
+        "artifacts-builder",
+        "canvas-design",
+        "changelog-generator",
+        "connect-apps",
+        "content-research-writer",
+        "document-skills",
+        "mcp-builder",
+        "skill-creator",
+        "template-skill",
+        "webapp-testing"
+      ]
+    },
+    {
+      "url": "https://github.com/BehiSecc/awesome-claude-skills",
+      "repo": "BehiSecc/awesome-claude-skills",
+      "status": "catalog_repo",
+      "notes": "repository root contains README index; no root skills dir"
+    },
+    {
+      "url": "https://github.com/VoltAgent/awesome-claude-skills",
+      "repo": "VoltAgent/awesome-agent-skills",
+      "status": "catalog_repo",
+      "notes": "repository root contains README index; no root skills dir"
+    },
+    {
+      "url": "https://github.com/travisvn/awesome-claude-skills",
+      "repo": "travisvn/awesome-claude-skills",
+      "status": "catalog_repo",
+      "notes": "repository root contains README index; no root skills dir"
+    },
+    {
+      "url": "https://github.com/mrgoonie/claudekit-skills/tree/main/.claude/skills",
+      "repo": "mrgoonie/claudekit-skills",
+      "status": "fetched_via_github_api",
+      "sample_skills": [
+        "aesthetic",
+        "ai-multimodal",
+        "backend-development",
+        "debugging",
+        "devops",
+        "frontend-development",
+        "mcp-builder",
+        "problem-solving",
+        "sequential-thinking",
+        "web-testing"
+      ]
+    },
+    {
+      "url": "https://github.com/K-Dense-AI/claude-scientific-skills",
+      "repo": "K-Dense-AI/claude-scientific-skills",
+      "status": "fetched_repo_root",
+      "notes": "skills located in scientific-skills directory"
+    },
+    {
+      "url": "https://github.com/bear2u/my-skills/tree/master/skills",
+      "repo": "bear2u/my-skills",
+      "status": "fetched_via_github_api",
+      "skills": [
+        "card-news-generator-v2",
+        "code-changelog",
+        "code-prompt-coach",
+        "codex-claude-loop",
+        "frontend-design",
+        "meta-prompt-generator",
+        "nextjs15-init",
+        "prompt-enhancer",
+        "web-search",
+        "web-to-markdown",
+        "workthrough-v2"
+      ]
+    },
+    {
+      "url": "https://github.com/czlonkowski/n8n-skills",
+      "repo": "czlonkowski/n8n-skills",
+      "status": "fetched_repo_root",
+      "notes": "skills in /skills and packaged assets in /dist"
+    },
+    {
+      "url": "https://github.com/huggingface/skills",
+      "repo": "huggingface/skills",
+      "status": "fetched_repo_root",
+      "notes": "skills in /skills with plugin metadata"
+    }
+  ],
+  "local_target": "d:/Newidea-warp/.warp/skills"
+}

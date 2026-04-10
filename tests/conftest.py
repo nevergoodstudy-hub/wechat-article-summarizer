@@ -38,8 +38,7 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     每个测试自动执行：
     1. 重置全局容器单例，防止测试间状态泄漏
     2. 重置 settings lru_cache
-    3. 如果测试未标记为 @pytest.mark.integration，则 patch get_container
-       返回 create_minimal() 容器，避免连接外部服务
+    3. 对非 integration 测试，使用最小化容器并禁用外部网络
     """
     from wechat_summarizer.infrastructure.config.container import reset_container
     from wechat_summarizer.infrastructure.config.settings import reset_settings
@@ -61,6 +60,12 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
             "wechat_summarizer.infrastructure.config.container._container",
             _minimal,
         )
+        # 防止测试误触外部网络
+        monkeypatch.setenv("NO_PROXY", "*")
+        monkeypatch.setenv("HTTP_PROXY", "")
+        monkeypatch.setenv("HTTPS_PROXY", "")
+        monkeypatch.setenv("http_proxy", "")
+        monkeypatch.setenv("https_proxy", "")
 
     yield
 

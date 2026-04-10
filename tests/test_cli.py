@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -59,6 +60,12 @@ class TestCLIBasic:
         assert "--method" in result.output
         assert "--no-summary" in result.output
         assert "--export" in result.output
+        assert "html" in result.output
+        assert "markdown" in result.output
+        assert "word" in result.output
+        assert "obsidian" in result.output
+        assert "notion" in result.output
+        assert "onenote" in result.output
 
     def test_batch_help(self, runner: CliRunner) -> None:
         """测试 batch --help"""
@@ -68,6 +75,27 @@ class TestCLIBasic:
         assert "批量处理多篇文章" in result.output
         assert "--input-file" in result.output
         assert "--from-clipboard" in result.output
+        assert "html" in result.output
+        assert "markdown" in result.output
+        assert "word" in result.output
+        assert "obsidian" in result.output
+        assert "notion" in result.output
+        assert "onenote" in result.output
+
+    def test_batch_async_help(self, runner: CliRunner) -> None:
+        """测试 batch-async --help"""
+        result = runner.invoke(cli, ["batch-async", "--help"])
+
+        assert result.exit_code == 0
+        assert "异步批量处理多篇文章" in result.output
+        assert "--concurrency" in result.output
+        assert "--export" in result.output
+        assert "html" in result.output
+        assert "markdown" in result.output
+        assert "word" in result.output
+        assert "obsidian" in result.output
+        assert "notion" in result.output
+        assert "onenote" in result.output
 
     def test_config_help(self, runner: CliRunner) -> None:
         """测试 config --help"""
@@ -368,12 +396,8 @@ class TestBatchCommand:
             assert result.exit_code == 0
             assert "处理完成" in result.output
 
-    def test_batch_from_file(self, runner: CliRunner, sample_article, tmp_path) -> None:
+    def test_batch_from_file(self, runner: CliRunner, sample_article) -> None:
         """测试从文件读取 URL"""
-        # 创建 URL 文件
-        url_file = tmp_path / "urls.txt"
-        url_file.write_text("https://mp.weixin.qq.com/s/test1\nhttps://mp.weixin.qq.com/s/test2")
-
         mock_container = MagicMock()
         mock_container.fetch_use_case.execute.return_value = sample_article
         mock_container.summarize_use_case.execute.return_value = MagicMock(
@@ -383,10 +407,18 @@ class TestBatchCommand:
             method=MagicMock(value="simple"),
         )
 
-        with patch(
-            "wechat_summarizer.presentation.cli.app.get_container",
-            return_value=mock_container,
+        with (
+            patch(
+                "wechat_summarizer.presentation.cli.app.get_container",
+                return_value=mock_container,
+            ),
+            runner.isolated_filesystem(),
         ):
+            url_file = Path("urls.txt")
+            url_file.write_text(
+                "https://mp.weixin.qq.com/s/test1\nhttps://mp.weixin.qq.com/s/test2",
+                encoding="utf-8",
+            )
             result = runner.invoke(cli, ["batch", "-f", str(url_file)])
 
             assert result.exit_code == 0

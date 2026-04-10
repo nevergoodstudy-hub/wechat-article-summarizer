@@ -59,6 +59,11 @@ class SinglePage(ctk.CTkFrame):
         self.points_text = None
 
         self._clipboard_banner: ctk.CTkFrame | None = None
+        self._unsubscribe_navigate = None
+        if hasattr(self.gui, "event_bus"):
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe(
+                "navigate", self._on_navigate_event
+            )
         self._build()
 
     # ==================================================================
@@ -73,6 +78,12 @@ class SinglePage(ctk.CTkFrame):
                 current = self.url_entry.get().strip() if self.url_entry else ""
                 if clip != current:
                     self._show_clipboard_banner(clip)
+
+    def _on_navigate_event(self, *, from_page: str, to_page: str) -> None:
+        """响应导航事件。"""
+        _ = from_page
+        if to_page == self.gui.PAGE_SINGLE:
+            self.on_page_shown()
 
     def _show_clipboard_banner(self, url: str) -> None:
         """显示剪贴板智能提示横幅"""

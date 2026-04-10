@@ -39,6 +39,11 @@ class HistoryPage(ctk.CTkFrame):
         # 公开属性
         self.cache_stats_label = None
         self.history_frame = None
+        self._unsubscribe_navigate = None
+        if hasattr(self.gui, "event_bus"):
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe(
+                "navigate", self._on_navigate_event
+            )
 
         self._build()
 
@@ -87,6 +92,16 @@ class HistoryPage(ctk.CTkFrame):
         self.history_frame.pack(fill="both", expand=True, padx=15, pady=15)
 
     # ── 历史记录业务逻辑（从 app.py 迁移） ─────────────────────
+
+    def _on_navigate_event(self, *, from_page: str, to_page: str) -> None:
+        """响应导航事件。"""
+        _ = from_page
+        if to_page == self.gui.PAGE_HISTORY:
+            self.on_page_shown()
+
+    def on_page_shown(self) -> None:
+        """页面显示时刷新历史记录。"""
+        self._refresh_history()
 
     def _refresh_history(self):
         """刷新历史记录列表"""

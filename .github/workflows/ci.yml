@@ -36,9 +36,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev]
 
-    - name: Run tests
+    - name: Run tests (unified gate)
       run: |
-        pytest tests/ --cov=src/wechat_summarizer --cov-report=xml --cov-report=term --timeout=90 -v
+        python scripts/quality_gate.py --mode test
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
@@ -67,15 +67,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev]
 
-    - name: Ruff check
-      run: ruff check src/ tests/
+    - name: Run lint (unified gate)
+      run: python scripts/quality_gate.py --mode lint
 
-    - name: Ruff format check
-      run: ruff format --check src/ tests/
-
-    - name: Run mypy
+    - name: Run mypy (unified gate)
       run: |
-        mypy src/wechat_summarizer --ignore-missing-imports | tee mypy-report.txt
+        python scripts/quality_gate.py --mode mypy | tee mypy-report.txt
 
     - name: Upload mypy report
       if: always()
@@ -103,11 +100,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev] pip-audit bandit[toml]
 
-    - name: Run pip-audit (dependency vulnerabilities)
-      run: pip-audit --desc on | tee pip-audit.txt
+    - name: Run security gate (unified)
+      run: |
+        python scripts/quality_gate.py --mode security | tee security-gate.txt
 
-    - name: Run Bandit (code security check)
-      run: bandit -r src/wechat_summarizer -ll | tee bandit-report.txt
+    - name: Run security smoke (unified)
+      run: |
+        python scripts/quality_gate.py --mode security-smoke | tee security-smoke.txt
 
     - name: Upload security reports
       if: always()
@@ -115,8 +114,8 @@ jobs:
       with:
         name: security-reports
         path: |
-          pip-audit.txt
-          bandit-report.txt
+          security-gate.txt
+          security-smoke.txt
 
   docs:
     name: Docs Build Check
