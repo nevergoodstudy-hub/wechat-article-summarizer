@@ -47,6 +47,34 @@ class TestContainer:
         assert container._embedders is None
         assert container._vector_stores is None
 
+    @pytest.mark.unit
+    def test_reload_summarizers_invalidates_dependent_services(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """测试重新加载摘要器时会失效依赖缓存。"""
+        container = Container.create_minimal()
+        fresh_summarizers = {"simple": object()}
+
+        def fake_create_summarizers(
+            extra_api_keys: dict[str, str] | None = None,
+        ) -> dict[str, object]:
+            assert extra_api_keys == {"openai": "test-key"}
+            return fresh_summarizers
+
+        monkeypatch.setattr(container, "_create_summarizers", fake_create_summarizers)
+        container._summarize_use_case = object()
+        container._batch_use_case = object()
+        container._article_workflow_service = object()
+        container._evaluator = object()
+
+        container.reload_summarizers({"openai": "test-key"})
+
+        assert container._summarizers is fresh_summarizers
+        assert container._summarize_use_case is None
+        assert container._batch_use_case is None
+        assert container._article_workflow_service is None
+        assert container._evaluator is None
+
 
 class TestContainerIntegration:
     """Container 集成测试（使用真实适配器，可能连接外部服务）"""

@@ -7,22 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.4.3] - 2026-04-02
+## [2.4.3] - 2026-04-13
 
 ### Added
-- 新增中/英文发布说明同步，统一展示安全修复、测试验证与打包产物说明。
+- 新增 `features/article_workflow` 垂直切片服务，统一编排抓取、摘要与导出流程。
+- 新增 `constraints/py314.txt` 与 `requirements-dev.txt`，固定 Python 3.14 开发环境关键依赖。
+- 新增 GUI 组合、MCP 组合根、入口冒烟、质量门禁与结构化日志回归测试。
 
 ### Changed
-- 版本号升级至 `2.4.3`，同步更新 MSIX 默认版本为 `2.4.3.0`。
-- 发布流程扩展为全量构建产物：`sdist`、`wheel`、`PyInstaller`、`MSIX`。
+- MCP 服务重构为薄组合根，按 `toolsets` / `resources` 拆分注册逻辑，降低 `server.py` 复杂度。
+- 依赖注入装配提取至 `infrastructure/config/assembly.py`，集中构建抓取器、摘要器、导出器、向量组件与存储。
+- GUI 主应用重构为薄入口，拆分为 `app_bootstrap.py`、`app_navigation.py`、`app_actions.py`、`app_runtime.py`，提升可维护性与可测试性。
+- 更新 `pyproject.toml` 的 Python 与 Pydantic 约束，明确支持 `>=3.10,<3.15` 并收紧关键依赖版本范围。
 
-### Packaging
-- 生成 Python 安装包：`dist/*.tar.gz`（sdist）与 `dist/*.whl`（wheel）。
-- 生成 Windows 可执行安装产物：PyInstaller 单文件 EXE 与 MSIX 包。
+### Fixed
+- 修复 `reload_summarizers()` 之后的缓存失效链路，确保摘要器重载后相关服务与用例同步刷新。
+- 修复 Python 3.14 环境下 `pydantic` / `pydantic-core` 不匹配导致的 CLI、MCP 与测试失败问题。
+- 修复 URL 校验、SSRF 防护、向量存储装配与 CLI 导出相关回归问题，恢复主要入口的可运行状态。
+
+### Tests
+- 全量验证通过：
+  - `python -m ruff check src tests`
+  - `python -m mypy src\wechat_summarizer --ignore-missing-imports`
+  - `python -m pytest tests -q --no-cov` → `695 passed, 20 skipped`
+  - `python -m wechat_summarizer --help`
+  - `python -m wechat_summarizer.mcp --help`
 
 ### English Summary
-- Bumped release to `2.4.3` and aligned default MSIX version to `2.4.3.0`.
-- Synced bilingual release notes and built all package types (sdist/wheel/PyInstaller/MSIX).
+- Introduced the `features/article_workflow` vertical slice and refactored MCP into a thin composition root with dedicated `toolsets` and `resources`.
+- Extracted dependency wiring into `infrastructure/config/assembly.py` and split the GUI shell into focused bootstrap, navigation, actions, and runtime modules.
+- Repaired the Python 3.14 constrained environment by aligning `pydantic` dependencies and fixed summarizer reload cache invalidation behavior.
+- Current validation status: Ruff, mypy, CLI help, MCP help, and the full test suite all pass (`695 passed, 20 skipped`).
 
 ## [2.4.2] - 2026-04-02
 

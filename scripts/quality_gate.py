@@ -94,10 +94,10 @@ def main() -> int:
             run_mypy()
             run_tests()
             run_security_smoke()
-        print("\n[quality-gate] ✅ PASS")
+        print("\n[quality-gate] PASS")
         return 0
     except GateError as exc:
-        print(f"\n[quality-gate] ❌ FAIL: {exc}")
+        print(f"\n[quality-gate] FAIL: {exc}")
         return 1
 
 

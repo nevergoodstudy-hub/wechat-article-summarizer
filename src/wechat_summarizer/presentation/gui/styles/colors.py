@@ -352,8 +352,7 @@ def calculate_contrast_ratio(color1: str, color2: str) -> float:
         """Calculate relative luminance"""
         rgb_normalized = [x / 255.0 for x in rgb]
         rgb_linear = [
-            x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4
-            for x in rgb_normalized
+            x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in rgb_normalized
         ]
         return 0.2126 * rgb_linear[0] + 0.7152 * rgb_linear[1] + 0.0722 * rgb_linear[2]
 

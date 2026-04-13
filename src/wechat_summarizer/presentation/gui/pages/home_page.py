@@ -62,7 +62,9 @@ class HomePage(ctk.CTkFrame):
         # 订阅导航事件（用于后续页面可见性统计/埋点）
         self._unsubscribe_navigate = None
         if hasattr(self.gui, "event_bus"):
-            self._unsubscribe_navigate = self.gui.event_bus.subscribe("navigate", self._on_navigate_event)
+            self._unsubscribe_navigate = self.gui.event_bus.subscribe(
+                "navigate", self._on_navigate_event
+            )
 
         self._build()
 

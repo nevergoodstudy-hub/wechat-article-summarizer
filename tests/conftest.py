@@ -52,9 +52,7 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     # 对非 integration 测试，patch 全局 get_container 返回最小化容器
     # integration 测试通过标记来 opt-in 使用真实容器
     current_item = _get_current_test_item()
-    if current_item is None or "integration" not in [
-        m.name for m in current_item.iter_markers()
-    ]:
+    if current_item is None or "integration" not in [m.name for m in current_item.iter_markers()]:
         _minimal = Container.create_minimal()
         monkeypatch.setattr(
             "wechat_summarizer.infrastructure.config.container._container",

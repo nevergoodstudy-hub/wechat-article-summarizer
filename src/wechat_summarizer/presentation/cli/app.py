@@ -8,7 +8,7 @@ from datetime import UTC
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, ProgressColumn, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from ...infrastructure.config import get_container, get_settings
@@ -17,6 +17,39 @@ from ...shared.utils import setup_logger
 
 console = Console()
 EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote")
+
+
+def _console_supports_unicode_progress(target_console: Console) -> bool:
+    """Detect whether the active console can safely render Rich spinners."""
+
+    encoding = getattr(target_console.file, "encoding", None) or sys.stdout.encoding or ""
+    normalized = encoding.lower().replace("_", "-")
+    return normalized.startswith("utf") or normalized == "cp65001"
+
+
+def _create_single_progress(target_console: Console | None = None) -> Progress:
+    """Build a fetch progress view that degrades safely on legacy consoles."""
+
+    active_console = target_console or console
+    columns: list[ProgressColumn] = [TextColumn("[progress.description]{task.description}")]
+
+    if _console_supports_unicode_progress(active_console):
+        columns.insert(0, SpinnerColumn())
+
+    return Progress(*columns, console=active_console)
+
+
+def _console_safe_text(text: str, target_console: Console | None = None) -> str:
+    """Best-effort text sanitization for legacy console encodings."""
+
+    active_console = target_console or console
+    encoding = getattr(active_console.file, "encoding", None) or sys.stdout.encoding or "utf-8"
+
+    try:
+        text.encode(encoding)
+        return text
+    except UnicodeEncodeError:
+        return text.encode(encoding, errors="replace").decode(encoding)
 
 
 def _process_single(
@@ -29,11 +62,7 @@ def _process_single(
     """抓取并处理单篇文章（CLI/别名命令复用）"""
     container = get_container()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
+    with _create_single_progress() as progress:
         # 抓取文章
         task = progress.add_task("正在抓取文章...", total=None)
 
@@ -267,7 +296,7 @@ def batch(
                 results_data.append(result_entry)
 
                 if not quiet:
-                    console.print(f"[green]✓[/green] {article.title[:40]}...")
+                    console.print(f"[green]OK[/green] {article.title[:40]}...")
 
             except Exception as e:
                 failed_count += 1
@@ -279,7 +308,7 @@ def batch(
                     }
                 )
                 if not quiet:
-                    console.print(f"[red]✗[/red] {url[:50]}... - {e}")
+                    console.print(f"[red]ERR[/red] {url[:50]}... - {e}")
 
             progress.advance(task)
 
@@ -407,7 +436,7 @@ WECHAT_SUMMARIZER_EXPORT__DEFAULT_OUTPUT_DIR={output_dir}
         return
 
     env_path.write_text(env_content, encoding="utf-8")
-    console.print(f"\n[green]✓ 配置已保存到 {env_path.absolute()}[/green]")
+    console.print(f"\n[green]OK 配置已保存到 {env_path.absolute()}[/green]")
     console.print("[dim]提示: 重新运行命令以应用新配置[/dim]")
 
 
@@ -507,9 +536,9 @@ def batch_async(
             if p.current_url:
                 short_url = p.current_url[:50] + "..." if len(p.current_url) > 50 else p.current_url
                 if p.errors and p.errors[-1][0] == p.current_url:
-                    console.print(f"[red]✗[/red] {short_url}")
+                    console.print(f"[red]ERR[/red] {short_url}")
                 else:
-                    console.print(f"[green]✓[/green] {short_url}")
+                    console.print(f"[green]OK[/green] {short_url}")
 
         # 运行异步任务
         result = asyncio.run(
@@ -543,7 +572,7 @@ def batch_async(
     if result.errors:
         console.print("\n[yellow]失败详情:[/yellow]")
         for url, error in result.errors[:5]:  # 最多显示5个
-            console.print(f"  • {url[:50]}...: {error}")
+            console.print(f"  - {url[:50]}...: {error}")
         if len(result.errors) > 5:
             console.print(f"  ... 还有 {len(result.errors) - 5} 个错误")
 
@@ -661,48 +690,80 @@ def check():
     # 检查抓取器
     console.print("[cyan]抓取器:[/cyan]")
     for scraper in container.scrapers:
-        console.print(f"  • {scraper.name}: [green]可用[/green]")
+        console.print(f"  - {scraper.name}: [green]可用[/green]")
 
     # 检查摘要器
     console.print("\n[cyan]摘要器:[/cyan]")
     for name, summarizer in container.summarizers.items():
         status = "[green]可用[/green]" if summarizer.is_available() else "[red]不可用[/red]"
-        console.print(f"  • {name}: {status}")
+        console.print(f"  - {name}: {status}")
 
     # 检查导出器
     console.print("\n[cyan]导出器:[/cyan]")
     for name, exporter in container.exporters.items():
         status = "[green]可用[/green]" if exporter.is_available() else "[red]不可用[/red]"
-        console.print(f"  • {name}: {status}")
+        console.print(f"  - {name}: {status}")
 
     # 检查缓存/存储
     console.print("\n[cyan]缓存存储:[/cyan]")
     storage_status = "[green]可用[/green]" if container.storage is not None else "[red]不可用[/red]"
-    console.print(f"  • local_json: {storage_status}")
+    console.print(f"  - local_json: {storage_status}")
 
 
 def _display_article(article):
     """显示文章信息"""
-    # 文章信息面板
-    info_text = f"""[bold]标题:[/bold] {article.title}
-[bold]公众号:[/bold] {article.account_name or "未知"}
-[bold]字数:[/bold] {article.word_count}
-[bold]URL:[/bold] {article.url}"""
+    title = _console_safe_text(str(article.title))
+    account_name = _console_safe_text(str(article.account_name or "未知"))
+    article_url = _console_safe_text(str(article.url))
 
-    console.print(Panel(info_text, title="📰 文章信息", border_style="blue"))
+    # 对非 UTF 控制台降级为纯文本输出，避免 Rich Panel/边框字符触发编码错误。
+    if not _console_supports_unicode_progress(console):
+        console.print(f"标题: {title}")
+        console.print(f"公众号: {account_name}")
+        console.print(f"字数: {article.word_count}")
+        console.print(f"URL: {article_url}")
+
+        if article.summary:
+            summary_text = _console_safe_text(str(article.summary.content))
+            console.print(f"\n摘要:\n{summary_text}")
+
+            if article.summary.key_points:
+                key_points = "\n".join(
+                    f"  - {_console_safe_text(str(point))}" for point in article.summary.key_points
+                )
+                console.print(f"\n关键要点:\n{key_points}")
+
+            if article.summary.tags:
+                tags = ", ".join(_console_safe_text(str(tag)) for tag in article.summary.tags)
+                console.print(f"\n标签: {tags}")
+
+        preview = article.content_text[:500] + "..." if len(article.content_text) > 500 else article.content_text
+        console.print(f"\n内容预览:\n{_console_safe_text(preview)}")
+        return
+
+    # 文章信息面板
+    info_text = f"""[bold]标题:[/bold] {title}
+[bold]公众号:[/bold] {account_name}
+[bold]字数:[/bold] {article.word_count}
+[bold]URL:[/bold] {article_url}"""
+
+    console.print(Panel(info_text, title="文章信息", border_style="blue"))
 
     # 摘要面板
     if article.summary:
-        summary_text = article.summary.content
+        summary_text = _console_safe_text(str(article.summary.content))
 
         if article.summary.key_points:
-            summary_text += "\n\n[bold]📌 关键要点:[/bold]\n"
-            summary_text += "\n".join(f"  • {p}" for p in article.summary.key_points)
+            summary_text += "\n\n[bold]关键要点:[/bold]\n"
+            summary_text += "\n".join(
+                f"  - {_console_safe_text(str(point))}" for point in article.summary.key_points
+            )
 
         if article.summary.tags:
-            summary_text += f"\n\n[bold]🏷️ 标签:[/bold] {', '.join(article.summary.tags)}"
+            tags = ", ".join(_console_safe_text(str(tag)) for tag in article.summary.tags)
+            summary_text += f"\n\n[bold]标签:[/bold] {tags}"
 
-        console.print(Panel(summary_text, title="📝 文章摘要", border_style="green"))
+        console.print(Panel(summary_text, title="文章摘要", border_style="green"))
 
     # 内容预览
     preview = (
@@ -710,7 +771,7 @@ def _display_article(article):
         if len(article.content_text) > 500
         else article.content_text
     )
-    console.print(Panel(preview, title="📄 内容预览", border_style="dim"))
+    console.print(Panel(_console_safe_text(preview), title="内容预览", border_style="dim"))
 
 
 # 注册批量获取命令组

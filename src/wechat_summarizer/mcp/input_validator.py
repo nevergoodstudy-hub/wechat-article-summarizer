@@ -117,7 +117,7 @@ class MCPInputValidator:
             raise MCPValidationError("Invalid whitespace in URL hostname")
 
         # 明显非法字符（RFC 主机名场景下不应出现）
-        invalid_host_chars = set('"\'<>\\^')
+        invalid_host_chars = set("\"'<>\\^")
         if any(ch in invalid_host_chars for ch in netloc):
             raise MCPValidationError("Invalid character in URL hostname")
 

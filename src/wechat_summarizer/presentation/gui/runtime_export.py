@@ -30,9 +30,9 @@ def on_export(gui: Any) -> None:
     export_window.title("导出选项")
     export_window.geometry("400x350")
     export_window.transient(gui.root)
-    ctk.CTkLabel(export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")).pack(
-        pady=20
-    )
+    ctk.CTkLabel(
+        export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")
+    ).pack(pady=20)
 
     def export_as(target: str) -> None:
         export_window.destroy()
@@ -57,7 +57,9 @@ def on_export(gui: Any) -> None:
         )
         btn.pack(fill="x", padx=30, pady=5)
         if not info.available and info.reason:
-            ctk.CTkLabel(export_window, text=info.reason, font=ctk.CTkFont(size=11), text_color="gray").pack()
+            ctk.CTkLabel(
+                export_window, text=info.reason, font=ctk.CTkFont(size=11), text_color="gray"
+            ).pack()
 
 
 def do_export(gui: Any, target: str) -> None:
@@ -106,7 +108,9 @@ def do_export(gui: Any, target: str) -> None:
     def do_export_thread() -> None:
         try:
             logger.info(f"导出路径: {path}")
-            result = gui.container.export_use_case.execute(gui.current_article, target=target, path=path)
+            result = gui.container.export_use_case.execute(
+                gui.current_article, target=target, path=path
+            )
             logger.success(f"导出成功: {result}")
             gui.root.after(0, lambda: export_complete(gui, True, str(result)))
         except Exception as e:
@@ -314,9 +318,7 @@ def batch_export_worker(gui: Any, target: str, dir_path: str) -> None:
         gui.root.after(0, lambda msg=error_msg: batch_export_error(gui, msg))
 
 
-def batch_export_complete(
-    gui: Any, success_count: int, failure_count: int, dir_path: str
-) -> None:
+def batch_export_complete(gui: Any, success_count: int, failure_count: int, dir_path: str) -> None:
     """批量导出完成。"""
     gui._batch_export_active = False
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 
 from wechat_summarizer.domain.value_objects import ArticleURL
@@ -25,15 +24,18 @@ def test_scraper_blocks_on_unsafe_dns_resolution(scraper_cls, url: str):
     scraper = scraper_cls(timeout=1)
     article_url = ArticleURL.from_string(url)
 
-    with patch(
-        "wechat_summarizer.infrastructure.adapters.scrapers.wechat_httpx.safe_fetch_sync",
-        side_effect=SSRFBlockedError("blocked"),
-    ), patch(
-        "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
-        side_effect=SSRFBlockedError("blocked"),
+    with (
+        patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.wechat_httpx.safe_fetch_sync",
+            side_effect=SSRFBlockedError("blocked"),
+        ),
+        patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx.safe_fetch_sync",
+            side_effect=SSRFBlockedError("blocked"),
+        ),
+        pytest.raises(ScraperBlockedError),
     ):
-        with pytest.raises(ScraperBlockedError):
-            scraper.scrape(article_url)
+        scraper.scrape(article_url)
 
 
 def test_wechat_scraper_allows_safe_dns_and_requests():
@@ -44,10 +46,13 @@ def test_wechat_scraper_allows_safe_dns_and_requests():
     fake_response.raise_for_status.return_value = None
     fake_response.text = "<html><h1 id='activity-name'>T</h1><div id='js_content'>C</div></html>"
 
-    with patch(
-        "wechat_summarizer.infrastructure.adapters.scrapers.wechat_httpx.safe_fetch_sync",
-        return_value=fake_response,
-    ), patch.object(scraper, "_get_with_retry", return_value=fake_response):
+    with (
+        patch(
+            "wechat_summarizer.infrastructure.adapters.scrapers.wechat_httpx.safe_fetch_sync",
+            return_value=fake_response,
+        ),
+        patch.object(scraper, "_get_with_retry", return_value=fake_response),
+    ):
         article = scraper.scrape(article_url)
 
     assert article.title

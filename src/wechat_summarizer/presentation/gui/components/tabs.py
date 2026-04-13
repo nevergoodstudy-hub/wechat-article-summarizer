@@ -393,6 +393,7 @@ class ModernTabs(tk.Frame):
                 command=lambda: self.select_tab(tab.id),
                 cursor="hand2",
             )
+
             def on_label_enter(_event: tk.Event[tk.Misc], b: tk.Button = label_btn) -> None:
                 b.configure(bg=self._colors["tab_hover_bg"])
 
@@ -440,14 +441,10 @@ class ModernTabs(tk.Frame):
                 )
                 close_btn_tk: tk.Button = close_btn
 
-                def on_close_enter(
-                    _event: tk.Event[tk.Misc], b: tk.Button = close_btn_tk
-                ) -> None:
+                def on_close_enter(_event: tk.Event[tk.Misc], b: tk.Button = close_btn_tk) -> None:
                     b.configure(bg=self._colors["close_hover"], fg="#FFFFFF")
 
-                def on_close_leave(
-                    _event: tk.Event[tk.Misc], b: tk.Button = close_btn_tk
-                ) -> None:
+                def on_close_leave(_event: tk.Event[tk.Misc], b: tk.Button = close_btn_tk) -> None:
                     b.configure(bg=self._colors["tab_bar_bg"], fg=self._colors["text_secondary"])
 
                 close_btn.bind("<Enter>", on_close_enter)
@@ -606,6 +603,7 @@ class ModernTabs(tk.Frame):
         self._drag_data["tab_id"] = tab_id
         self._drag_data["start_x"] = event.x_root
         self._drag_data["start_index"] = self._get_tab_index(tab_id)
+
     def _on_drag_motion(self, event: tk.Event[tk.Misc]) -> None:
         """拖拽中"""
         current_tab_id = self._drag_data["tab_id"]

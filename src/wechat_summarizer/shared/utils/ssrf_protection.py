@@ -156,12 +156,15 @@ class SSRFSafeTransport(_SSRFSafeBase, httpx.AsyncHTTPTransport):
         new_url = request.url.copy_with(host=host_for_url)
         headers = httpx.Headers(request.headers)
         headers["Host"] = hostname
+        extensions = dict(request.extensions)
+        extensions["sni_hostname"] = hostname
 
         ip_request = httpx.Request(
             method=request.method,
             url=new_url,
             headers=headers,
             content=request.content,
+            extensions=extensions,
         )
         return await super().handle_async_request(ip_request)
 
@@ -181,12 +184,15 @@ class SSRFSafeSyncTransport(_SSRFSafeBase, httpx.HTTPTransport):
         new_url = request.url.copy_with(host=host_for_url)
         headers = httpx.Headers(request.headers)
         headers["Host"] = hostname
+        extensions = dict(request.extensions)
+        extensions["sni_hostname"] = hostname
 
         ip_request = httpx.Request(
             method=request.method,
             url=new_url,
             headers=headers,
             content=request.content,
+            extensions=extensions,
         )
         return super().handle_request(ip_request)
 
@@ -203,6 +209,24 @@ def create_safe_client(**kwargs: Any) -> httpx.Client:
     return httpx.Client(transport=SSRFSafeSyncTransport(), **kwargs)
 
 
+def _extract_client_kwargs(request_kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Split client-only kwargs from request kwargs.
+
+    `httpx` 0.28 accepts `proxy` on the client constructor, but not on
+    `Client.request()` / `AsyncClient.request()`. Generic scrapers pass
+    `proxy=None` by default, so we consume it here before issuing requests.
+    """
+
+    client_kwargs: dict[str, Any] = {}
+
+    if "proxy" in request_kwargs:
+        proxy = request_kwargs.pop("proxy")
+        if proxy is not None:
+            client_kwargs["proxy"] = proxy
+
+    return client_kwargs
+
+
 async def safe_fetch(
     url: str,
     *,
@@ -210,12 +234,15 @@ async def safe_fetch(
     max_redirects: int = 5,
     **kwargs: Any,
 ) -> httpx.Response:
-    async with create_safe_async_client() as client:
+    request_kwargs = dict(kwargs)
+    client_kwargs = _extract_client_kwargs(request_kwargs)
+
+    async with create_safe_async_client(**client_kwargs) as client:
         current_url = url
         current_method = method
         for redirect_count in range(max_redirects + 1):
             SSRFSafeTransport.validate_url(current_url)
-            response = await client.request(current_method, current_url, **kwargs)
+            response = await client.request(current_method, current_url, **request_kwargs)
 
             if response.status_code not in (301, 302, 303, 307, 308):
                 return response
@@ -248,12 +275,15 @@ def safe_fetch_sync(
     max_redirects: int = 5,
     **kwargs: Any,
 ) -> httpx.Response:
-    with create_safe_client() as client:
+    request_kwargs = dict(kwargs)
+    client_kwargs = _extract_client_kwargs(request_kwargs)
+
+    with create_safe_client(**client_kwargs) as client:
         current_url = url
         current_method = method
         for redirect_count in range(max_redirects + 1):
             SSRFSafeSyncTransport.validate_url(current_url)
-            response = client.request(current_method, current_url, **kwargs)
+            response = client.request(current_method, current_url, **request_kwargs)
 
             if response.status_code not in (301, 302, 303, 307, 308):
                 return response

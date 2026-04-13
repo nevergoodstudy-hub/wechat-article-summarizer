@@ -393,9 +393,7 @@ class ResponsiveLayout:
     def __init__(self, breakpoint_manager: BreakpointManager):
         self.bp_manager = breakpoint_manager
 
-    def apply_responsive_styles(
-        self, widget: tk.Misc, styles: dict[Breakpoint, dict[str, Any]]
-    ):
+    def apply_responsive_styles(self, widget: tk.Misc, styles: dict[Breakpoint, dict[str, Any]]):
         """应用响应式样式"""
 
         def on_change(bp: Breakpoint, w: int, h: int):

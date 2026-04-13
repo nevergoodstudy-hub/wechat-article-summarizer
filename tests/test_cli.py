@@ -13,9 +13,33 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
 
-from wechat_summarizer.presentation.cli.app import cli
+from wechat_summarizer.presentation.cli.app import _display_article, _process_single, cli
 from wechat_summarizer.shared.constants import VERSION
+
+
+class _EncodingGuardStream:
+    """模拟 GBK 控制台，遇到不可编码字符时直接抛错。"""
+
+    encoding = "gbk"
+
+    def __init__(self) -> None:
+        self._buffer: list[str] = []
+
+    def write(self, text: str) -> int:
+        text.encode(self.encoding)
+        self._buffer.append(text)
+        return len(text)
+
+    def flush(self) -> None:
+        return None
+
+    def isatty(self) -> bool:
+        return True
+
+    def getvalue(self) -> str:
+        return "".join(self._buffer)
 
 
 @pytest.mark.unit
@@ -208,6 +232,61 @@ class TestFetchCommand:
             assert result.exit_code == 1
             assert "抓取失败" in result.output
 
+    def test_process_single_fetch_failure_is_safe_on_gbk_console(self) -> None:
+        """GBK 控制台下的抓取失败路径不应因为 Rich spinner 再次崩溃。"""
+        mock_container = MagicMock()
+        mock_container.fetch_use_case.execute.side_effect = Exception("网络错误")
+
+        stream = _EncodingGuardStream()
+        gbk_console = Console(
+            file=stream,
+            force_terminal=True,
+            color_system=None,
+            width=120,
+        )
+
+        with (
+            patch(
+                "wechat_summarizer.presentation.cli.app.get_container",
+                return_value=mock_container,
+            ),
+            patch("wechat_summarizer.presentation.cli.app.console", gbk_console),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            _process_single("https://mp.weixin.qq.com/s/test123")
+
+        assert exc_info.value.code == 1
+        assert "抓取失败" in stream.getvalue()
+
+    def test_display_article_is_safe_on_gbk_console(self) -> None:
+        """GBK 控制台下展示文章结果时不应因 Rich Panel 或特殊字符崩溃。"""
+        article = MagicMock()
+        article.title = "What’s new in Python 3.14"
+        article.account_name = None
+        article.word_count = 123
+        article.url = "https://docs.python.org/3/whatsnew/3.14.html"
+        article.content_text = "Preview body"
+        article.summary = MagicMock(
+            content="What’s new in Python 3.14",
+            key_points=("alpha",),
+            tags=("python",),
+        )
+
+        stream = _EncodingGuardStream()
+        gbk_console = Console(
+            file=stream,
+            force_terminal=True,
+            color_system=None,
+            width=120,
+        )
+
+        with patch("wechat_summarizer.presentation.cli.app.console", gbk_console):
+            _display_article(article)
+
+        rendered = stream.getvalue()
+        assert "标题:" in rendered
+        assert "内容预览:" in rendered
+
     def test_fetch_summary_failure_continues(
         self,
         runner: CliRunner,
@@ -320,6 +399,34 @@ class TestCheckCommand:
             assert "抓取器" in result.output
             assert "摘要器" in result.output
             assert "导出器" in result.output
+
+    def test_check_output_is_console_safe(self, runner: CliRunner) -> None:
+        """check 输出不应包含会触发 GBK 控制台崩溃的符号。"""
+        mock_scraper = MagicMock()
+        mock_scraper.name = "wechat_httpx"
+
+        mock_summarizer = MagicMock()
+        mock_summarizer.is_available.return_value = True
+
+        mock_exporter = MagicMock()
+        mock_exporter.is_available.return_value = True
+
+        mock_container = MagicMock()
+        mock_container.scrapers = [mock_scraper]
+        mock_container.summarizers = {"simple": mock_summarizer}
+        mock_container.exporters = {"markdown": mock_exporter}
+        mock_container.storage = MagicMock()
+
+        with patch(
+            "wechat_summarizer.presentation.cli.app.get_container",
+            return_value=mock_container,
+        ):
+            result = runner.invoke(cli, ["check"])
+
+        assert result.exit_code == 0
+        assert "•" not in result.output
+        assert "✓" not in result.output
+        assert "✗" not in result.output
 
 
 @pytest.mark.unit

@@ -163,6 +163,7 @@ class TestGenericHttpxScraper:
         ):
             article = scraper.scrape(generic_url)
             assert article.title == "OG标题"
+
     def test_scrape_retries_timeout_then_success(
         self,
         scraper: GenericHttpxScraper,
@@ -312,11 +313,14 @@ class TestWechatHttpxScraper:
         self, scraper: WechatHttpxScraper, wechat_url: ArticleURL
     ) -> None:
         """测试请求超时错误"""
-        with patch.object(
-            scraper,
-            "_get_with_retry",
-            side_effect=httpx.TimeoutException("Connection timeout"),
-        ), pytest.raises(ScraperTimeoutError):
+        with (
+            patch.object(
+                scraper,
+                "_get_with_retry",
+                side_effect=httpx.TimeoutException("Connection timeout"),
+            ),
+            pytest.raises(ScraperTimeoutError),
+        ):
             scraper.scrape(wechat_url)
 
     def test_scrape_blocked_error_403(
@@ -331,11 +335,11 @@ class TestWechatHttpxScraper:
             response=mock_response,
         )
 
-        with patch.object(
-            scraper, "_get_with_retry", return_value=mock_response
-        ), pytest.raises(ScraperBlockedError):
+        with (
+            patch.object(scraper, "_get_with_retry", return_value=mock_response),
+            pytest.raises(ScraperBlockedError),
+        ):
             scraper.scrape(wechat_url)
-
 
     def test_scrape_blocked_error_429(
         self, scraper: WechatHttpxScraper, wechat_url: ArticleURL
@@ -349,9 +353,10 @@ class TestWechatHttpxScraper:
             response=mock_response,
         )
 
-        with patch.object(
-            scraper, "_get_with_retry", return_value=mock_response
-        ), pytest.raises(ScraperBlockedError):
+        with (
+            patch.object(scraper, "_get_with_retry", return_value=mock_response),
+            pytest.raises(ScraperBlockedError),
+        ):
             scraper.scrape(wechat_url)
 
     def test_scrape_http_error_404(

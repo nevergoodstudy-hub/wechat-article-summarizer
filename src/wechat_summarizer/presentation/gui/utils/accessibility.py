@@ -40,11 +40,13 @@ class FocusDirection(Enum):
 @dataclass
 class FocusableElement:
     """可聚焦元素"""
+
     widget: tk.Misc
     tab_index: int = 0
     group: str = "default"
     label: str = ""
     skip: bool = False  # 是否在Tab导航中跳过
+
 
 class FocusRingStyleDict(TypedDict):
     """焦点轮廓样式字典"""

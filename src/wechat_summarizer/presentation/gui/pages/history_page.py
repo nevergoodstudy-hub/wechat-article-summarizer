@@ -132,7 +132,11 @@ class HistoryPage(ctk.CTkFrame):
 
     def _add_history_item(self, article: Article):
         """添加单条历史记录项"""
-        frame = ctk.CTkFrame(self.history_frame, corner_radius=10, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET))
+        frame = ctk.CTkFrame(
+            self.history_frame,
+            corner_radius=10,
+            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
+        )
         frame.pack(fill="x", pady=4)
         title = article.title[:45] + "..." if len(article.title) > 45 else article.title
         ctk.CTkLabel(frame, text=title, anchor="w", font=ctk.CTkFont(size=13)).pack(

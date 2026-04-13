@@ -222,7 +222,9 @@ class BatchPage(ctk.CTkFrame):
     def _build_progress_detail(self, parent):
         """构建进度详情面板"""
         progress_detail_frame = ctk.CTkFrame(
-            parent, fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_SURFACE_ALT), corner_radius=Spacing.RADIUS_MD
+            parent,
+            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_SURFACE_ALT),
+            corner_radius=Spacing.RADIUS_MD,
         )
         progress_detail_frame.pack(fill="x", padx=20, pady=(0, 10))
 

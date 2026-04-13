@@ -26,11 +26,10 @@ except ImportError:
     Processor = Any  # type: ignore
 
 
-def _loguru_sink_processor(
-    logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> str:
+def _loguru_sink_processor(logger: Any, method_name: str, event_dict: dict[str, Any]) -> str:
     """将 structlog 事件转发到 loguru 的处理器"""
     from loguru import logger as loguru_logger
+
     level = str(event_dict.pop("level", method_name)).upper()
     event = str(event_dict.pop("event", ""))
 

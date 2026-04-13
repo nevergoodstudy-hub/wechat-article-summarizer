@@ -90,7 +90,13 @@ class GUILogHandler:
             self.root.after(0, self._append_log, message)
 
     # 日志级别 -> 标签映射
-    _LEVEL_TAGS = {"ERROR": "ERROR", "WARNING": "WARNING", "INFO": "INFO", "DEBUG": "DEBUG", "SUCCESS": "SUCCESS"}
+    _LEVEL_TAGS = {
+        "ERROR": "ERROR",
+        "WARNING": "WARNING",
+        "INFO": "INFO",
+        "DEBUG": "DEBUG",
+        "SUCCESS": "SUCCESS",
+    }
 
     @staticmethod
     def _detect_level(msg: str) -> str | None:
@@ -164,6 +170,7 @@ class UserPreferences:
         except Exception as e:
             logger.warning(f"加载偏好设置失败: {e}")
         return self.DEFAULT_PREFS.copy()
+
     def _save(self) -> None:
         """保存用户偏好"""
         try:
@@ -176,6 +183,7 @@ class UserPreferences:
     def get(self, key: str, default: Any = None) -> Any:
         """获取偏好设置"""
         return self._prefs.get(key, default)
+
     def set(self, key: str, value: Any) -> None:
         """设置偏好并保存"""
         self._prefs[key] = value

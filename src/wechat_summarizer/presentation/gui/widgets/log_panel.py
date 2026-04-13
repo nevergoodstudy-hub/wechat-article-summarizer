@@ -211,8 +211,13 @@ class LogPanel(ctk.CTkFrame):
     def _setup_log_tags(self):
         """配置日志级别颜色标签"""
         import contextlib
+
+        log_text = self.log_text
+        if log_text is None:
+            return None
+
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox  # 内部 tk.Text
+            tw = log_text._textbox  # 内部 tk.Text
             tw.tag_configure("ERROR", foreground=ModernColors.ERROR)
             tw.tag_configure("WARNING", foreground=ModernColors.WARNING)
             tw.tag_configure("SUCCESS", foreground=ModernColors.SUCCESS)
@@ -225,9 +230,13 @@ class LogPanel(ctk.CTkFrame):
     def _on_level_filter(self, _value: str = ""):
         """级别过滤 - 显示/隐藏匹配行"""
         import contextlib
+
         level = self._level_var.get()
+        log_text = self.log_text
+        if log_text is None:
+            return None
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox
+            tw = log_text._textbox
             tw.configure(state="normal")
             tw.tag_remove("hidden", "1.0", "end")
             if level != "ALL":
@@ -244,9 +253,13 @@ class LogPanel(ctk.CTkFrame):
     def _on_search(self, _event=None):
         """搜索高亮"""
         import contextlib
+
         query = self._search_var.get().strip()
+        log_text = self.log_text
+        if log_text is None:
+            return None
         with contextlib.suppress(Exception):
-            tw = self.log_text._textbox
+            tw = log_text._textbox
             tw.tag_remove("SEARCH_HIT", "1.0", "end")
             if not query:
                 return
