@@ -39,8 +39,20 @@ def test_run_gui_prints_install_hint_when_customtkinter_missing(
 ) -> None:
     monkeypatch.setattr(gui_app, "CTK_AVAILABLE", False)
 
-    gui_app.run_gui()
+    with pytest.raises(SystemExit) as exc_info:
+        gui_app.run_gui()
 
     captured = capsys.readouterr()
+    assert exc_info.value.code == 1
     assert "customtkinter" in captured.out
     assert "pip install customtkinter" in captured.out
+
+
+@pytest.mark.unit
+def test_run_gui_can_raise_import_error_for_entrypoints(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(gui_app, "CTK_AVAILABLE", False)
+
+    with pytest.raises(ImportError, match="customtkinter未安装"):
+        gui_app.run_gui(raise_on_error=True)

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -154,7 +154,7 @@ class LocalJsonStorage:
     def cleanup_expired(self) -> int:
         """清理过期缓存，返回清理数量"""
         cleaned = 0
-        cutoff = datetime.now() - timedelta(hours=self._config.max_age_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=self._config.max_age_hours)
 
         for cache_file in self._dir.glob("*.json"):
             if cache_file.name == self._index_path.name:
@@ -296,10 +296,14 @@ class LocalJsonStorage:
         publish_dt = datetime.fromisoformat(publish_time) if publish_time else None
 
         created_at = data.get("created_at")
-        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now(UTC)
+        created_dt = (
+            datetime.fromisoformat(created_at) if created_at else datetime.now(timezone.utc)
+        )
 
         updated_at = data.get("updated_at")
-        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now(UTC)
+        updated_dt = (
+            datetime.fromisoformat(updated_at) if updated_at else datetime.now(timezone.utc)
+        )
 
         c = data.get("content") or {}
         content = ArticleContent(

@@ -6,9 +6,9 @@
 
 from __future__ import annotations
 
-import json
 import re
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -21,6 +21,8 @@ from ....application.ports.outbound.auth_port import (
     QRCodeData,
 )
 from ....infrastructure.config.settings import get_settings
+from ....shared.constants import CONFIG_DIR_NAME
+from ....shared.system_keyring import JsonSecretStore
 from ..http_client_pool import ClientConfig, get_http_pool
 
 # 微信公众平台相关URL
@@ -41,6 +43,9 @@ DEFAULT_HEADERS = {
     "Referer": f"{MP_BASE_URL}/",
     "Origin": MP_BASE_URL,
 }
+
+WECHAT_BATCH_CREDENTIALS_SERVICE = "wechat-summarizer.wechat-batch"
+LOCAL_CREDENTIAL_TTL = timedelta(days=7)
 
 
 class WechatAuthManager:
@@ -277,6 +282,7 @@ class WechatAuthManager:
         credentials = AuthCredentials(
             token=token,
             cookies=cookies,
+            expires_at=datetime.now() + LOCAL_CREDENTIAL_TTL,
             user_info=user_info,
         )
 
@@ -324,7 +330,6 @@ class WechatAuthManager:
 
                 return {
                     "nickname": nickname,
-                    "token": token,
                 }
         except Exception as e:
             logger.warning(f"获取用户信息失败: {e}")
@@ -431,9 +436,9 @@ class WechatAuthManager:
 
 class FileCredentialStorage:
     """
-    文件凭据存储
+    凭据存储
 
-    将凭据以JSON格式保存到文件。
+    优先使用系统密钥库保存凭据，并自动迁移旧版明文 JSON 文件。
     """
 
     def __init__(self, filepath: str | Path | None = None) -> None:
@@ -446,26 +451,26 @@ class FileCredentialStorage:
             self._filepath = Path(filepath)
         else:
             settings = get_settings()
-            self._filepath = Path.home() / ".wechat_summarizer" / settings.batch.credentials_file
+            self._filepath = Path.home() / CONFIG_DIR_NAME / settings.batch.credentials_file
+
+        self._secret_store = JsonSecretStore(
+            service_name=WECHAT_BATCH_CREDENTIALS_SERVICE,
+            entry_name=str(self._filepath.resolve()),
+            legacy_path=self._filepath,
+            label="微信公众号登录凭据",
+        )
 
     def save(self, credentials: AuthCredentials) -> None:
         """保存凭据"""
-        self._filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        data = credentials.to_dict()
-        self._filepath.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        logger.debug(f"凭据已保存到 {self._filepath}")
+        self._secret_store.save(credentials.to_dict())
+        logger.debug("登录凭据已写入安全存储")
 
     def load(self) -> AuthCredentials | None:
         """加载凭据"""
-        if not self._filepath.exists():
-            return None
-
         try:
-            data = json.loads(self._filepath.read_text(encoding="utf-8"))
+            data = self._secret_store.load()
+            if data is None:
+                return None
             credentials = AuthCredentials.from_dict(data)
 
             # 检查是否过期
@@ -482,10 +487,9 @@ class FileCredentialStorage:
 
     def delete(self) -> None:
         """删除凭据"""
-        if self._filepath.exists():
-            self._filepath.unlink()
-            logger.debug(f"已删除凭据文件 {self._filepath}")
+        self._secret_store.delete()
+        logger.debug("已删除安全存储中的登录凭据")
 
     def exists(self) -> bool:
         """检查凭据是否存在"""
-        return self._filepath.exists()
+        return self._secret_store.exists()

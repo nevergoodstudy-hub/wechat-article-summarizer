@@ -36,6 +36,7 @@ dependencies = [
     "loguru>=0.7.0",
     "structlog>=24.1.0",
     "cryptography>=41.0.0",  # 凭证加密存储 (Fernet)
+    "keyring>=25.0.0",  # 系统密钥库存储
     # CLI
     "click>=8.1.0",
     "rich>=13.0.0",
@@ -156,6 +157,8 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
     "pip-audit>=2.7.0",
+    "customtkinter>=5.2.0",
+    "starlette>=0.27.0",
 ]
 
 [project.scripts]
@@ -169,7 +172,7 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "C4", "RUF"]

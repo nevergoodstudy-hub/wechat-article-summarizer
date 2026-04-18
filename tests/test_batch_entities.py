@@ -4,16 +4,16 @@ from datetime import datetime
 
 import pytest
 
-from src.wechat_summarizer.domain.entities.article_list import (
+from wechat_summarizer.domain.entities.article_list import (
     ArticleList,
     ArticleListItem,
 )
-from src.wechat_summarizer.domain.entities.official_account import (
+from wechat_summarizer.domain.entities.official_account import (
     OfficialAccount,
     ServiceType,
 )
-from src.wechat_summarizer.domain.value_objects.article_filter import ArticleFilter
-from src.wechat_summarizer.domain.value_objects.batch_export_options import (
+from wechat_summarizer.domain.value_objects.article_filter import ArticleFilter
+from wechat_summarizer.domain.value_objects.batch_export_options import (
     BatchExportOptions,
     ExportFormat,
     LinkFormat,

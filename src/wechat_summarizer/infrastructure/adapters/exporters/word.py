@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
-import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
 
 from ....domain.entities import Article
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import safe_fetch_sync
 from .base import BaseExporter
 
 if TYPE_CHECKING:
@@ -46,6 +46,7 @@ except ImportError:
 # Word兼容性模式值
 # 11 = Word 2003, 12 = Word 2007, 14 = Word 2010, 15 = Word 2013+
 WORD_COMPATIBILITY_MODE_2013 = "15"
+MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 class WordExporter(BaseExporter):
@@ -266,21 +267,22 @@ class WordExporter(BaseExporter):
                 img_url = urljoin(base_url, img_url)
 
             try:
-                # 下载图片
-                with httpx.Client(timeout=30, follow_redirects=True) as client:
-                    response = client.get(
-                        img_url,
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                            "Referer": base_url,
-                        },
-                    )
-                    response.raise_for_status()
+                response = safe_fetch_sync(
+                    img_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Referer": base_url,
+                    },
+                    timeout=30,
+                )
+                response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "image/png")
                 if not content_type.startswith("image/"):
                     img.decompose()
                     continue
+                if len(response.content) > MAX_REMOTE_IMAGE_BYTES:
+                    raise ExporterError("图片体积超出安全限制")
 
                 # 转换为 base64
                 img_base64 = base64.b64encode(response.content).decode("ascii")
@@ -520,21 +522,23 @@ class WordExporter(BaseExporter):
             img_url = urljoin(base_url, img_url)
 
         try:
-            with httpx.Client(timeout=30, follow_redirects=True) as client:
-                response = client.get(
-                    img_url,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                        "Referer": base_url,
-                    },
-                )
-                response.raise_for_status()
+            response = safe_fetch_sync(
+                img_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": base_url,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
 
             content_type = response.headers.get("content-type", "")
             if not content_type.startswith("image/"):
                 return
 
             image_data = response.content
+            if len(image_data) > MAX_REMOTE_IMAGE_BYTES:
+                raise ExporterError("图片体积超出安全限制")
             image_stream = io.BytesIO(image_data)
 
             # 获取图片尺寸

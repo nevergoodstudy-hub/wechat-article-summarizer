@@ -9,7 +9,7 @@
   <Identity
     Name="WeChatSummarizer"
     Publisher="CN=WeChatSummarizer"
-    Version="2.4.1.0"
+    Version="2.4.3.0"
     ProcessorArchitecture="x64"/>
 
   <Properties>

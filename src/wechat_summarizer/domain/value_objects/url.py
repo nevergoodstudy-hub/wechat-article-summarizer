@@ -7,6 +7,7 @@ import socket
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from ...shared.constants import WECHAT_DOMAIN
 from ...shared.exceptions import InvalidURLError
 
 # URL 最大长度限制
@@ -37,23 +38,23 @@ class ArticleURL:
             raise InvalidURLError(f"URL长度超出限制（最大{MAX_URL_LENGTH}字符）")
 
         parsed = urlparse(self.value)
-        if not parsed.scheme or not parsed.netloc:
+        if not parsed.scheme or not parsed.hostname:
             raise InvalidURLError(f"无效的URL格式: {self.value}")
+
+        if parsed.username or parsed.password:
+            raise InvalidURLError("URL中不允许包含用户信息")
 
         # 协议白名单
         if parsed.scheme.lower() not in ALLOWED_SCHEMES:
             raise InvalidURLError(f"不支持的协议: {parsed.scheme}（仅支持 http/https）")
 
         # SSRF 防护：禁止访问内网地址
-        if self._is_private_address(parsed.netloc):
+        if self._is_private_address(parsed.hostname):
             raise InvalidURLError("不允许访问内网地址")
 
     @staticmethod
-    def _is_private_address(netloc: str) -> bool:
+    def _is_private_address(host: str) -> bool:
         """检查是否为内网/私有地址"""
-        # 移除端口号
-        host = netloc.split(":")[0]
-
         # 检查特殊域名
         # NOTE: These addresses are used for VALIDATION (blocking), not for binding
         private_domains = {
@@ -88,7 +89,8 @@ class ArticleURL:
     @property
     def is_wechat(self) -> bool:
         """是否为微信公众号链接"""
-        return "mp.weixin.qq.com" in self.value
+        parsed = urlparse(self.value)
+        return (parsed.hostname or "").lower() == WECHAT_DOMAIN
 
     @property
     def is_rss(self) -> bool:
@@ -99,7 +101,7 @@ class ArticleURL:
     def domain(self) -> str:
         """获取域名"""
         parsed = urlparse(self.value)
-        return parsed.netloc
+        return parsed.hostname or parsed.netloc
 
     @property
     def scheme(self) -> str:

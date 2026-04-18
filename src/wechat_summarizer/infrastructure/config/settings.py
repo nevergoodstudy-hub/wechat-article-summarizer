@@ -7,6 +7,8 @@
 兼容逻辑实现于 get_settings()：会从 OS 环境变量与 .env 文件读取并回填到 settings 对象。
 """
 
+from __future__ import annotations
+
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -17,7 +19,6 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ...shared.constants import (
-    CONFIG_DIR_NAME,
     CONFIG_FILE_NAME,
     DEFAULT_ANTHROPIC_MODEL,
     DEFAULT_DEEPSEEK_BASE_URL,
@@ -27,6 +28,7 @@ from ...shared.constants import (
     DEFAULT_OPENAI_MODEL,
     DEFAULT_ZHIPU_MODEL,
 )
+from .paths import get_config_dir, get_env_file_candidates
 
 
 class ScraperSettings(BaseSettings):
@@ -175,7 +177,7 @@ class AppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="WECHAT_SUMMARIZER_",
-        env_file=".env",
+        env_file=None,
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         extra="ignore",
@@ -219,7 +221,7 @@ class AppSettings(BaseSettings):
                 "zhipu": self.zhipu.api_key,
             }
             key = key_map.get(self.default_summary_method)
-            if key and not key.get_secret_value():
+            if key is not None and not key.get_secret_value():
                 _logger.warning(
                     f"默认摘要方法为 '{self.default_summary_method}' 但未配置对应 API Key"
                 )
@@ -272,6 +274,16 @@ def _get_env_value(key: str, dotenv: dict[str, str]) -> str | None:
     return os.getenv(key) or dotenv.get(key)
 
 
+def _load_settings_from_env_files(env_files: tuple[str, ...]) -> AppSettings:
+    """Instantiate settings with an explicit dotenv override.
+
+    `pydantic-settings` supports the runtime-only `_env_file` keyword on
+    `BaseSettings`, but static type checkers do not model that parameter on the
+    generated `__init__`.
+    """
+    return AppSettings(_env_file=env_files or None)  # type: ignore[call-arg]
+
+
 @lru_cache
 def get_settings() -> AppSettings:
     """获取应用配置（单例）
@@ -281,9 +293,12 @@ def get_settings() -> AppSettings:
 
     这样既保持“企业级嵌套配置”的能力，也对用户保留简单易用的 .env 写法。
     """
-    settings = AppSettings()
+    env_files = tuple(str(path) for path in get_env_file_candidates() if path.exists())
+    settings = _load_settings_from_env_files(env_files)
 
-    dotenv = _parse_dotenv_file(Path(".env"))
+    dotenv: dict[str, str] = {}
+    for env_path in get_env_file_candidates():
+        dotenv.update(_parse_dotenv_file(env_path))
 
     # ---- OpenAI legacy ----
     if not settings.openai.api_key.get_secret_value():
@@ -368,4 +383,4 @@ def reset_settings() -> None:
 
 def get_config_path() -> Path:
     """获取配置文件路径"""
-    return Path.home() / CONFIG_DIR_NAME / CONFIG_FILE_NAME
+    return get_config_dir() / CONFIG_FILE_NAME

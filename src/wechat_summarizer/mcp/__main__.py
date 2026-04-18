@@ -42,16 +42,23 @@ def main():
         default=None,
         help="HTTP 模式访问 token（请求头: X-MCP-Token）",
     )
+    parser.add_argument(
+        "--admin-token",
+        default=None,
+        help="HTTP 模式管理员 token（请求头: X-MCP-Token）",
+    )
 
     args = parser.parse_args()
 
     auth_token = args.auth_token or os.environ.get("WECHAT_SUMMARIZER_MCP_AUTH_TOKEN")
+    admin_token = args.admin_token or os.environ.get("WECHAT_SUMMARIZER_MCP_ADMIN_TOKEN")
 
     run_mcp_server(
         transport=args.transport,
         port=args.port,
         host=args.host,
         auth_token=auth_token,
+        admin_token=admin_token,
         allow_remote=args.allow_remote,
     )
 

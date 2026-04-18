@@ -3,6 +3,8 @@
 表示微信公众号账号的领域实体，包含账号基本信息和元数据。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum

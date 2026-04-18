@@ -92,12 +92,14 @@ class WechatSummarizerGUI(
         self.root.mainloop()
 
 
-def run_gui() -> None:
+def run_gui(*, raise_on_error: bool = False) -> None:
     """Launch the GUI through the thin `MainWindow` coordinator."""
     if not CTK_AVAILABLE:
-        print("错误: customtkinter未安装")
-        print("请运行: pip install customtkinter")
-        return None
+        message = "customtkinter未安装，请运行: pip install customtkinter"
+        if raise_on_error:
+            raise ImportError(message)
+        print(f"错误: {message}")
+        raise SystemExit(1)
 
     window = MainWindow(WechatSummarizerGUI, settings=get_settings())
     window.run()

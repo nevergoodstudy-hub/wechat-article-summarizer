@@ -3,7 +3,7 @@
 实现目标：写入指定 OneNote Notebook/Section（创建页面并写入摘要/链接）。
 
 鉴权方式：Microsoft identity platform OAuth2 Device Code Flow（委托权限）
-- 首次使用需要运行 CLI 命令获取 token，并缓存到本地文件
+- 首次使用需要运行 CLI 命令获取 token，并保存到系统密钥库
 - 后续使用 refresh_token 自动续期
 
 参考（Microsoft Learn）：
@@ -13,10 +13,9 @@
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -27,6 +26,7 @@ from loguru import logger
 from ....domain.entities import Article
 from ....shared.constants import CONFIG_DIR_NAME
 from ....shared.exceptions import ExporterAuthError, ExporterError
+from ....shared.system_keyring import JsonSecretStore
 from .base import BaseExporter
 
 
@@ -47,17 +47,20 @@ class OneNoteConfig:
 class _TokenCache:
     def __init__(self, path: Path):
         self._path = path
+        self._secret_store = JsonSecretStore(
+            service_name="wechat-summarizer.onenote",
+            entry_name=str(path.resolve()),
+            legacy_path=path,
+            label="OneNote OAuth token",
+        )
 
     @property
     def path(self) -> Path:
         return self._path
 
     def load(self) -> dict[str, Any] | None:
-        if not self._path.exists():
-            return None
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except Exception:
+        data = self._secret_store.load()
+        if data is None:
             return None
 
         if isinstance(data, dict):
@@ -67,18 +70,10 @@ class _TokenCache:
         return None
 
     def save(self, data: dict[str, Any]) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self._path.with_suffix(self._path.suffix + ".tmp")
-        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(self._path)
+        self._secret_store.save(data)
 
     def clear(self) -> None:
-        try:
-            if self._path.exists():
-                self._path.unlink()
-        except Exception:
-            # best-effort
-            pass
+        self._secret_store.delete()
 
 
 class _DeviceCodeAuth:
@@ -461,7 +456,7 @@ class OneNoteExporter(BaseExporter):
         account = escape(article.account_name or "未知")
         author = escape(article.author or "")
         publish_time = escape(article.publish_time_str)
-        created = escape(datetime.now(UTC).isoformat())
+        created = escape(datetime.now(timezone.utc).isoformat())
 
         # Summary
         summary_html = ""

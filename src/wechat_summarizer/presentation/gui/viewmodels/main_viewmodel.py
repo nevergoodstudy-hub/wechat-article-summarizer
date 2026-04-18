@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ....shared.constants import VERSION
 from .base import BaseViewModel
 from .batch_process_viewmodel import BatchProcessViewModel
 from .settings_viewmodel import SettingsViewModel
@@ -29,7 +30,7 @@ class MainViewModel(BaseViewModel):
         self.settings = SettingsViewModel(container)
 
         # 应用信息
-        self._app_version = "2.0.0"
+        self._app_version = VERSION
         self._app_name = "微信公众号文章总结器"
 
     @property

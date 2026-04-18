@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -255,7 +255,7 @@ class Container:
 
     # ==================== 生命周期管理 ====================
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> Container:
         """异步上下文管理器入口"""
         return self
 

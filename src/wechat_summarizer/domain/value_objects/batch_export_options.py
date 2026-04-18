@@ -3,9 +3,12 @@
 定义批量导出文章链接的配置选项。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
+
+from ...shared.compat import StrEnum
 
 
 class ExportFormat(StrEnum):

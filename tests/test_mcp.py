@@ -22,9 +22,12 @@ from wechat_summarizer.mcp.security import (
     PermissionLevel,
     RateLimiter,
     SecurityManager,
+    get_current_permission,
     get_security_manager,
     require_permission,
+    reset_current_security_context,
     reset_security_manager,
+    set_current_security_context,
 )
 
 # ============== RateLimiter ==============
@@ -69,11 +72,17 @@ class TestRateLimiter:
 
     def test_refill_does_not_exceed_max(self):
         """补充不会超过桶容量"""
-        limiter = RateLimiter(max_tokens=5, refill_rate=1000.0)
-        time.sleep(0.05)
-        # 即使等待了很久，也只能消费 max_tokens
-        assert limiter.consume(5) is True
-        assert limiter.consume(1) is False
+        with patch("wechat_summarizer.mcp.security.time.time") as mock_time:
+            limiter = RateLimiter(max_tokens=5, refill_rate=1000.0)
+            limiter._tokens = float(limiter.max_tokens)
+            limiter._last_refill = 100.0
+
+            mock_time.return_value = 100.05
+            # 即使等待了很久，也只能消费 max_tokens
+            assert limiter.consume(5) is True
+
+            mock_time.return_value = 100.0501
+            assert limiter.consume(1) is False
 
     def test_get_wait_time_zero_when_available(self):
         """有令牌时等待时间为 0"""
@@ -360,6 +369,38 @@ class TestRequirePermission:
             r2 = asyncio.run(limited_tool())
             assert r2.get("success") is False
             assert "速率限制" in r2.get("error", "")
+
+    def test_decorator_blocks_insufficient_permission(self):
+        """上下文权限不足时应拒绝执行工具"""
+
+        @require_permission(PermissionLevel.ADMIN)
+        async def admin_tool() -> dict:
+            return {"ok": True}
+
+        tokens = set_current_security_context(PermissionLevel.READ, caller="test-read")
+        try:
+            result = asyncio.run(admin_tool())
+        finally:
+            reset_current_security_context(tokens)
+
+        assert result["success"] is False
+        assert "权限不足" in result["error"]
+
+    def test_decorator_uses_context_permission_when_present(self):
+        """上下文权限应被装饰器读取"""
+
+        @require_permission(PermissionLevel.READ)
+        async def read_tool() -> dict:
+            return {"ok": True}
+
+        tokens = set_current_security_context(PermissionLevel.WRITE, caller="test-write")
+        try:
+            assert get_current_permission() == PermissionLevel.WRITE
+            result = asyncio.run(read_tool())
+        finally:
+            reset_current_security_context(tokens)
+
+        assert result["ok"] is True
 
     def test_decorator_propagates_exceptions(self):
         """装饰器正确传播异常"""

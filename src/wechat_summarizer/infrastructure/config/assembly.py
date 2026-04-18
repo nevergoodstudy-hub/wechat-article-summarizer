@@ -162,9 +162,7 @@ def build_exporters(
         try:
             from ..adapters.exporters.obsidian import ObsidianExporter
 
-            exporters["obsidian"] = ObsidianExporter(
-                vault_path=settings.export.obsidian_vault_path
-            )
+            exporters["obsidian"] = ObsidianExporter(vault_path=settings.export.obsidian_vault_path)
             logger.debug("Obsidian 导出器已创建")
         except Exception as exc:
             logger.warning(f"Obsidian 导出器不可用: {exc}")
@@ -310,9 +308,7 @@ def _create_base_summarizers(
         except Exception as exc:
             logger.warning(f"DeepSeek摘要器不可用: {exc}")
 
-    anthropic_key = (
-        extra_api_keys.get("anthropic") or settings.anthropic.api_key.get_secret_value()
-    )
+    anthropic_key = extra_api_keys.get("anthropic") or settings.anthropic.api_key.get_secret_value()
     if anthropic_key:
         try:
             summarizers["anthropic"] = AnthropicSummarizer(

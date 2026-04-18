@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from datetime import UTC
+from datetime import timezone
 
 import click
 from rich.console import Console
@@ -12,11 +12,12 @@ from rich.progress import Progress, ProgressColumn, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from ...infrastructure.config import get_container, get_settings
+from ...infrastructure.config.paths import get_env_file_path
 from ...shared.constants import VERSION
 from ...shared.utils import setup_logger
 
 console = Console()
-EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote")
+EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote", "zip")
 
 
 def _console_supports_unicode_progress(target_console: Console) -> bool:
@@ -166,10 +167,11 @@ def gui():
     try:
         from ..gui import run_gui
 
-        run_gui()
+        run_gui(raise_on_error=True)
     except ImportError as e:
         console.print(f"[red]GUI启动失败: {e}")
         console.print("请先安装GUI依赖: pip install customtkinter")
+        sys.exit(1)
 
 
 @cli.command()
@@ -336,7 +338,7 @@ def batch(
         from datetime import datetime
 
         output_data = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "success_count": success_count,
             "failed_count": failed_count,
             "total": len(url_list),
@@ -383,8 +385,6 @@ def config(output_json: bool):
 @cli.command(name="config-init")
 def config_init():
     """交互式配置向导"""
-    from pathlib import Path
-
     console.print("[bold]🔧 配置向导[/bold]\n")
 
     # Ollama 配置
@@ -430,7 +430,8 @@ WECHAT_SUMMARIZER_OPENAI__API_KEY={openai_key}
 WECHAT_SUMMARIZER_EXPORT__DEFAULT_OUTPUT_DIR={output_dir}
 """
 
-    env_path = Path(".env")
+    env_path = get_env_file_path()
+    env_path.parent.mkdir(parents=True, exist_ok=True)
     if env_path.exists() and not click.confirm("\n.env 文件已存在，是否覆盖？"):
         console.print("[已取消]")
         return
@@ -737,7 +738,11 @@ def _display_article(article):
                 tags = ", ".join(_console_safe_text(str(tag)) for tag in article.summary.tags)
                 console.print(f"\n标签: {tags}")
 
-        preview = article.content_text[:500] + "..." if len(article.content_text) > 500 else article.content_text
+        preview = (
+            article.content_text[:500] + "..."
+            if len(article.content_text) > 500
+            else article.content_text
+        )
         console.print(f"\n内容预览:\n{_console_safe_text(preview)}")
         return
 

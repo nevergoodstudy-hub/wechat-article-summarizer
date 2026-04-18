@@ -15,13 +15,15 @@
 - 异常处理
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
 import tkinter as tk
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -253,7 +255,7 @@ class ResponsiveGrid(tk.Frame):
         super().destroy()
 
 
-class ResponsiveValue[T]:
+class ResponsiveValue(Generic[T]):
     """响应式值 - 根据断点返回不同值"""
 
     def __init__(

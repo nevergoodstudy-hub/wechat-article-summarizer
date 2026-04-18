@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import importlib.metadata
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from loguru import logger
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ...application.ports.outbound import ExporterPort, ScraperPort, SummarizerPort
+from ...shared.compat import StrEnum
 
 
 class PluginType(StrEnum):

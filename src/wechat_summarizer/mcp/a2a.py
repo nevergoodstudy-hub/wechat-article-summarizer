@@ -12,8 +12,10 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 from typing import Any
+
+from ..shared.compat import StrEnum
+from ..shared.constants import VERSION
 
 
 class TaskStatus(StrEnum):
@@ -423,7 +425,7 @@ def create_wechat_summarizer_agent_card() -> AgentCard:
     return AgentCard(
         name="wechat-article-summarizer",
         description="微信公众号文章抓取和摘要服务，支持多种AI摘要方法、GraphRAG知识图谱分析和文章对比",
-        version="2.3.0",
+        version=VERSION,
         endpoint="http://localhost:8000/mcp",  # MCP 服务端点
         skills=skills,
         auth_schemes=["none", "api_key"],

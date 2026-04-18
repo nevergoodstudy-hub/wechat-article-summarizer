@@ -4,6 +4,8 @@
 值对象是不可变的，包含筛选逻辑。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING

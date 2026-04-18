@@ -107,15 +107,16 @@ class AsyncTaskExecutor:
                 if pending:
 
                     async def _cancel_pending():
-                        async with asyncio.TaskGroup() as tg:
-                            for task in pending:
-                                tg.create_task(_safe_cancel(task))
+                        await asyncio.gather(
+                            *(_safe_cancel(task) for task in pending),
+                            return_exceptions=True,
+                        )
 
                     async def _safe_cancel(task):
                         with contextlib.suppress(asyncio.CancelledError, Exception):
                             await task
 
-                    with contextlib.suppress(BaseExceptionGroup):
+                    with contextlib.suppress(BaseException):
                         self._loop.run_until_complete(_cancel_pending())
 
                 self._loop.close()
@@ -247,12 +248,12 @@ def get_async_executor() -> AsyncTaskExecutor:
     return AsyncTaskExecutor()
 
 
-def run_async[T](coro: Coroutine[Any, Any, T], timeout: float | None = None) -> T:
+def run_async(coro: Coroutine[Any, Any, T], timeout: float | None = None) -> T:
     """便捷函数：同步执行协程"""
     return get_async_executor().run_sync(coro, timeout=timeout)
 
 
-def submit_async[T](coro: Coroutine[Any, Any, T]) -> Future[T]:
+def submit_async(coro: Coroutine[Any, Any, T]) -> Future[T]:
     """便捷函数：提交异步任务"""
     return get_async_executor().submit(coro)
 

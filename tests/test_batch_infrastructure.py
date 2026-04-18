@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from src.wechat_summarizer.domain.entities.article_list import (
+from wechat_summarizer.domain.entities.article_list import (
     ArticleList,
     ArticleListItem,
 )
-from src.wechat_summarizer.infrastructure.adapters.wechat_batch.article_cache import (
+from wechat_summarizer.infrastructure.adapters.wechat_batch.article_cache import (
     ArticleListCache,
 )
-from src.wechat_summarizer.infrastructure.adapters.wechat_batch.rate_limiter import (
+from wechat_summarizer.infrastructure.adapters.wechat_batch.rate_limiter import (
     AdaptiveRateLimiter,
     RateLimitConfig,
     RateLimiter,

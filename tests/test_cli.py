@@ -90,6 +90,7 @@ class TestCLIBasic:
         assert "obsidian" in result.output
         assert "notion" in result.output
         assert "onenote" in result.output
+        assert "zip" in result.output
 
     def test_batch_help(self, runner: CliRunner) -> None:
         """测试 batch --help"""
@@ -105,6 +106,7 @@ class TestCLIBasic:
         assert "obsidian" in result.output
         assert "notion" in result.output
         assert "onenote" in result.output
+        assert "zip" in result.output
 
     def test_batch_async_help(self, runner: CliRunner) -> None:
         """测试 batch-async --help"""
@@ -120,6 +122,7 @@ class TestCLIBasic:
         assert "obsidian" in result.output
         assert "notion" in result.output
         assert "onenote" in result.output
+        assert "zip" in result.output
 
     def test_config_help(self, runner: CliRunner) -> None:
         """测试 config --help"""

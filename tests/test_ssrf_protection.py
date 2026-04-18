@@ -307,7 +307,9 @@ class TestSafeTransportTLS:
                 "resolve_and_validate",
                 return_value=["151.101.0.223"],
             ),
-            patch.object(httpx.HTTPTransport, "handle_request", return_value=response) as mock_super,
+            patch.object(
+                httpx.HTTPTransport, "handle_request", return_value=response
+            ) as mock_super,
         ):
             transport = SSRFSafeSyncTransport()
             result = transport.handle_request(request)

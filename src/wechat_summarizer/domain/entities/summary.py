@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 
+from ...shared.compat import StrEnum
 from ...shared.utils import utc_now
 
 

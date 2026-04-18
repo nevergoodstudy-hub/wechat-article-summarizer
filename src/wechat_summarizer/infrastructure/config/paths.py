@@ -163,16 +163,34 @@ def migrate_legacy_config() -> bool:
         return False
 
 
-def get_env_file_path() -> Path:
-    """获取 .env 文件路径（项目目录或配置目录）"""
-    # 优先使用当前工作目录
-    cwd_env = Path.cwd() / ".env"
-    if cwd_env.exists():
-        return cwd_env
+def get_default_env_file_path() -> Path:
+    """获取稳定的用户级 .env 配置路径。"""
+    return get_config_dir() / ".env"
 
-    # 其次使用配置目录
-    config_env = get_config_dir() / ".env"
-    return config_env
+
+def get_env_file_candidates() -> tuple[Path, ...]:
+    """Return supported .env files in precedence order.
+
+    The stable user config lives under the platform config directory. A
+    checkout-local `.env` can still override it for development workflows.
+    """
+
+    config_env = get_default_env_file_path()
+    cwd_env = Path.cwd() / ".env"
+
+    if cwd_env.exists():
+        try:
+            if cwd_env.resolve() != config_env.resolve():
+                return (config_env, cwd_env)
+        except OSError:
+            return (config_env, cwd_env)
+
+    return (config_env,)
+
+
+def get_env_file_path() -> Path:
+    """获取默认 .env 文件写入路径。"""
+    return get_default_env_file_path()
 
 
 # 模块初始化时自动迁移

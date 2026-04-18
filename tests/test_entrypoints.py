@@ -69,7 +69,7 @@ class TestPackageMain:
     def test_run_gui_or_exit_runs_gui(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
 
-        monkeypatch.setattr(gui_module, "run_gui", lambda: calls.append("run_gui"))
+        monkeypatch.setattr(gui_module, "run_gui", lambda **kwargs: calls.append("run_gui"))
 
         package_main._run_gui_or_exit()
 
@@ -122,6 +122,7 @@ class TestMCPMain:
                 "port": 8000,
                 "host": "127.0.0.1",
                 "auth_token": None,
+                "admin_token": None,
                 "allow_remote": False,
             }
         ]
@@ -161,6 +162,7 @@ class TestMCPMain:
                 "port": 9000,
                 "host": "0.0.0.0",
                 "auth_token": "env-token",
+                "admin_token": None,
                 "allow_remote": True,
             }
         ]
@@ -190,3 +192,33 @@ class TestMCPMain:
         mcp_main.main()
 
         assert calls[0]["auth_token"] == "cli-token"
+        assert calls[0]["admin_token"] is None
+
+    def test_main_reads_env_admin_token_when_argument_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[dict[str, object]] = []
+
+        monkeypatch.setattr(
+            mcp_main,
+            "run_mcp_server",
+            lambda **kwargs: calls.append(kwargs),
+        )
+        monkeypatch.setenv("WECHAT_SUMMARIZER_MCP_ADMIN_TOKEN", "admin-env-token")
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "wechat_summarizer.mcp",
+                "--transport",
+                "http",
+                "--auth-token",
+                "read-token",
+            ],
+        )
+
+        mcp_main.main()
+
+        assert calls[0]["auth_token"] == "read-token"
+        assert calls[0]["admin_token"] == "admin-env-token"
