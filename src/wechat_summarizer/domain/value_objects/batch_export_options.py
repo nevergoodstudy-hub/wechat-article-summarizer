@@ -6,12 +6,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 
-
-class StrEnum(str, Enum):
-    """Backport of enum.StrEnum for Python 3.10 compatibility."""
+from ...shared.compat import StrEnum
 
 
 class ExportFormat(StrEnum):

@@ -30,7 +30,9 @@ def _ensure_key_dir() -> None:
             import ctypes
 
             file_attribute_hidden = 0x02
-            ctypes.windll.kernel32.SetFileAttributesW(str(KEY_FILE_DIR), file_attribute_hidden)
+            kernel32 = getattr(getattr(ctypes, "windll", None), "kernel32", None)
+            if kernel32 is not None:
+                kernel32.SetFileAttributesW(str(KEY_FILE_DIR), file_attribute_hidden)
         except Exception:
             pass  # 如果设置隐藏失败，不影响功能
 

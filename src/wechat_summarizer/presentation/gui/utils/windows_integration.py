@@ -59,11 +59,15 @@ class WindowsIntegration:
             import ctypes
 
             # 获取窗口句柄
+            windll = getattr(ctypes, "windll", None)
+            kernel32 = getattr(windll, "kernel32", None)
+            user32 = getattr(windll, "user32", None)
             if hwnd is None:
-                hwnd = ctypes.windll.kernel32.GetConsoleWindow()
-                if not hwnd:
+                if kernel32 is not None:
+                    hwnd = kernel32.GetConsoleWindow()
+                if not hwnd and user32 is not None:
                     # 尝试获取前台窗口
-                    hwnd = ctypes.windll.user32.GetForegroundWindow()
+                    hwnd = user32.GetForegroundWindow()
 
             if not hwnd:
                 return
@@ -209,7 +213,10 @@ class WindowsIntegration:
         try:
             import os
 
-            os.startfile(str(path))
+            startfile = getattr(os, "startfile", None)
+            if startfile is None:
+                return False
+            startfile(str(path))
             return True
         except Exception as e:
             logger.debug(f"Failed to open file: {e}")
@@ -285,7 +292,10 @@ class WindowsIntegration:
 
                 csidl_personal = 0x0005
                 buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-                ctypes.windll.shell32.SHGetFolderPathW(None, csidl_personal, None, 0, buf)
+                shell32 = getattr(getattr(ctypes, "windll", None), "shell32", None)
+                if shell32 is None:
+                    raise RuntimeError("shell32 unavailable")
+                shell32.SHGetFolderPathW(None, csidl_personal, None, 0, buf)
                 return Path(buf.value)
             except Exception:
                 pass
@@ -301,7 +311,10 @@ class WindowsIntegration:
 
                 csidl_desktopdirectory = 0x0010
                 buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-                ctypes.windll.shell32.SHGetFolderPathW(None, csidl_desktopdirectory, None, 0, buf)
+                shell32 = getattr(getattr(ctypes, "windll", None), "shell32", None)
+                if shell32 is None:
+                    raise RuntimeError("shell32 unavailable")
+                shell32.SHGetFolderPathW(None, csidl_desktopdirectory, None, 0, buf)
                 return Path(buf.value)
             except Exception:
                 pass
@@ -362,8 +375,13 @@ class Windows11StyleHelper:
         if cls._pywinstyles is None:
             return False
         try:
-            version = sys.getwindowsversion()
-            return version.major == 10 and version.build >= 22000
+            get_windows_version = getattr(sys, "getwindowsversion", None)
+            if get_windows_version is None:
+                return False
+            version = get_windows_version()
+            major = int(getattr(version, "major", 0))
+            build = int(getattr(version, "build", 0))
+            return major == 10 and build >= 22000
         except Exception:
             return False
 

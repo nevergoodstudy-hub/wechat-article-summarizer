@@ -4,16 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 
-try:
-    from enum import StrEnum
-except ImportError:  # pragma: no cover - Python 3.10 fallback
-
-    class StrEnum(str, Enum):
-        """Backport of enum.StrEnum for Python 3.10 compatibility."""
-
-
+from ...shared.compat import StrEnum
 from ...shared.utils import utc_now
 
 

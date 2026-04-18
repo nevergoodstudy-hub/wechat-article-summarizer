@@ -200,8 +200,10 @@ class I18n:
 
             # 调用 GetUserDefaultUILanguage
             # 返回 LANGID (语言标识符)
-            windll = ctypes.windll.kernel32
-            lang_id = windll.GetUserDefaultUILanguage()
+            kernel32 = getattr(getattr(ctypes, "windll", None), "kernel32", None)
+            if kernel32 is None:
+                return self.DEFAULT_LANGUAGE
+            lang_id = int(kernel32.GetUserDefaultUILanguage())
 
             # 使用 locale.windows_locale 映射 LANGID -> locale name
             if lang_id in locale.windows_locale:

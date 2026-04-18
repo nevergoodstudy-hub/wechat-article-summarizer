@@ -13,7 +13,6 @@ from collections.abc import Callable
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from functools import wraps
 from pathlib import Path
 from threading import Lock
@@ -22,13 +21,7 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 from platformdirs import user_data_dir
 
-try:
-    from enum import StrEnum
-except ImportError:  # pragma: no cover - Python 3.10 fallback
-
-    class StrEnum(str, Enum):
-        """Backport of enum.StrEnum for Python 3.10 compatibility."""
-
+from ..shared.compat import StrEnum
 
 F = TypeVar("F", bound=Callable[..., Any])
 
