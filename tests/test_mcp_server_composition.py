@@ -93,6 +93,57 @@ class TestMCPServerComposition:
         assert response.status_code == 200
         assert response.json() == {"ok": True}
 
+    def test_build_http_app_maps_single_auth_token_to_admin_permission(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        monkeypatch.setattr(
+            server,
+            "set_current_security_context",
+            lambda permission, caller="unknown": captured.update(
+                {"permission": permission, "caller": caller}
+            )
+            or ("perm", "caller"),
+        )
+        monkeypatch.setattr(server, "reset_current_security_context", lambda _tokens: None)
+
+        app = server.build_http_app(_FakeMCP(), auth_token="secret-token")
+        client = TestClient(app)
+
+        response = client.get("/mcp/", headers={"x-mcp-token": "secret-token"})
+
+        assert response.status_code == 200
+        assert captured["permission"] == server.PermissionLevel.ADMIN
+
+    def test_build_http_app_maps_auth_and_admin_tokens_separately(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        captured: list[server.PermissionLevel] = []
+
+        monkeypatch.setattr(
+            server,
+            "set_current_security_context",
+            lambda permission, caller="unknown": captured.append(permission) or ("perm", "caller"),
+        )
+        monkeypatch.setattr(server, "reset_current_security_context", lambda _tokens: None)
+
+        app = server.build_http_app(
+            _FakeMCP(),
+            auth_token="read-token",
+            admin_token="admin-token",
+        )
+        client = TestClient(app)
+
+        read_response = client.get("/mcp/", headers={"x-mcp-token": "read-token"})
+        admin_response = client.get("/mcp/", headers={"x-mcp-token": "admin-token"})
+
+        assert read_response.status_code == 200
+        assert admin_response.status_code == 200
+        assert captured == [server.PermissionLevel.READ, server.PermissionLevel.ADMIN]
+
     def test_run_mcp_server_rejects_remote_http_without_explicit_opt_in(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -101,6 +152,19 @@ class TestMCPServerComposition:
 
         with pytest.raises(ValueError, match="远程监听已被禁止"):
             server.run_mcp_server(transport="http", host="0.0.0.0")
+
+    def test_run_mcp_server_rejects_remote_http_without_any_token(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(server, "_ensure_mcp", lambda: _FakeMCP())
+
+        with pytest.raises(ValueError, match="必须配置 auth token 或 admin token"):
+            server.run_mcp_server(
+                transport="http",
+                host="0.0.0.0",
+                allow_remote=True,
+            )
 
     def test_run_mcp_server_http_invokes_uvicorn_with_built_app(
         self,
@@ -118,7 +182,11 @@ class TestMCPServerComposition:
                 captured["port"] = port
 
         monkeypatch.setattr(server, "_ensure_mcp", lambda: fake_mcp)
-        monkeypatch.setattr(server, "build_http_app", lambda mcp, auth_token=None: fake_app)
+        monkeypatch.setattr(
+            server,
+            "build_http_app",
+            lambda mcp, auth_token=None, admin_token=None: fake_app,
+        )
         monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace(run=_FakeUvicorn.run))
 
         server.run_mcp_server(
@@ -126,6 +194,7 @@ class TestMCPServerComposition:
             host="127.0.0.1",
             port=8765,
             auth_token="token",
+            admin_token="admin-token",
         )
 
         assert captured == {"app": fake_app, "host": "127.0.0.1", "port": 8765}

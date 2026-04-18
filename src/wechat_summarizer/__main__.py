@@ -52,7 +52,7 @@ def _run_gui_or_exit() -> None:
     try:
         from .presentation.gui import run_gui
 
-        run_gui()
+        run_gui(raise_on_error=True)
     except ImportError as e:
         print(f"GUI启动失败: {e}")
         print("尝试使用CLI模式: python -m wechat_summarizer --help")

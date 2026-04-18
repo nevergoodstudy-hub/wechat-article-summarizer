@@ -13,7 +13,8 @@ from wechat_summarizer.application.use_cases import (
     SummarizeArticleUseCase,
 )
 from wechat_summarizer.domain.entities import Article, Summary
-from wechat_summarizer.shared.exceptions import ScraperError, UseCaseError
+from wechat_summarizer.shared.exceptions import ScraperBlockedError, ScraperError, UseCaseError
+from wechat_summarizer.shared.utils.ssrf_protection import SSRFBlockedError
 
 
 class TestFetchArticleUseCase:
@@ -123,6 +124,48 @@ class TestFetchArticleUseCase:
 
         assert article == sample_article
         mock_scraper1.scrape.assert_called_once()
+        mock_scraper2.scrape.assert_called_once()
+
+    @pytest.mark.unit
+    def test_execute_stops_on_security_block(self, sample_article: Article) -> None:
+        """SSRF 安全拦截不应再回退到后续抓取器。"""
+        mock_scraper1 = Mock()
+        mock_scraper1.name = "scraper1"
+        mock_scraper1.can_handle.return_value = True
+        blocked_error = ScraperBlockedError("SSRF防护拦截：blocked")
+        blocked_error.__cause__ = SSRFBlockedError("blocked")
+        mock_scraper1.scrape.side_effect = blocked_error
+
+        mock_scraper2 = Mock()
+        mock_scraper2.name = "scraper2"
+        mock_scraper2.can_handle.return_value = True
+        mock_scraper2.scrape.return_value = sample_article
+
+        use_case = FetchArticleUseCase([mock_scraper1, mock_scraper2])
+
+        with pytest.raises(UseCaseError, match="安全策略拦截"):
+            use_case.execute("https://mp.weixin.qq.com/s/test")
+
+        mock_scraper1.scrape.assert_called_once()
+        mock_scraper2.scrape.assert_not_called()
+
+    @pytest.mark.unit
+    def test_execute_can_still_fallback_on_non_security_block(self, sample_article: Article) -> None:
+        """非安全原因的阻断仍应允许回退。"""
+        mock_scraper1 = Mock()
+        mock_scraper1.name = "scraper1"
+        mock_scraper1.can_handle.return_value = True
+        mock_scraper1.scrape.side_effect = ScraperBlockedError("请求被拒绝/限流")
+
+        mock_scraper2 = Mock()
+        mock_scraper2.name = "scraper2"
+        mock_scraper2.can_handle.return_value = True
+        mock_scraper2.scrape.return_value = sample_article
+
+        use_case = FetchArticleUseCase([mock_scraper1, mock_scraper2])
+        article = use_case.execute("https://mp.weixin.qq.com/s/test")
+
+        assert article == sample_article
         mock_scraper2.scrape.assert_called_once()
 
     @pytest.mark.unit

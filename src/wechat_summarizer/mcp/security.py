@@ -10,6 +10,7 @@ import re
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -30,6 +31,9 @@ class PermissionLevel(StrEnum):
     READ = "read"  # 只读（查询、获取信息）
     WRITE = "write"  # 读写（创建、修改、删除）
     ADMIN = "admin"  # 管理员（配置、审计）
+
+
+SecurityContextTokens = tuple[Token, Token]
 
 
 @dataclass
@@ -320,15 +324,22 @@ class SecurityManager:
             是否有权限
         """
         tool_perm = self.tool_permissions.get(tool_name, PermissionLevel.READ)
+        return self.permission_allows(tool_perm, required_permission)
 
-        # 权限等级: ADMIN > WRITE > READ
+    @staticmethod
+    def permission_allows(
+        granted_permission: PermissionLevel,
+        required_permission: PermissionLevel,
+    ) -> bool:
+        """Check whether a granted permission covers the required level."""
+
         perm_levels = {
             PermissionLevel.READ: 1,
             PermissionLevel.WRITE: 2,
             PermissionLevel.ADMIN: 3,
         }
 
-        return perm_levels[tool_perm] >= perm_levels[required_permission]
+        return perm_levels[granted_permission] >= perm_levels[required_permission]
 
     def check_rate_limit(self, tool_name: str, tokens: int = 1) -> tuple[bool, float]:
         """检查速率限制
@@ -390,6 +401,14 @@ class SecurityManager:
 
 # 全局安全管理器实例
 _security_manager: SecurityManager | None = None
+_current_permission: ContextVar[PermissionLevel] = ContextVar(
+    "wechat_summarizer_mcp_current_permission",
+    default=PermissionLevel.ADMIN,
+)
+_current_caller: ContextVar[str] = ContextVar(
+    "wechat_summarizer_mcp_current_caller",
+    default="local",
+)
 
 
 def get_security_manager() -> SecurityManager:
@@ -404,6 +423,37 @@ def reset_security_manager() -> None:
     """重置安全管理器（用于测试）"""
     global _security_manager
     _security_manager = None
+
+
+def set_current_security_context(
+    permission: PermissionLevel,
+    caller: str = "unknown",
+) -> SecurityContextTokens:
+    """Bind the current caller's permission into the active context."""
+
+    permission_token = _current_permission.set(permission)
+    caller_token = _current_caller.set(caller)
+    return permission_token, caller_token
+
+
+def reset_current_security_context(tokens: SecurityContextTokens) -> None:
+    """Restore the previous security context after a request completes."""
+
+    permission_token, caller_token = tokens
+    _current_permission.reset(permission_token)
+    _current_caller.reset(caller_token)
+
+
+def get_current_permission() -> PermissionLevel:
+    """Read the active caller permission from context."""
+
+    return _current_permission.get()
+
+
+def get_current_caller() -> str:
+    """Read the active caller identifier from context."""
+
+    return _current_caller.get()
 
 
 def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
@@ -421,9 +471,24 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             manager = get_security_manager()
             tool_name = func.__name__
+            caller = get_current_caller()
+            caller_permission = get_current_permission()
 
             # 注册工具权限
             manager.register_tool_permission(tool_name, permission)
+
+            if not manager.permission_allows(caller_permission, permission):
+                error_msg = f"权限不足：{caller_permission.value} 无法调用 {permission.value} 级工具"
+                logger.warning(f"{tool_name} 权限校验失败: caller={caller}, level={caller_permission}")
+                manager.log_tool_call(
+                    tool_name=tool_name,
+                    arguments=kwargs,
+                    result="error",
+                    execution_time_ms=0.0,
+                    error_message=error_msg,
+                    caller=caller,
+                )
+                return {"success": False, "error": error_msg}
 
             # 检查速率限制
             allowed, wait_time = manager.check_rate_limit(tool_name)
@@ -436,6 +501,7 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
                     result="error",
                     execution_time_ms=0.0,
                     error_message=error_msg,
+                    caller=caller,
                 )
                 return {"success": False, "error": error_msg}
 
@@ -451,6 +517,7 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
                     arguments=kwargs,
                     result="success",
                     execution_time_ms=execution_time_ms,
+                    caller=caller,
                 )
 
                 return result
@@ -469,6 +536,7 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
                     result="error",
                     execution_time_ms=execution_time_ms,
                     error_message=safe_error,
+                    caller=caller,
                 )
 
                 raise

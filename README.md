@@ -2,7 +2,7 @@
 
 将微信公众号文章抓取后生成摘要，并导出为 HTML / Markdown（支持写入 Obsidian Vault、创建 Notion 页面、写入 OneNote）。
 
-OneNote 导出基于 Microsoft Graph（设备码授权 + 本地 token 缓存）。
+OneNote 导出基于 Microsoft Graph（设备码授权 + 系统密钥库存储 token）。
 
 ## ✨ 功能特性
 
@@ -91,11 +91,10 @@ wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m simple -e onenote
 # 使用 RAG 增强摘要（需安装 rag 依赖）
 wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m rag-openai -e markdown
 
-# 使用 GraphRAG 全局摘要（需安装 graphrag 依赖）
-# Local Search: 基于实体上下文的检索
+# 使用 GraphRAG 摘要（需安装 graphrag 依赖）
+# graphrag-* 当前默认优先使用 Global Search（社区摘要），
+# 当社区构建不可用时会自动回退到 Local Search（实体上下文检索）。
 wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m graphrag-openai -e markdown
-# Global Search: 基于社区摘要的全局分析（适合复杂问题）
-wechat-summarizer fetch "https://mp.weixin.qq.com/s/xxx" -m graphrag-openai --global-search
 
 # 兼容旧命令名：process = fetch
 wechat-summarizer process "https://mp.weixin.qq.com/s/xxx" -m ollama

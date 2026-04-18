@@ -1,12 +1,59 @@
 """全局常量"""
 
-import importlib.metadata as _metadata
+from __future__ import annotations
 
-# 版本信息 — 从 pyproject.toml 动态读取，保证唯一来源
+import importlib.metadata as _metadata
+import re
+from pathlib import Path
+
 try:
-    VERSION = _metadata.version("wechat-summarizer")
-except _metadata.PackageNotFoundError:
-    VERSION = "2.4.0"  # fallback（开发模式未 pip install -e . 时）
+    import tomllib
+except ImportError:  # pragma: no cover - Python 3.10 fallback
+    tomllib = None  # type: ignore[assignment]
+
+
+def _read_version_from_pyproject() -> str | None:
+    """Read the local project version when running from a source checkout."""
+
+    pyproject_path = Path(__file__).resolve().parents[3] / "pyproject.toml"
+    if not pyproject_path.exists():
+        return None
+
+    try:
+        pyproject_text = pyproject_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    if tomllib is not None:
+        try:
+            data = tomllib.loads(pyproject_text)
+        except (TypeError, ValueError):
+            data = {}
+        version = data.get("project", {}).get("version")
+        if isinstance(version, str) and version.strip():
+            return version.strip()
+
+    match = re.search(r'(?ms)^\[project\].*?^version\s*=\s*"([^"]+)"', pyproject_text)
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+
+def _resolve_version() -> str:
+    """Resolve the runtime version without depending on stale site-packages metadata."""
+
+    version = _read_version_from_pyproject()
+    if version:
+        return version
+
+    try:
+        return _metadata.version("wechat-summarizer")
+    except _metadata.PackageNotFoundError:
+        return "2.4.3"
+
+
+VERSION = _resolve_version()
 
 APP_NAME = "WeChat Article Summarizer"
 

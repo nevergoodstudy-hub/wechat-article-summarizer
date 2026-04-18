@@ -8,7 +8,8 @@ from loguru import logger
 
 from ...domain.entities import Article
 from ...domain.value_objects import ArticleURL
-from ...shared.exceptions import ScraperError, UseCaseError
+from ...shared.exceptions import ScraperBlockedError, ScraperError, UseCaseError
+from ...shared.utils.ssrf_protection import SSRFBlockedError
 
 if TYPE_CHECKING:
     from ..ports.outbound import ScraperPort, StoragePort
@@ -77,6 +78,11 @@ class FetchArticleUseCase:
                     article = self._scrape_with(scraper, article_url)
                     self._save_cache_if_needed(article)
                     return article
+                except ScraperBlockedError as e:
+                    if self._is_security_block(e):
+                        raise UseCaseError(f"抓取被安全策略拦截: {e}") from e
+                    logger.warning(f"抓取器 {scraper.name} 被阻断: {e}, 尝试下一个...")
+                    continue
                 except ScraperError as e:
                     logger.warning(f"抓取器 {scraper.name} 失败: {e}, 尝试下一个...")
                     continue
@@ -106,3 +112,12 @@ class FetchArticleUseCase:
             self._storage.save(article)
         except Exception as e:
             logger.warning(f"缓存写入失败，忽略: {e}")
+
+    @staticmethod
+    def _is_security_block(error: ScraperBlockedError) -> bool:
+        """Return True when the block came from SSRF/DNS protection."""
+
+        cause = error.__cause__
+        if isinstance(cause, SSRFBlockedError):
+            return True
+        return "SSRF" in str(error)

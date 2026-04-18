@@ -17,6 +17,11 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from .resources import register_article_resources
+from .security import (
+    PermissionLevel,
+    reset_current_security_context,
+    set_current_security_context,
+)
 from .toolsets import register_analysis_tools, register_article_tools
 
 if TYPE_CHECKING:
@@ -62,7 +67,30 @@ def _ensure_mcp() -> FastMCP:
     return mcp
 
 
-def build_http_app(mcp_instance: FastMCP, auth_token: str | None = None) -> Starlette:
+def _resolve_http_permission(
+    request_token: str | None,
+    auth_token: str | None,
+    admin_token: str | None,
+) -> PermissionLevel | None:
+    """Resolve a request token to the effective MCP permission level."""
+
+    if admin_token and request_token == admin_token:
+        return PermissionLevel.ADMIN
+
+    if auth_token and request_token == auth_token:
+        return PermissionLevel.READ if admin_token else PermissionLevel.ADMIN
+
+    if not auth_token and not admin_token:
+        return PermissionLevel.ADMIN
+
+    return None
+
+
+def build_http_app(
+    mcp_instance: FastMCP,
+    auth_token: str | None = None,
+    admin_token: str | None = None,
+) -> Starlette:
     """Build the HTTP transport app with optional token authentication."""
     from starlette.applications import Starlette
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -72,14 +100,23 @@ def build_http_app(mcp_instance: FastMCP, auth_token: str | None = None) -> Star
 
     class TokenAuthMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-            if auth_token:
-                request_token = request.headers.get("x-mcp-token")
-                if request_token != auth_token:
-                    return JSONResponse(
-                        {"success": False, "error": "Unauthorized"},
-                        status_code=401,
-                    )
-            return await call_next(request)
+            request_token = request.headers.get("x-mcp-token")
+            permission = _resolve_http_permission(request_token, auth_token, admin_token)
+            if permission is None:
+                return JSONResponse(
+                    {"success": False, "error": "Unauthorized"},
+                    status_code=401,
+                )
+
+            client_host = request.client.host if request.client is not None else "unknown"
+            context_tokens = set_current_security_context(
+                permission,
+                caller=f"http:{client_host}:{permission.value}",
+            )
+            try:
+                return await call_next(request)
+            finally:
+                reset_current_security_context(context_tokens)
 
     app = Starlette(routes=[Mount("/mcp", app=mcp_instance.sse_app())])
     app.add_middleware(TokenAuthMiddleware)
@@ -91,6 +128,7 @@ def run_mcp_server(
     port: int = 8000,
     host: str = "127.0.0.1",
     auth_token: str | None = None,
+    admin_token: str | None = None,
     allow_remote: bool = False,
 ) -> None:
     """Run the MCP server."""
@@ -108,12 +146,21 @@ def run_mcp_server(
     if is_remote_host and not allow_remote:
         raise ValueError("远程监听已被禁止。若确需远程访问，请显式传入 --allow-remote。")
 
+    if is_remote_host and not (auth_token or admin_token):
+        raise ValueError("远程 HTTP MCP 必须配置 auth token 或 admin token。")
+
     if is_remote_host:
         logger.warning("MCP HTTP 正在远程监听，请确保网络隔离与鉴权配置。")
+    if auth_token and not admin_token:
+        logger.warning("仅配置 auth_token 时，HTTP 客户端将继承管理员权限；可额外配置 admin_token 隔离管理工具。")
 
     import uvicorn
 
-    app = build_http_app(mcp_instance, auth_token=auth_token)
+    app = build_http_app(
+        mcp_instance,
+        auth_token=auth_token,
+        admin_token=admin_token,
+    )
     uvicorn.run(app, host=host, port=port)
 
 

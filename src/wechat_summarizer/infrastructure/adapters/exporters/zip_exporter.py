@@ -6,21 +6,24 @@
 from __future__ import annotations
 
 import contextlib
+import html
 import re
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
 from loguru import logger
 
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import safe_fetch_sync
 from .base import BaseExporter
 from .html import HtmlExporter
 
 if TYPE_CHECKING:
     from ....domain.entities import Article
+
+MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 class ZipExporter(BaseExporter):
@@ -127,6 +130,7 @@ class ZipExporter(BaseExporter):
                             html_content,
                             article.content.images,
                             f"{i + 1:03d}_{safe_title}",
+                            base_url=str(article.url),
                         )
                         # 添加图片到 ZIP
                         for img_name, img_data in image_files.items():
@@ -172,6 +176,7 @@ class ZipExporter(BaseExporter):
         html_content: str,
         images: tuple[str, ...],
         prefix: str,
+        base_url: str,
     ) -> tuple[str, dict[str, bytes]]:
         """
         下载图片并替换 HTML 中的链接
@@ -187,11 +192,15 @@ class ZipExporter(BaseExporter):
                 continue
 
             try:
-                # 下载图片
-                with httpx.Client(timeout=self._image_timeout) as client:
-                    response = client.get(img_url)
-                    response.raise_for_status()
-                    img_data = response.content
+                response = safe_fetch_sync(
+                    img_url,
+                    headers={"Referer": base_url},
+                    timeout=self._image_timeout,
+                )
+                response.raise_for_status()
+                img_data = response.content
+                if len(img_data) > MAX_REMOTE_IMAGE_BYTES:
+                    raise ExporterError("图片体积超出安全限制")
 
                 # 确定图片扩展名
                 content_type = response.headers.get("content-type", "")
@@ -241,7 +250,10 @@ class ZipExporter(BaseExporter):
         for i, article in enumerate(articles):
             safe_title = self._safe_filename(article.title)
             html_filename = f"{i + 1:03d}_{safe_title}.html"
-            items.append(f'<li><a href="{html_filename}">{article.title}</a></li>')
+            items.append(
+                f'<li><a href="{html.escape(html_filename, quote=True)}">'
+                f"{html.escape(article.title)}</a></li>"
+            )
 
         items_html = "\n".join(items)
 
