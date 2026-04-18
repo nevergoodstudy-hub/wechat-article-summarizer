@@ -5,9 +5,11 @@
 用于批量展示和筛选，不包含文章完整内容。
 """
 
+from __future__ import annotations
+
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -53,8 +55,8 @@ class ArticleListItem:
     def publish_datetime(self) -> datetime:
         """获取发布时间（datetime对象，timezone-aware）"""
         if self.update_time:
-            return datetime.fromtimestamp(self.update_time, tz=UTC)
-        return datetime.now(UTC)
+            return datetime.fromtimestamp(self.update_time, tz=timezone.utc)
+        return datetime.now(timezone.utc)
 
     @property
     def publish_date_str(self) -> str:
@@ -139,7 +141,7 @@ class ArticleList:
     account_name: str
     items: list[ArticleListItem] = field(default_factory=list)
     total_count: int = 0
-    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # 内部去重索引（基于 link 的 O(1) 查重）
     _link_index: set[str] = field(default_factory=set, init=False, repr=False)

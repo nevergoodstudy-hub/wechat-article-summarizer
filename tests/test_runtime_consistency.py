@@ -31,7 +31,9 @@ def test_agent_card_uses_shared_version() -> None:
 
 
 @pytest.mark.unit
-def test_get_settings_reads_stable_user_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_get_settings_reads_stable_user_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     config_env = tmp_path / ".env"
     config_env.write_text(
         "WECHAT_SUMMARIZER_OPENAI__MODEL=config-model\n",
@@ -50,7 +52,9 @@ def test_get_settings_reads_stable_user_env(monkeypatch: pytest.MonkeyPatch, tmp
 
 
 @pytest.mark.unit
-def test_get_settings_allows_checkout_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_get_settings_allows_checkout_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     config_env = tmp_path / "config.env"
     config_env.write_text(
         "WECHAT_SUMMARIZER_OPENAI__MODEL=config-model\n",

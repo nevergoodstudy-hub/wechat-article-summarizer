@@ -17,6 +17,8 @@
 - 最大动画数量限制
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import time

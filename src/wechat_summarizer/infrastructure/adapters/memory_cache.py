@@ -17,7 +17,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from loguru import logger
 
@@ -26,7 +26,7 @@ V = TypeVar("V")
 
 
 @dataclass
-class CacheEntry[V]:
+class CacheEntry(Generic[V]):
     """缓存条目"""
 
     value: V
@@ -46,7 +46,7 @@ class CacheEntry[V]:
         self.accessed_at = time.time()
 
 
-class MemoryCache[K, V]:
+class MemoryCache(Generic[K, V]):
     """
     内存缓存
 

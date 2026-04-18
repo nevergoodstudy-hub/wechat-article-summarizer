@@ -351,7 +351,7 @@ class IconManager:
                 g = int(hex_color[2:4], 16)
                 b = int(hex_color[4:6], 16)
                 return (r, g, b, 255)
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             pass
         return (255, 255, 255, 255)
 

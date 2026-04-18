@@ -149,9 +149,7 @@ def register_analysis_tools(mcp_instance: FastMCP) -> None:
             word_counts: list[int] = []
             for article_data in articles_data:
                 entities = cast(list[dict[str, str]], article_data.get("entities", []))
-                entity_name_sets.append(
-                    {entity["name"] for entity in entities if "name" in entity}
-                )
+                entity_name_sets.append({entity["name"] for entity in entities if "name" in entity})
                 tags = cast(list[str], article_data.get("tags", []))
                 tag_sets.append(set(tags))
                 word_count_value = article_data.get("word_count")
@@ -237,9 +235,7 @@ def register_analysis_tools(mcp_instance: FastMCP) -> None:
             articles_with_topic = len(
                 [item for item in topic_data if _to_int(item.get("topic_occurrences")) > 0]
             )
-            total_occurrences = sum(
-                _to_int(item.get("topic_occurrences")) for item in topic_data
-            )
+            total_occurrences = sum(_to_int(item.get("topic_occurrences")) for item in topic_data)
 
             return {
                 "success": True,
@@ -323,9 +319,7 @@ def register_analysis_tools(mcp_instance: FastMCP) -> None:
                     "overall_score": round(overall_score, 2),
                     "covered_keywords": list(covered_words)[:10],
                 },
-                "summary": summary_text[:500] + "..."
-                if len(summary_text) > 500
-                else summary_text,
+                "summary": summary_text[:500] + "..." if len(summary_text) > 500 else summary_text,
                 "recommendations": _get_summary_recommendations(
                     keyword_coverage,
                     conciseness_score,

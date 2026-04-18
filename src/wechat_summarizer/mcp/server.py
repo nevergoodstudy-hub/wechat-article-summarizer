@@ -152,7 +152,9 @@ def run_mcp_server(
     if is_remote_host:
         logger.warning("MCP HTTP 正在远程监听，请确保网络隔离与鉴权配置。")
     if auth_token and not admin_token:
-        logger.warning("仅配置 auth_token 时，HTTP 客户端将继承管理员权限；可额外配置 admin_token 隔离管理工具。")
+        logger.warning(
+            "仅配置 auth_token 时，HTTP 客户端将继承管理员权限；可额外配置 admin_token 隔离管理工具。"
+        )
 
     import uvicorn
 

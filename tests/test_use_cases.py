@@ -150,7 +150,9 @@ class TestFetchArticleUseCase:
         mock_scraper2.scrape.assert_not_called()
 
     @pytest.mark.unit
-    def test_execute_can_still_fallback_on_non_security_block(self, sample_article: Article) -> None:
+    def test_execute_can_still_fallback_on_non_security_block(
+        self, sample_article: Article
+    ) -> None:
         """非安全原因的阻断仍应允许回退。"""
         mock_scraper1 = Mock()
         mock_scraper1.name = "scraper1"

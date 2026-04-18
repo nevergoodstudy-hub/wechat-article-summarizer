@@ -461,7 +461,7 @@ pause
 - 设置导出到你常用的笔记软件
 
 **需要帮助？**
-- 查看 [README.md](../README.md) 了解更多功能
-- 查看 [CONTRIBUTING.md](./CONTRIBUTING.md) 了解如何参与开发
+- 查看 [README.md](README.md) 了解更多功能
+- 查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与开发
 
 祝你使用愉快！📰✨

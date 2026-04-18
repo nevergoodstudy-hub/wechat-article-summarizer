@@ -3,9 +3,15 @@
 定义批量导出文章链接的配置选项。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
+
+
+class StrEnum(str, Enum):
+    """Backport of enum.StrEnum for Python 3.10 compatibility."""
 
 
 class ExportFormat(StrEnum):

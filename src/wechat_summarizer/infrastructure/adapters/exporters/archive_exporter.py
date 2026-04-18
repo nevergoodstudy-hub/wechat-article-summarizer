@@ -171,7 +171,7 @@ class MultiFormatArchiveExporter(BaseExporter):
                 )
                 if result.returncode == 0:
                     return True, f"使用 {rar_path}"
-            except subprocess.SubprocessError, FileNotFoundError, OSError:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError):
                 continue
 
         return False, "需要安装 WinRAR 并添加到 PATH"
@@ -191,7 +191,7 @@ class MultiFormatArchiveExporter(BaseExporter):
                 )
                 if result.returncode == 0:
                     return rar_path
-            except subprocess.SubprocessError, FileNotFoundError, OSError:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError):
                 continue
 
         return None

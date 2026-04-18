@@ -83,7 +83,9 @@ def test_app_settings_warns_when_llm_method_lacks_api_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     warnings: list[str] = []
-    monkeypatch.setattr(settings_module._logger, "warning", lambda message: warnings.append(message))
+    monkeypatch.setattr(
+        settings_module._logger, "warning", lambda message: warnings.append(message)
+    )
 
     AppSettings(default_summary_method="openai")
 
@@ -193,7 +195,9 @@ def test_get_config_path_uses_platform_config_directory(
 
 
 @pytest.mark.unit
-def test_get_platformdirs_paths_prefers_platformdirs_module(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_platformdirs_paths_prefers_platformdirs_module(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     fake_platformdirs = SimpleNamespace(
         user_config_dir=lambda app_name, app_author: f"/config/{app_name}/{app_author}",
         user_cache_dir=lambda app_name, app_author: f"/cache/{app_name}/{app_author}",
@@ -237,8 +241,20 @@ def test_get_platformdirs_paths_falls_back_when_import_fails(
 @pytest.mark.parametrize(
     ("platform_name", "local_app_data", "expected"),
     [
-        ("win32", r"C:\Users\Test\AppData\Local", (Path(r"C:\Users\Test\AppData\Local") / "WechatSummarizer", "Cache", "Data")),
-        ("darwin", None, (Path("/Users/test/Library/Application Support/WechatSummarizer"), "Caches", "Application Support")),
+        (
+            "win32",
+            r"C:\Users\Test\AppData\Local",
+            (Path(r"C:\Users\Test\AppData\Local") / "WechatSummarizer", "Cache", "Data"),
+        ),
+        (
+            "darwin",
+            None,
+            (
+                Path("/Users/test/Library/Application Support/WechatSummarizer"),
+                "Caches",
+                "Application Support",
+            ),
+        ),
         ("linux", None, (Path("/home/test/.config/wechatsummarizer"), ".cache", ".local/share")),
     ],
 )
@@ -254,11 +270,7 @@ def test_get_fallback_paths_returns_platform_specific_locations(
     else:
         monkeypatch.delenv("LOCALAPPDATA", raising=False)
 
-    home = (
-        Path("/Users/test")
-        if platform_name == "darwin"
-        else Path("/home/test")
-    )
+    home = Path("/Users/test") if platform_name == "darwin" else Path("/home/test")
     monkeypatch.setattr(Path, "home", lambda: home)
     monkeypatch.setattr(paths_module.sys, "platform", platform_name)
 
@@ -285,7 +297,9 @@ def test_standard_directory_helpers_create_directories(
     config_dir = tmp_path / "config"
     cache_dir = tmp_path / "cache"
     data_dir = tmp_path / "data"
-    monkeypatch.setattr(paths_module, "_get_platformdirs_paths", lambda: (config_dir, cache_dir, data_dir))
+    monkeypatch.setattr(
+        paths_module, "_get_platformdirs_paths", lambda: (config_dir, cache_dir, data_dir)
+    )
 
     assert paths_module.get_config_dir().is_dir()
     assert paths_module.get_cache_dir().is_dir()
@@ -352,7 +366,9 @@ def test_migrate_legacy_config_handles_existing_marker_and_copy_failures(
     assert paths_module.migrate_legacy_config() is False
 
     marker.unlink()
-    monkeypatch.setattr(shutil, "copy2", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("copy failed")))
+    monkeypatch.setattr(
+        shutil, "copy2", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("copy failed"))
+    )
 
     assert paths_module.migrate_legacy_config() is False
 

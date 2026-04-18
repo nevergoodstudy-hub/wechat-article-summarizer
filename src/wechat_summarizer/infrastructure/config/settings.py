@@ -7,6 +7,8 @@
 兼容逻辑实现于 get_settings()：会从 OS 环境变量与 .env 文件读取并回填到 settings 对象。
 """
 
+from __future__ import annotations
+
 import os
 from functools import lru_cache
 from pathlib import Path

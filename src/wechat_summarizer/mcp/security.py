@@ -13,7 +13,7 @@ from collections.abc import Callable
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from threading import Lock
@@ -21,6 +21,14 @@ from typing import Any, TypeVar, cast
 
 from loguru import logger
 from platformdirs import user_data_dir
+
+try:
+    from enum import StrEnum
+except ImportError:  # pragma: no cover - Python 3.10 fallback
+
+    class StrEnum(str, Enum):
+        """Backport of enum.StrEnum for Python 3.10 compatibility."""
+
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -230,6 +238,10 @@ class RateLimiter:
     _tokens: float = field(default=100.0, init=False)
     _last_refill: float = field(default_factory=time.time, init=False)
     _lock: Lock = field(default_factory=Lock, init=False)
+
+    def __post_init__(self) -> None:
+        """Initialize the bucket to its configured capacity."""
+        self._tokens = float(self.max_tokens)
 
     def consume(self, tokens: int = 1) -> bool:
         """消费令牌
@@ -478,8 +490,12 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
             manager.register_tool_permission(tool_name, permission)
 
             if not manager.permission_allows(caller_permission, permission):
-                error_msg = f"权限不足：{caller_permission.value} 无法调用 {permission.value} 级工具"
-                logger.warning(f"{tool_name} 权限校验失败: caller={caller}, level={caller_permission}")
+                error_msg = (
+                    f"权限不足：{caller_permission.value} 无法调用 {permission.value} 级工具"
+                )
+                logger.warning(
+                    f"{tool_name} 权限校验失败: caller={caller}, level={caller_permission}"
+                )
                 manager.log_tool_call(
                     tool_name=tool_name,
                     arguments=kwargs,

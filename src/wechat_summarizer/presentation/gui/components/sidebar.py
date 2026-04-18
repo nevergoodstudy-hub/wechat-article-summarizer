@@ -18,6 +18,8 @@
 - 事件解绑防内存泄漏
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import logging

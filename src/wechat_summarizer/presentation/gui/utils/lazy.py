@@ -15,6 +15,8 @@
 - 内存泄漏防护
 """
 
+from __future__ import annotations
+
 import importlib
 import logging
 import threading

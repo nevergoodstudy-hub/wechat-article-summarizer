@@ -13,6 +13,7 @@ from loguru import logger
 _keyring: Any | None
 _is_recommended_backend: Callable[[object], bool]
 
+
 def _fallback_recommended_backend(_backend: object) -> bool:
     return False
 

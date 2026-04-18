@@ -35,9 +35,7 @@ class _FakeKeyring:
         self._store.pop((service_name, entry_name), None)
 
 
-def _install_fake_keyring(
-    monkeypatch: pytest.MonkeyPatch, *, priority: int = 5
-) -> _FakeKeyring:
+def _install_fake_keyring(monkeypatch: pytest.MonkeyPatch, *, priority: int = 5) -> _FakeKeyring:
     fake = _FakeKeyring(priority=priority)
     monkeypatch.setattr(system_keyring_module, "_keyring", fake)
     monkeypatch.setattr(
@@ -112,10 +110,13 @@ def test_file_credential_storage_uses_secure_store_without_creating_plaintext_fi
     assert loaded.token == "token-123"
     assert loaded.cookies == {"session": "cookie"}
     assert loaded.user_info == {"nickname": "公众号"}
-    assert fake_keyring.get_password(
-        "wechat-summarizer.wechat-batch",
-        str(credential_path.resolve()),
-    ) is not None
+    assert (
+        fake_keyring.get_password(
+            "wechat-summarizer.wechat-batch",
+            str(credential_path.resolve()),
+        )
+        is not None
+    )
 
 
 @pytest.mark.unit
@@ -144,10 +145,13 @@ def test_file_credential_storage_migrates_existing_plaintext_file(
     assert loaded is not None
     assert loaded.token == "legacy-token"
     assert credential_path.exists() is False
-    assert fake_keyring.get_password(
-        "wechat-summarizer.wechat-batch",
-        str(credential_path.resolve()),
-    ) is not None
+    assert (
+        fake_keyring.get_password(
+            "wechat-summarizer.wechat-batch",
+            str(credential_path.resolve()),
+        )
+        is not None
+    )
 
 
 @pytest.mark.unit
@@ -162,10 +166,13 @@ def test_onenote_token_cache_uses_secure_store_without_plaintext_file(
 
     assert token_path.exists() is False
     assert cache.load() == {"refresh_token": "rt", "access_token": "at"}
-    assert fake_keyring.get_password(
-        "wechat-summarizer.onenote",
-        str(token_path.resolve()),
-    ) is not None
+    assert (
+        fake_keyring.get_password(
+            "wechat-summarizer.onenote",
+            str(token_path.resolve()),
+        )
+        is not None
+    )
 
 
 @pytest.mark.unit

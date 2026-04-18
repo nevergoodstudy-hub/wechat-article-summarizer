@@ -102,10 +102,9 @@ class TestMCPServerComposition:
         monkeypatch.setattr(
             server,
             "set_current_security_context",
-            lambda permission, caller="unknown": captured.update(
-                {"permission": permission, "caller": caller}
-            )
-            or ("perm", "caller"),
+            lambda permission, caller="unknown": (
+                captured.update({"permission": permission, "caller": caller}) or ("perm", "caller")
+            ),
         )
         monkeypatch.setattr(server, "reset_current_security_context", lambda _tokens: None)
 

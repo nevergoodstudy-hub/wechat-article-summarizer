@@ -10,19 +10,26 @@ repo_url: "https://github.com/wechat-summarizer/wechat-article-summarizer"
 
 # Navigation
 nav:
-  - Home: index.md
-  - Getting Started:
-      - Quick Start: getting-started.md
-      - Installation: installation.md
-  - User Guide:
-      - GUI Usage: gui-usage.md
-      - CLI Usage: cli-usage.md
-      - Configuration: configuration.md
+  - Home: README.md
+  - Getting Started: GETTING_STARTED.md
+  - Architecture: ARCHITECTURE.md
+  - Project Structure: PROJECT_STRUCTURE.md
+  - GUI Refactoring: GUI_REFACTORING.md
+  - GUI Animation Optimization: GUI_Animation_Optimization.md
+  - Windows Build: WINDOWS_BUILD.md
   - Development:
-      - Architecture: architecture.md
-      - Contributing: contributing.md
-      - API Reference: api/
-  - Release Notes: changelog.md
+      - Contributing: CONTRIBUTING.md
+      - Iteration Roadmap: ITERATION_ROADMAP.md
+      - Migration Index: MIGRATION_INDEX.md
+  - Audits:
+      - Security Audit: audits/SECURITY_AUDIT.md
+      - Deep Audit Issues: audits/DEEP_AUDIT_ISSUES.md
+      - Deep Audit Improvements: audits/DEEP_AUDIT_IMPROVEMENTS.md
+      - Test Report: audits/TEST_REPORT.md
+  - Plans:
+      - Improvement Plan: plans/IMPROVEMENT_PLAN.md
+      - Core Scope View: plans/CORE_SCOPE_VIEW.md
+      - Repo Hygiene Cycle: plans/REPO_HYGIENE_CYCLE.md
 
 # Theme
 theme:
@@ -74,8 +81,6 @@ plugins:
             show_source: true
             show_root_heading: true
             show_category_heading: true
-      watch:
-        - src/wechat_summarizer
 
 # Footer
 copyright: "Copyright © 2024-2026 WeChatSummarizer Team"

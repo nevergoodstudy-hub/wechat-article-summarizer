@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -456,7 +456,7 @@ class OneNoteExporter(BaseExporter):
         account = escape(article.account_name or "未知")
         author = escape(article.author or "")
         publish_time = escape(article.publish_time_str)
-        created = escape(datetime.now(UTC).isoformat())
+        created = escape(datetime.now(timezone.utc).isoformat())
 
         # Summary
         summary_html = ""

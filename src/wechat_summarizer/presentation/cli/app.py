@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from datetime import UTC
+from datetime import timezone
 
 import click
 from rich.console import Console
@@ -338,7 +338,7 @@ def batch(
         from datetime import datetime
 
         output_data = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "success_count": success_count,
             "failed_count": failed_count,
             "total": len(url_list),
@@ -738,7 +738,11 @@ def _display_article(article):
                 tags = ", ".join(_console_safe_text(str(tag)) for tag in article.summary.tags)
                 console.print(f"\n标签: {tags}")
 
-        preview = article.content_text[:500] + "..." if len(article.content_text) > 500 else article.content_text
+        preview = (
+            article.content_text[:500] + "..."
+            if len(article.content_text) > 500
+            else article.content_text
+        )
         console.print(f"\n内容预览:\n{_console_safe_text(preview)}")
         return
 

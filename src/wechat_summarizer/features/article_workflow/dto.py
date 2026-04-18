@@ -70,4 +70,3 @@ class BatchSummaryPayload:
     total: int
     processed: int
     results: tuple[BatchSummaryItemPayload, ...]
-

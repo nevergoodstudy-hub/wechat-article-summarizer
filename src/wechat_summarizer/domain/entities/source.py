@@ -1,8 +1,17 @@
 """来源实体"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime, timezone
+from enum import Enum
+
+try:
+    from enum import StrEnum
+except ImportError:  # pragma: no cover - Python 3.10 fallback
+
+    class StrEnum(str, Enum):
+        """Backport of enum.StrEnum for Python 3.10 compatibility."""
 
 
 class SourceType(StrEnum):
@@ -32,7 +41,7 @@ class ArticleSource:
     feed_title: str | None = None
 
     # 抓取信息
-    scraped_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    scraped_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     scraper_name: str = "unknown"
 
     @classmethod
