@@ -140,7 +140,8 @@ def on_batch_export(gui: Any) -> None:
     if not gui._check_export_dir_configured():
         return
 
-    dialog = BatchArchiveExportDialog(gui.root, gui.batch_results)
+    archive_formats = gui.container.export_workflow_service.list_archive_formats()
+    dialog = BatchArchiveExportDialog(gui.root, gui.batch_results, archive_formats)
     result = dialog.get()
     if not result:
         return
@@ -182,16 +183,13 @@ def do_archive_export(gui: Any, articles: list, archive_format: str, path: str) 
 def archive_export_worker(gui: Any, articles: list, archive_format: str, path: str) -> None:
     """工作线程：执行多格式压缩导出。"""
     try:
-        from ...infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
         tracker = gui._archive_progress_tracker
 
         def progress_callback(current: int, total: int, item_name: str) -> None:
             if current > tracker.current:
                 tracker.update_success(current_item=item_name)
 
-        exporter = MultiFormatArchiveExporter()
-        result = exporter.export_batch(
+        result = gui.container.export_workflow_service.export_archive(
             articles=articles,
             path=path,
             archive_format=archive_format,

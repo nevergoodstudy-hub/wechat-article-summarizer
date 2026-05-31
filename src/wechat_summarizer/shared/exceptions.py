@@ -11,6 +11,11 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
+from ..domain.exceptions import ArticleNotFoundError as ArticleNotFoundError
+from ..domain.exceptions import DomainError as DomainError
+from ..domain.exceptions import InvalidContentError as InvalidContentError
+from ..domain.exceptions import InvalidURLError as InvalidURLError
+
 
 class ErrorCode(Enum):
     """错误码枚举
@@ -140,28 +145,10 @@ class WechatSummarizerError(Exception):
 
 
 # ============ 领域层异常 ============
-
-
-class DomainError(WechatSummarizerError):
-    """领域异常基类"""
-
-
-class InvalidURLError(DomainError):
-    """无效URL异常"""
-
-    error_code = ErrorCode.INVALID_URL
-
-
-class InvalidContentError(DomainError):
-    """无效内容异常"""
-
-    error_code = ErrorCode.INVALID_CONTENT
-
-
-class ArticleNotFoundError(DomainError):
-    """文章未找到异常"""
-
-    error_code = ErrorCode.ARTICLE_NOT_FOUND
+#
+# Domain exceptions are defined in ``wechat_summarizer.domain.exceptions`` so the
+# domain layer does not depend on this shared module. They are re-exported here
+# to keep the historical ``wechat_summarizer.shared.exceptions`` import path.
 
 
 # ============ 应用层异常 ============

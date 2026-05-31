@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
 
 
 class GateError(RuntimeError):
@@ -18,7 +20,12 @@ class GateError(RuntimeError):
 def run(cmd: list[str], *, allow_nonzero: set[int] | None = None) -> int:
     allow_nonzero = allow_nonzero or set()
     print(f"\n[quality-gate] >>> {' '.join(cmd)}")
-    result = subprocess.run(cmd, cwd=ROOT, check=False)
+    env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        str(SRC) if not existing_pythonpath else os.pathsep.join([str(SRC), existing_pythonpath])
+    )
+    result = subprocess.run(cmd, cwd=ROOT, env=env, check=False)
     if result.returncode != 0 and result.returncode not in allow_nonzero:
         raise GateError(f"Command failed ({result.returncode}): {' '.join(cmd)}")
     return result.returncode
@@ -31,6 +38,10 @@ def run_lint() -> None:
 
 def run_mypy() -> None:
     run(["mypy", "src/wechat_summarizer", "--ignore-missing-imports"])
+
+
+def run_architecture() -> None:
+    run([sys.executable, "scripts/check_architecture_boundaries.py"])
 
 
 def run_tests() -> None:
@@ -68,7 +79,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Unified quality gate runner")
     parser.add_argument(
         "--mode",
-        choices=["all", "lint", "mypy", "test", "security", "security-smoke"],
+        choices=["all", "lint", "mypy", "architecture", "test", "security", "security-smoke"],
         default="all",
         help="Which gate to run",
     )
@@ -83,6 +94,8 @@ def main() -> int:
             run_lint()
         elif args.mode == "mypy":
             run_mypy()
+        elif args.mode == "architecture":
+            run_architecture()
         elif args.mode == "test":
             run_tests()
         elif args.mode == "security":
@@ -91,6 +104,7 @@ def main() -> int:
             run_security_smoke()
         else:
             run_lint()
+            run_architecture()
             run_mypy()
             run_tests()
             run_security_smoke()

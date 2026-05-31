@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from loguru import logger
 
-if TYPE_CHECKING:
-    from ...application.ports.outbound import SummarizerPort
-
+from ..entities import Summary, SummaryStyle
 from ..value_objects import ArticleContent
 
 # 检查 rouge-score 是否可用
@@ -52,6 +50,19 @@ try:
     _jieba_available = True
 except ImportError:
     pass
+
+
+class EvaluationSummarizer(Protocol):
+    """Minimal summarizer contract needed by domain evaluation."""
+
+    def summarize(
+        self,
+        content: ArticleContent,
+        style: SummaryStyle = SummaryStyle.CONCISE,
+        max_length: int = 500,
+    ) -> Summary:
+        """Generate a summary for LLM-as-judge evaluation."""
+        ...
 
 
 @dataclass
@@ -215,7 +226,7 @@ class SummaryEvaluator:
 
     def __init__(
         self,
-        summarizer: SummarizerPort | None = None,
+        summarizer: EvaluationSummarizer | None = None,
         use_rouge: bool = True,
         use_bert_score: bool = False,
         use_hallucination_detection: bool = True,
@@ -563,7 +574,7 @@ def evaluate_summary(
     original: str,
     summary: str,
     use_llm: bool = False,
-    summarizer: SummarizerPort | None = None,
+    summarizer: EvaluationSummarizer | None = None,
 ) -> EvaluationResult:
     """快捷评估函数"""
     evaluator = SummaryEvaluator(summarizer=summarizer, use_llm=use_llm)

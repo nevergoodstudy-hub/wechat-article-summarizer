@@ -9,8 +9,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from ...infrastructure.config import get_container, get_settings
-
 
 class MainWindow:
     """GUI 启动协调器（薄层）。"""
@@ -19,12 +17,12 @@ class MainWindow:
         self,
         app_factory: Callable[..., Any],
         *,
-        container: Any | None = None,
-        settings: Any | None = None,
+        container: Any,
+        settings: Any,
     ) -> None:
         self._app_factory = app_factory
-        self._container = container if container is not None else get_container()
-        self._settings = settings if settings is not None else get_settings()
+        self._container = container
+        self._settings = settings
         self._app: Any | None = None
 
     def build(self) -> Any:

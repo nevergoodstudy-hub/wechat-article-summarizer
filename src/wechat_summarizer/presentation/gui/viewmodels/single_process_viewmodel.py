@@ -11,7 +11,7 @@ from .base import BaseViewModel, Command, Observable
 
 if TYPE_CHECKING:
     from ....domain.entities import Article, Summary
-    from ....infrastructure.config import Container
+    from .ports import ContainerLike
 
 
 @dataclass
@@ -45,7 +45,7 @@ class SingleProcessViewModel(BaseViewModel):
     负责管理单篇文章的抓取、摘要生成和导出流程。
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: ContainerLike):
         super().__init__()
         self._container = container
 

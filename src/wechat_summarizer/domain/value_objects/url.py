@@ -7,7 +7,7 @@ import socket
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-from ...shared.exceptions import InvalidURLError
+from ..exceptions import InvalidURLError
 
 # URL 最大长度限制
 MAX_URL_LENGTH = 2048

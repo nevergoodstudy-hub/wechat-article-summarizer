@@ -767,8 +767,6 @@ class SettingsPage(ctk.CTkFrame):
 
     def _save_api_keys(self):
         """保存API密钥"""
-        from ....infrastructure.config import get_container
-
         saved_count = 0
         api_keys = {}
         for provider, entry in self._api_key_entries.items():
@@ -777,8 +775,7 @@ class SettingsPage(ctk.CTkFrame):
             if key:
                 saved_count += 1
                 api_keys[provider] = key
-        container = get_container()
-        container.reload_summarizers(api_keys)
+        self.gui.container.settings_workflow_service.reload_summarizers(api_keys)
         self.gui._summarizer_info = self.gui._get_summarizer_info()
         self.update_summarizer_status_display()
         self.gui._refresh_summarizer_menus()

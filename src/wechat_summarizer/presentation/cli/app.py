@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from datetime import UTC
+from typing import Any
 
 import click
 from rich.console import Console
@@ -11,12 +13,38 @@ from rich.panel import Panel
 from rich.progress import Progress, ProgressColumn, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from ...infrastructure.config import get_container, get_settings
 from ...shared.constants import VERSION
 from ...shared.utils import setup_logger
 
 console = Console()
 EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote")
+_container_provider: Callable[[], Any] | None = None
+_settings_provider: Callable[[], Any] | None = None
+
+
+def configure_runtime(
+    *,
+    container_provider: Callable[[], Any],
+    settings_provider: Callable[[], Any],
+) -> None:
+    """Install runtime providers for CLI commands."""
+    global _container_provider, _settings_provider
+    _container_provider = container_provider
+    _settings_provider = settings_provider
+
+
+def get_container() -> Any:
+    """Return the configured application container."""
+    if _container_provider is None:
+        raise RuntimeError("CLI container provider has not been configured")
+    return _container_provider()
+
+
+def get_settings() -> Any:
+    """Return the configured application settings."""
+    if _settings_provider is None:
+        raise RuntimeError("CLI settings provider has not been configured")
+    return _settings_provider()
 
 
 def _console_supports_unicode_progress(target_console: Console) -> bool:
@@ -737,7 +765,11 @@ def _display_article(article):
                 tags = ", ".join(_console_safe_text(str(tag)) for tag in article.summary.tags)
                 console.print(f"\n标签: {tags}")
 
-        preview = article.content_text[:500] + "..." if len(article.content_text) > 500 else article.content_text
+        preview = (
+            article.content_text[:500] + "..."
+            if len(article.content_text) > 500
+            else article.content_text
+        )
         console.print(f"\n内容预览:\n{_console_safe_text(preview)}")
         return
 

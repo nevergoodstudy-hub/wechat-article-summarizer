@@ -16,11 +16,16 @@ from ...application.use_cases import (
     SummarizeArticleUseCase,
 )
 from ...domain.services.summary_evaluator import SummaryEvaluator
+from ...features.analysis_workflow import AnalysisWorkflowService
 from ...features.article_workflow import ArticleWorkflowService
+from ...features.export_workflow import ArchiveExporterPort, ExportWorkflowService
+from ...features.settings_workflow import SettingsWorkflowService
 from ..plugins import PluginLoader
 from .assembly import (
+    build_archive_exporter,
     build_embedders,
     build_exporters,
+    build_knowledge_graph_components,
     build_scrapers,
     build_storage,
     build_summarizers,
@@ -73,6 +78,10 @@ class Container:
     _export_use_case: ExportArticleUseCase | None = field(default=None, init=False)
     _batch_use_case: BatchProcessUseCase | None = field(default=None, init=False)
     _article_workflow_service: ArticleWorkflowService | None = field(default=None, init=False)
+    _analysis_workflow_service: AnalysisWorkflowService | None = field(default=None, init=False)
+    _archive_exporter: ArchiveExporterPort | None = field(default=None, init=False)
+    _export_workflow_service: ExportWorkflowService | None = field(default=None, init=False)
+    _settings_workflow_service: SettingsWorkflowService | None = field(default=None, init=False)
 
     @classmethod
     def create_minimal(cls) -> Container:
@@ -97,6 +106,10 @@ class Container:
         instance._export_use_case = None
         instance._batch_use_case = None
         instance._article_workflow_service = None
+        instance._analysis_workflow_service = None
+        instance._archive_exporter = None
+        instance._export_workflow_service = None
+        instance._settings_workflow_service = None
         return instance
 
     @property
@@ -237,6 +250,56 @@ class Container:
                     )
         return self._article_workflow_service
 
+    @property
+    def analysis_workflow_service(self) -> AnalysisWorkflowService:
+        """Expose a feature-oriented service for analysis workflows."""
+        if self._analysis_workflow_service is None:
+            with self._lock:
+                if self._analysis_workflow_service is None:
+                    entity_extractor, graph_builder, community_detector = (
+                        build_knowledge_graph_components()
+                    )
+                    self._analysis_workflow_service = AnalysisWorkflowService(
+                        fetch_use_case=self.fetch_use_case,
+                        summarize_use_case=self.summarize_use_case,
+                        entity_extractor=entity_extractor,
+                        graph_builder=graph_builder,
+                        community_detector=community_detector,
+                        summarizers=self.summarizers,
+                    )
+        return self._analysis_workflow_service
+
+    @property
+    def archive_exporter(self) -> ArchiveExporterPort:
+        """Get the archive exporter adapter."""
+        if self._archive_exporter is None:
+            with self._lock:
+                if self._archive_exporter is None:
+                    self._archive_exporter = build_archive_exporter(self.settings)
+        return self._archive_exporter
+
+    @property
+    def export_workflow_service(self) -> ExportWorkflowService:
+        """Expose a feature-oriented service for export workflows."""
+        if self._export_workflow_service is None:
+            with self._lock:
+                if self._export_workflow_service is None:
+                    self._export_workflow_service = ExportWorkflowService(
+                        archive_exporter=self.archive_exporter
+                    )
+        return self._export_workflow_service
+
+    @property
+    def settings_workflow_service(self) -> SettingsWorkflowService:
+        """Expose a feature-oriented service for settings workflows."""
+        if self._settings_workflow_service is None:
+            with self._lock:
+                if self._settings_workflow_service is None:
+                    self._settings_workflow_service = SettingsWorkflowService(
+                        summarizer_registry=self
+                    )
+        return self._settings_workflow_service
+
     def _create_scrapers(self) -> list[ScraperPort]:
         """创建抓取器列表。"""
         return build_scrapers(self.settings, self.plugin_loader)
@@ -326,6 +389,7 @@ class Container:
         self._summarize_use_case = None
         self._batch_use_case = None
         self._article_workflow_service = None
+        self._analysis_workflow_service = None
         self._evaluator = None
         logger.info(f"摘要器已重新加载，当前可用: {list(self._summarizers.keys())}")
 

@@ -16,18 +16,12 @@ if TYPE_CHECKING:
 ArticleWorkflowFactory = Callable[[], ArticleWorkflowService]
 
 
-def _default_service_factory() -> ArticleWorkflowService:
-    from ...infrastructure.config import get_container
-
-    return get_container().article_workflow_service
-
-
 def register_article_resources(
     mcp_instance: FastMCP,
-    service_factory: ArticleWorkflowFactory | None = None,
+    service_factory: ArticleWorkflowFactory,
 ) -> None:
     """Register article content resources on an MCP server."""
-    get_service = service_factory or _default_service_factory
+    get_service = service_factory
 
     @mcp_instance.resource("article://{url}")
     async def get_article_content(url: str) -> str:

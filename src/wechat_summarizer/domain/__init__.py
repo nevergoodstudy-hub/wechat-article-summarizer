@@ -11,18 +11,20 @@
 """
 
 from .entities import Article, ArticleSource, SourceType, Summary, SummaryMethod, SummaryStyle
+from .exceptions import ArticleNotFoundError, DomainError, InvalidContentError, InvalidURLError
 from .services import ArticleProcessorService
 from .value_objects import ArticleContent, ArticleURL
 
 __all__ = [
-    # Entities
     "Article",
     "ArticleContent",
-    # Services
+    "ArticleNotFoundError",
     "ArticleProcessorService",
     "ArticleSource",
-    # Value Objects
     "ArticleURL",
+    "DomainError",
+    "InvalidContentError",
+    "InvalidURLError",
     "SourceType",
     "Summary",
     "SummaryMethod",

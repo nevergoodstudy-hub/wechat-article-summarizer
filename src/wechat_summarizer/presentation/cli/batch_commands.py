@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from collections.abc import Callable
+from typing import Any
 
 import click
 from rich.console import Console
@@ -16,29 +18,20 @@ from rich.prompt import Confirm
 from rich.table import Table
 
 console = Console()
+_components_factory: Callable[[], dict[str, Any]] | None = None
 
 
-def _get_components():
+def configure_components_factory(factory: Callable[[], dict[str, Any]]) -> None:
+    """Install the component factory used by `mp` commands."""
+    global _components_factory
+    _components_factory = factory
+
+
+def _get_components() -> dict[str, Any]:
     """获取批量获取组件（延迟导入）"""
-    from ...infrastructure.adapters.wechat_batch import (
-        ArticleListCache,
-        FileCredentialStorage,
-        LinkExporter,
-        WechatArticleFetcher,
-        WechatAuthManager,
-    )
-
-    storage = FileCredentialStorage()
-    auth = WechatAuthManager(storage)
-    cache = ArticleListCache()
-
-    return {
-        "storage": storage,
-        "auth": auth,
-        "fetcher": WechatArticleFetcher(auth, cache=cache),
-        "cache": cache,
-        "exporter": LinkExporter(),
-    }
+    if _components_factory is None:
+        raise RuntimeError("CLI batch component factory has not been configured")
+    return _components_factory()
 
 
 @click.group(name="mp")

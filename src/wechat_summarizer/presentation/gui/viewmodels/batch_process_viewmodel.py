@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from .base import BaseViewModel, Command, Observable
 
 if TYPE_CHECKING:
-    from ....infrastructure.config import Container
+    from .ports import ContainerLike
 
 
 class BatchItemStatus(Enum):
@@ -41,7 +41,7 @@ class BatchProcessViewModel(BaseViewModel):
     负责管理批量文章处理流程。
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: ContainerLike):
         super().__init__()
         self._container = container
 

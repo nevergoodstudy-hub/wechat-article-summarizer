@@ -31,18 +31,12 @@ _METHOD_DESCRIPTIONS = {
 }
 
 
-def _default_service_factory() -> ArticleWorkflowService:
-    from ...infrastructure.config import get_container
-
-    return get_container().article_workflow_service
-
-
 def register_article_tools(
     mcp_instance: FastMCP,
-    service_factory: ArticleWorkflowFactory | None = None,
+    service_factory: ArticleWorkflowFactory,
 ) -> None:
     """Register article workflow tools on an MCP server."""
-    get_service = service_factory or _default_service_factory
+    get_service = service_factory
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)

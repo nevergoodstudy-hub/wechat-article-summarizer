@@ -8,9 +8,10 @@ import sys
 import pytest
 
 from wechat_summarizer import __main__ as package_main
+from wechat_summarizer.bootstrap import cli as cli_bootstrap
+from wechat_summarizer.bootstrap import gui as gui_bootstrap
 from wechat_summarizer.mcp import __main__ as mcp_main
-from wechat_summarizer.presentation import cli as cli_module
-from wechat_summarizer.presentation import gui as gui_module
+from wechat_summarizer.presentation import cli as presentation_cli
 
 
 @pytest.mark.unit
@@ -43,7 +44,7 @@ class TestPackageMain:
         calls: list[str] = []
 
         monkeypatch.setattr(package_main, "setup_logger", lambda: calls.append("logger"))
-        monkeypatch.setattr(cli_module, "run_cli", lambda: calls.append("cli"))
+        monkeypatch.setattr(cli_bootstrap, "run_cli", lambda: calls.append("cli"))
         monkeypatch.setattr(package_main.sys, "argv", ["wechat_summarizer", "cli", "fetch"])
 
         package_main.main()
@@ -55,7 +56,7 @@ class TestPackageMain:
         calls: list[str] = []
 
         monkeypatch.setattr(package_main, "setup_logger", lambda: calls.append("logger"))
-        monkeypatch.setattr(cli_module, "run_cli", lambda: calls.append("cli"))
+        monkeypatch.setattr(cli_bootstrap, "run_cli", lambda: calls.append("cli"))
         monkeypatch.setattr(
             package_main.sys,
             "argv",
@@ -69,7 +70,7 @@ class TestPackageMain:
     def test_run_gui_or_exit_runs_gui(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
 
-        monkeypatch.setattr(gui_module, "run_gui", lambda: calls.append("run_gui"))
+        monkeypatch.setattr(gui_bootstrap, "run_gui", lambda: calls.append("run_gui"))
 
         package_main._run_gui_or_exit()
 
@@ -83,8 +84,10 @@ class TestPackageMain:
         original_import = builtins.__import__
 
         def fake_import(name, globals=None, locals=None, fromlist=(), level=0):  # type: ignore[no-untyped-def]
-            if name.endswith("presentation.gui") or (
-                name.endswith("presentation") and "gui" in fromlist
+            if (
+                name.endswith("bootstrap.gui")
+                or (level > 0 and name == "bootstrap.gui")
+                or (name.endswith("bootstrap") and "gui" in fromlist)
             ):
                 raise ImportError("missing gui extras")
             return original_import(name, globals, locals, fromlist, level)
@@ -98,6 +101,15 @@ class TestPackageMain:
         assert exc_info.value.code == 1
         assert "GUI" in captured.out
         assert "--help" in captured.out
+
+    def test_presentation_cli_run_cli_uses_bootstrap(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+
+        monkeypatch.setattr(cli_bootstrap, "run_cli", lambda: calls.append("cli"))
+
+        presentation_cli.run_cli()
+
+        assert calls == ["cli"]
 
 
 @pytest.mark.unit

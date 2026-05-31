@@ -24,6 +24,17 @@ class _FakeMCP:
         return Starlette(routes=[Route("/", healthcheck)])
 
 
+class _FakeContainer:
+    """Small container double that is compatible with reset_container teardown."""
+
+    def __init__(self) -> None:
+        self.article_workflow_service = object()
+        self.analysis_workflow_service = object()
+
+    def close(self) -> None:
+        pass
+
+
 @pytest.mark.unit
 class TestMCPServerComposition:
     """Composition-root behavior should stay thin and explicit."""
@@ -32,32 +43,54 @@ class TestMCPServerComposition:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        calls: list[str] = []
+        calls: list[tuple[str, object]] = []
         fake_mcp = _FakeMCP()
+        fake_container = _FakeContainer()
 
-        monkeypatch.setattr(server, "register_article_tools", lambda mcp: calls.append("article"))
-        monkeypatch.setattr(server, "register_analysis_tools", lambda mcp: calls.append("analysis"))
+        monkeypatch.setattr(
+            "wechat_summarizer.infrastructure.config.container._container",
+            fake_container,
+        )
+        monkeypatch.setattr(
+            server,
+            "register_article_tools",
+            lambda mcp, factory: calls.append(("article", factory())),
+        )
+        monkeypatch.setattr(
+            server,
+            "register_analysis_tools",
+            lambda mcp, factory: calls.append(("analysis", factory())),
+        )
 
         server._register_tools(fake_mcp)
 
-        assert calls == ["article", "analysis"]
+        assert calls == [
+            ("article", fake_container.article_workflow_service),
+            ("analysis", fake_container.analysis_workflow_service),
+        ]
 
     def test_register_resources_delegates_to_composable_resources(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        calls: list[str] = []
+        calls: list[tuple[str, object]] = []
         fake_mcp = _FakeMCP()
+        fake_container = _FakeContainer()
+
+        monkeypatch.setattr(
+            "wechat_summarizer.infrastructure.config.container._container",
+            fake_container,
+        )
 
         monkeypatch.setattr(
             server,
             "register_article_resources",
-            lambda mcp: calls.append("resources"),
+            lambda mcp, factory: calls.append(("resources", factory())),
         )
 
         server._register_resources(fake_mcp)
 
-        assert calls == ["resources"]
+        assert calls == [("resources", fake_container.article_workflow_service)]
 
     def test_ensure_mcp_initializes_once(self, monkeypatch: pytest.MonkeyPatch) -> None:
         fake_mcp = _FakeMCP()

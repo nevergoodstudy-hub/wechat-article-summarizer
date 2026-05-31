@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from ...shared.utils import utc_now
+from ..time import utc_now
 
 if TYPE_CHECKING:
     from ..value_objects import ArticleContent, ArticleURL

@@ -10,7 +10,7 @@ from .settings_viewmodel import SettingsViewModel
 from .single_process_viewmodel import SingleProcessViewModel
 
 if TYPE_CHECKING:
-    from ....infrastructure.config import Container
+    from .ports import ContainerLike
 
 
 class MainViewModel(BaseViewModel):
@@ -19,7 +19,7 @@ class MainViewModel(BaseViewModel):
     作为应用的顶层视图模型，管理子视图模型。
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: ContainerLike):
         super().__init__()
         self._container = container
 

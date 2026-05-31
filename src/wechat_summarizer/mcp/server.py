@@ -43,13 +43,19 @@ def _get_mcp() -> FastMCP:
 
 def _register_tools(mcp_instance: FastMCP) -> None:
     """Register all MCP toolsets."""
-    register_article_tools(mcp_instance)
-    register_analysis_tools(mcp_instance)
+    from ..infrastructure.config import get_container
+
+    container = get_container()
+    register_article_tools(mcp_instance, lambda: container.article_workflow_service)
+    register_analysis_tools(mcp_instance, lambda: container.analysis_workflow_service)
 
 
 def _register_resources(mcp_instance: FastMCP) -> None:
     """Register all MCP resources."""
-    register_article_resources(mcp_instance)
+    from ..infrastructure.config import get_container
+
+    container = get_container()
+    register_article_resources(mcp_instance, lambda: container.article_workflow_service)
 
 
 def _ensure_mcp() -> FastMCP:

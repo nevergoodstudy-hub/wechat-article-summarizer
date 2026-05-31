@@ -70,6 +70,9 @@ jobs:
     - name: Run lint (unified gate)
       run: python scripts/quality_gate.py --mode lint
 
+    - name: Run architecture boundary check (unified gate)
+      run: python scripts/quality_gate.py --mode architecture
+
     - name: Run mypy (unified gate)
       run: |
         python scripts/quality_gate.py --mode mypy | tee mypy-report.txt

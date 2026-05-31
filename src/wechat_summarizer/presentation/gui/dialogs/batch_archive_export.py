@@ -8,10 +8,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
+from ....features.export_workflow import ArchiveFormatPayload
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 
@@ -26,20 +28,22 @@ class BatchArchiveExportDialog:
     - 模态对话框
     """
 
-    def __init__(self, parent, articles: list, archive_exporter=None):
+    def __init__(
+        self,
+        parent,
+        articles: list,
+        archive_formats: Sequence[ArchiveFormatPayload],
+    ):
         """创建批量压缩导出对话框
 
         Args:
             parent: 父窗口
             articles: 文章列表
-            archive_exporter: 多格式压缩导出器实例（用于检测格式可用性）
+            archive_formats: 可用压缩格式信息
         """
-        from ....infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
         self.result = None  # {'articles': [...], 'format': 'zip', 'path': '...'}
         self.articles = articles
-        self._archive_exporter = archive_exporter or MultiFormatArchiveExporter()
-        self._format_infos = self._archive_exporter.get_available_formats()
+        self._format_infos = tuple(archive_formats)
 
         # 存储复选框变量
         self._article_vars: list[ctk.BooleanVar] = []
@@ -232,7 +236,7 @@ class BatchArchiveExportDialog:
             frame,
             text="",
             variable=self._format_var,
-            value=format_info.format.value,
+            value=format_info.value,
             width=20,
             radiobutton_width=18,
             radiobutton_height=18,
@@ -321,7 +325,7 @@ class BatchArchiveExportDialog:
         format_value = self._format_var.get()
 
         # 检查格式是否可用
-        format_info = next((f for f in self._format_infos if f.format.value == format_value), None)
+        format_info = next((f for f in self._format_infos if f.value == format_value), None)
         if not format_info or not format_info.available:
             messagebox.showerror("错误", f"所选格式 {format_value} 不可用")
             return
