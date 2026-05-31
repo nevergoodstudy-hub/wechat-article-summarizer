@@ -7,7 +7,8 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from ...features.article_workflow import ArticleWorkflowService
-from ..input_validator import MCPInputValidator
+from ..input_validator import MCPInputValidator, MCPValidationError
+from ..responses import validation_error_text
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -40,5 +41,7 @@ def register_article_resources(
 
 {payload.content}
 """
+        except MCPValidationError as exc:
+            return validation_error_text(exc)
         except Exception as exc:
             return f"获取文章失败: {exc}"

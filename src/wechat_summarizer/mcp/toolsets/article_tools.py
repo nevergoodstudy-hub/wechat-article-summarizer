@@ -10,6 +10,7 @@ from loguru import logger
 
 from ...features.article_workflow import ArticleWorkflowService
 from ..input_validator import MCPInputValidator, MCPValidationError
+from ..responses import validation_error_response
 from ..security import PermissionLevel, require_permission
 
 if TYPE_CHECKING:
@@ -56,7 +57,7 @@ def register_article_tools(
                 "content_truncated": payload.content_truncated,
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"抓取文章失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -93,7 +94,7 @@ def register_article_tools(
                 },
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"摘要生成失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -115,7 +116,7 @@ def register_article_tools(
                 "preview": payload.preview,
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"获取文章信息失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -154,7 +155,7 @@ def register_article_tools(
                 ],
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)

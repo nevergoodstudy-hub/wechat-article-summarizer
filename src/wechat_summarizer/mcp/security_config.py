@@ -52,6 +52,14 @@ MCP_SECURITY_CONFIG: dict[str, Any] = {
     "max_text_length": 100_000,
     # 摘要最大长度上限
     "max_summary_length": 10_000,
+    # 单个主题参数最大文本长度
+    "max_topic_length": 200,
+    # 单个对比维度最大文本长度
+    "max_aspect_length": 100,
+    # 单次对比维度最大数量
+    "max_aspects": 10,
+    # 审计日志单次读取最大条数
+    "max_audit_logs": 100,
 }
 
 
@@ -63,6 +71,49 @@ def get_allowed_dirs() -> list[str]:
 def get_allowed_hosts() -> list[str]:
     """获取允许访问的网络主机列表"""
     return cast(list[str], MCP_SECURITY_CONFIG["allowed_network_hosts"])
+
+
+def get_int_limit(key: str) -> int:
+    """获取 MCP 安全整数限制。"""
+    value = MCP_SECURITY_CONFIG[key]
+    if not isinstance(value, int):
+        raise TypeError(f"MCP security limit {key!r} must be an integer")
+    return value
+
+
+def get_max_batch_urls() -> int:
+    """获取单次批量 URL 数量上限。"""
+    return get_int_limit("max_batch_urls")
+
+
+def get_max_text_length() -> int:
+    """获取单次请求文本长度上限。"""
+    return get_int_limit("max_text_length")
+
+
+def get_max_summary_length() -> int:
+    """获取摘要长度上限。"""
+    return get_int_limit("max_summary_length")
+
+
+def get_max_topic_length() -> int:
+    """获取主题参数长度上限。"""
+    return get_int_limit("max_topic_length")
+
+
+def get_max_aspect_length() -> int:
+    """获取单个对比维度长度上限。"""
+    return get_int_limit("max_aspect_length")
+
+
+def get_max_aspects() -> int:
+    """获取对比维度数量上限。"""
+    return get_int_limit("max_aspects")
+
+
+def get_max_audit_logs() -> int:
+    """获取审计日志读取条数上限。"""
+    return get_int_limit("max_audit_logs")
 
 
 def is_confirmation_required(operation: str) -> bool:

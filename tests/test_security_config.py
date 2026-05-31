@@ -11,6 +11,14 @@ from wechat_summarizer.mcp.security_config import (
     MCP_SECURITY_CONFIG,
     get_allowed_dirs,
     get_allowed_hosts,
+    get_int_limit,
+    get_max_aspect_length,
+    get_max_aspects,
+    get_max_audit_logs,
+    get_max_batch_urls,
+    get_max_summary_length,
+    get_max_text_length,
+    get_max_topic_length,
     is_confirmation_required,
 )
 
@@ -107,3 +115,24 @@ class TestMCPSecurityConfig:
     def test_max_file_size_limit(self) -> None:
         """文件大小上限"""
         assert MCP_SECURITY_CONFIG["max_file_size_mb"] > 0
+
+    @pytest.mark.unit
+    def test_named_limit_helpers_return_config_values(self) -> None:
+        """命名限制 helper 应直接反映安全配置"""
+        assert get_max_batch_urls() == MCP_SECURITY_CONFIG["max_batch_urls"]
+        assert get_max_text_length() == MCP_SECURITY_CONFIG["max_text_length"]
+        assert get_max_summary_length() == MCP_SECURITY_CONFIG["max_summary_length"]
+        assert get_max_topic_length() == MCP_SECURITY_CONFIG["max_topic_length"]
+        assert get_max_aspect_length() == MCP_SECURITY_CONFIG["max_aspect_length"]
+        assert get_max_aspects() == MCP_SECURITY_CONFIG["max_aspects"]
+        assert get_max_audit_logs() == MCP_SECURITY_CONFIG["max_audit_logs"]
+
+    @pytest.mark.unit
+    def test_get_int_limit_rejects_non_integer_config(self) -> None:
+        """安全限制必须是整数，避免运行期静默降级"""
+        with (
+            pytest.MonkeyPatch.context() as monkeypatch,
+            pytest.raises(TypeError, match="must be an integer"),
+        ):
+            monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_batch_urls", "10")
+            get_int_limit("max_batch_urls")

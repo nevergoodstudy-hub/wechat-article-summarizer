@@ -10,7 +10,9 @@ from loguru import logger
 
 from ...features.analysis_workflow import AnalysisWorkflowService
 from ..input_validator import MCPInputValidator, MCPValidationError
+from ..responses import validation_error_response
 from ..security import PermissionLevel, require_permission
+from ..security_config import get_max_audit_logs, get_max_text_length, get_max_topic_length
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -65,7 +67,7 @@ def register_analysis_tools(
                 ],
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"知识图谱分析失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -78,7 +80,7 @@ def register_analysis_tools(
     ) -> dict[str, Any]:
         """Compare multiple articles by entities, tags, and summaries."""
         try:
-            urls = MCPInputValidator.validate_urls(urls, max_count=5)
+            urls = MCPInputValidator.validate_urls(urls)
             aspects = MCPInputValidator.validate_aspects(aspects)
 
             if len(urls) < 2:
@@ -112,7 +114,7 @@ def register_analysis_tools(
                 },
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"文章对比分析失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -126,7 +128,7 @@ def register_analysis_tools(
         """Track how a topic appears across multiple articles."""
         try:
             urls = MCPInputValidator.validate_urls(urls)
-            topic = MCPInputValidator.sanitize_text(topic, max_length=200)
+            topic = MCPInputValidator.sanitize_text(topic, max_length=get_max_topic_length())
             payload = await asyncio.to_thread(get_service().track_topic, urls, topic)
 
             return {
@@ -148,7 +150,7 @@ def register_analysis_tools(
                 ],
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"主题追踪失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -165,7 +167,10 @@ def register_analysis_tools(
             url = MCPInputValidator.validate_url(url)
             method = MCPInputValidator.validate_method(method)
             if summary_text is not None:
-                summary_text = MCPInputValidator.sanitize_text(summary_text, max_length=20_000)
+                summary_text = MCPInputValidator.sanitize_text(
+                    summary_text,
+                    max_length=get_max_text_length(),
+                )
 
             payload = await asyncio.to_thread(
                 get_service().evaluate_summary,
@@ -190,7 +195,7 @@ def register_analysis_tools(
                 "recommendations": list(payload.recommendations),
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"摘要评估失败: {exc}")
             return {"success": False, "error": str(exc)}
@@ -206,16 +211,16 @@ def register_analysis_tools(
                 limit,
                 field_name="limit",
                 lower=1,
-                upper=100,
+                upper=get_max_audit_logs(),
             )
             manager = get_security_manager()
             if manager.audit_logger is None:
                 return {"success": False, "error": "审计日志未启用"}
 
-            logs = manager.audit_logger.get_recent_logs(min(limit, 100))
+            logs = manager.audit_logger.get_recent_logs(limit)
             return {"success": True, "count": len(logs), "logs": logs}
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"获取审计日志失败: {exc}")
             return {"success": False, "error": str(exc)}
