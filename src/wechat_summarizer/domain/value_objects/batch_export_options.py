@@ -3,12 +3,14 @@
 定义批量导出文章链接的配置选项。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 
-class ExportFormat(StrEnum):
+class ExportFormat(str, Enum):
     """导出格式"""
 
     TXT = "txt"  # 纯文本，每行一个链接
@@ -17,7 +19,7 @@ class ExportFormat(StrEnum):
     MARKDOWN = "markdown"  # Markdown格式，带标题链接
 
 
-class LinkFormat(StrEnum):
+class LinkFormat(str, Enum):
     """链接格式"""
 
     RAW = "raw"  # 原始链接

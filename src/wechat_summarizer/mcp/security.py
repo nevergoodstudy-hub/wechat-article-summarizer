@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from threading import Lock
@@ -24,7 +24,7 @@ from platformdirs import user_data_dir
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class PermissionLevel(StrEnum):
+class PermissionLevel(str, Enum):
     """权限级别"""
 
     READ = "read"  # 只读（查询、获取信息）

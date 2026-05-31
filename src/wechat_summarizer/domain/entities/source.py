@@ -1,11 +1,15 @@
 """来源实体"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime
+from enum import Enum
+
+from ..time import utc_now
 
 
-class SourceType(StrEnum):
+class SourceType(str, Enum):
     """来源类型"""
 
     WECHAT = "wechat"  # 微信公众号
@@ -32,7 +36,7 @@ class ArticleSource:
     feed_title: str | None = None
 
     # 抓取信息
-    scraped_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    scraped_at: datetime = field(default_factory=utc_now)
     scraper_name: str = "unknown"
 
     @classmethod

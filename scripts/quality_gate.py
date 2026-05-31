@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+PIP_AUDIT_CACHE = ROOT / ".cache" / "pip-audit"
 
 
 class GateError(RuntimeError):
@@ -59,7 +60,18 @@ def run_tests() -> None:
 
 
 def run_security() -> None:
-    run(["pip-audit", "--desc", "on"])
+    run(
+        [
+            "pip-audit",
+            ".",
+            "--desc",
+            "on",
+            "--progress-spinner",
+            "off",
+            "--cache-dir",
+            str(PIP_AUDIT_CACHE),
+        ]
+    )
     run(["bandit", "-r", "src/wechat_summarizer", "-ll"])
 
 

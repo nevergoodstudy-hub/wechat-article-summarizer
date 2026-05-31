@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import importlib.metadata
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from loguru import logger
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ...application.ports.outbound import ExporterPort, ScraperPort, SummarizerPort
 
 
-class PluginType(StrEnum):
+class PluginType(str, Enum):
     """插件类型"""
 
     SCRAPER = "wechat_summarizer.scrapers"

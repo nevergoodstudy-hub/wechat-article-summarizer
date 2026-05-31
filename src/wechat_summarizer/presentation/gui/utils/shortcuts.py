@@ -16,6 +16,8 @@
 - 回调异常捕获
 """
 
+from __future__ import annotations
+
 import contextlib
 import json
 import logging

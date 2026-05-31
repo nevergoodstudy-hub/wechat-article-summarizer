@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable
-from datetime import UTC
 from typing import Any
 
 import click
@@ -14,7 +13,7 @@ from rich.progress import Progress, ProgressColumn, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from ...shared.constants import VERSION
-from ...shared.utils import setup_logger
+from ...shared.utils import setup_logger, utc_now
 
 console = Console()
 EXPORT_CHOICES = ("html", "markdown", "word", "obsidian", "notion", "onenote")
@@ -361,10 +360,8 @@ def batch(
 
     # 输出结果
     if output_format == "json":
-        from datetime import datetime
-
         output_data = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": utc_now().isoformat(),
             "success_count": success_count,
             "failed_count": failed_count,
             "total": len(url_list),

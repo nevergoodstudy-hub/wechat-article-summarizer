@@ -566,7 +566,7 @@ class DataGrid(tk.Frame):
                 return (0, val)
             try:
                 return (0, float(val))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 return (1, str(val).lower())
 
         reverse = self.sort_order == "desc"

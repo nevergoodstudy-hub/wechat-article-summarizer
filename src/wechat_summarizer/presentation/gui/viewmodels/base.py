@@ -12,7 +12,7 @@ import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -35,7 +35,7 @@ class PropertyChangedEvent:
     new_value: Any
 
 
-class Observable[T]:
+class Observable(Generic[T]):
     """可观察属性
 
     用于实现数据绑定，当值变化时自动通知订阅者。

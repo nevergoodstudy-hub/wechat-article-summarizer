@@ -254,7 +254,7 @@ class ToutiaoScraper(BaseScraper):
                         return datetime.fromtimestamp(timestamp)
                     else:
                         return datetime.strptime(time_val, "%Y-%m-%d")
-                except ValueError, OSError:
+                except (ValueError, OSError):
                     pass
 
         return None

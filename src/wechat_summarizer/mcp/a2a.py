@@ -12,11 +12,11 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 
-class TaskStatus(StrEnum):
+class TaskStatus(str, Enum):
     """任务状态"""
 
     PENDING = "pending"  # 待处理

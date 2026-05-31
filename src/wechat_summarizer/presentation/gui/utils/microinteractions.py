@@ -240,7 +240,7 @@ class HoverEffect:
                     current_y = int(info.get("y", 0))
                     self._original_y = current_y
                     self.widget.place(y=current_y - self.lift_pixels)
-            except tk.TclError, ValueError:
+            except (tk.TclError, ValueError):
                 pass
 
     def _on_leave(self, event):

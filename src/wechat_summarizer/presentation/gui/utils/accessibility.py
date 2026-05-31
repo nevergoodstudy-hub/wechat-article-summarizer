@@ -15,6 +15,8 @@
 - 超时保护
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
 import tkinter as tk

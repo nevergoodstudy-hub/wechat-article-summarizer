@@ -1,6 +1,6 @@
 """共享工具"""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from .logger import get_logger, logger, setup_logger
 from .retry import async_retry, retry
@@ -16,7 +16,7 @@ from .text import (
 
 def utc_now() -> datetime:
     """返回当前 UTC 时间（带时区信息），替代 datetime.now() 的无时区调用"""
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 __all__ = [

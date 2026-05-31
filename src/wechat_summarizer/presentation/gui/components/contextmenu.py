@@ -17,6 +17,8 @@
 - 自动关闭机制
 """
 
+from __future__ import annotations
+
 import contextlib
 import html
 import logging
