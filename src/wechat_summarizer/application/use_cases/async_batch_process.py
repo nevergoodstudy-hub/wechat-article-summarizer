@@ -1,7 +1,7 @@
 """异步批量处理用例
 
 使用 asyncio.Semaphore 限制最大并发数，防止触发限流。
-使用 asyncio.TaskGroup 批量执行异步任务（Python 3.11+ 结构化并发）。
+使用 asyncio.gather 批量执行异步任务，保持 Python 3.10+ 兼容。
 """
 
 from __future__ import annotations
@@ -149,16 +149,8 @@ class AsyncBatchProcessUseCase:
                         on_progress(progress)
                     return None
 
-        # 使用 TaskGroup 并发执行所有任务（结构化并发）
-        # process_one 内部已捕获异常并返回 None，所以 TaskGroup 不会因单任务失败而取消全部
-        task_results: list[Article | None] = []
-        async with asyncio.TaskGroup() as tg:
-
-            async def _collect(url: str) -> None:
-                task_results.append(await process_one(url))
-
-            for url in urls:
-                tg.create_task(_collect(url))
+        # process_one 内部已捕获异常并返回 None，所以 gather 不会因单任务失败而取消全部
+        task_results = await asyncio.gather(*(process_one(url) for url in urls))
 
         # 收集结果
         for res in task_results:

@@ -341,7 +341,7 @@ class WechatArticleFetcher:
         """并发获取多个公众号的文章列表
 
         使用 asyncio.Semaphore 控制并发数量，
-        配合 asyncio.TaskGroup 实现结构化并发获取。
+        配合 asyncio.gather 实现 Python 3.10+ 兼容的并发获取。
 
         Args:
             accounts: 要获取的公众号列表
@@ -382,14 +382,7 @@ class WechatArticleFetcher:
 
         # 并发执行
         logger.info(f"开始并发获取 {len(accounts)} 个公众号（并发数: {max_concurrency}）")
-        task_results: list[tuple[str, ArticleList | None, str | None]] = []
-        async with asyncio.TaskGroup() as tg:
-
-            async def _collect(acct: OfficialAccount) -> None:
-                task_results.append(await fetch_one(acct))
-
-            for account in accounts:
-                tg.create_task(_collect(account))
+        task_results = await asyncio.gather(*(fetch_one(account) for account in accounts))
 
         # 收集结果
         success_count = 0
