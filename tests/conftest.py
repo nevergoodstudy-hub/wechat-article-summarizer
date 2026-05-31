@@ -40,7 +40,10 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     2. 重置 settings lru_cache
     3. 对非 integration 测试，使用最小化容器并禁用外部网络
     """
-    from wechat_summarizer.infrastructure.config.container import reset_container
+    from wechat_summarizer.infrastructure.config.container import (
+        override_container,
+        reset_container,
+    )
     from wechat_summarizer.infrastructure.config.settings import reset_settings
     from wechat_summarizer.mcp.security import reset_security_manager
 
@@ -53,11 +56,6 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     # integration 测试通过标记来 opt-in 使用真实容器
     current_item = _get_current_test_item()
     if current_item is None or "integration" not in [m.name for m in current_item.iter_markers()]:
-        _minimal = Container.create_minimal()
-        monkeypatch.setattr(
-            "wechat_summarizer.infrastructure.config.container._container",
-            _minimal,
-        )
         # 防止测试误触外部网络
         monkeypatch.setenv("NO_PROXY", "*")
         monkeypatch.setenv("HTTP_PROXY", "")
@@ -65,7 +63,10 @@ def _isolate_test(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
         monkeypatch.setenv("http_proxy", "")
         monkeypatch.setenv("https_proxy", "")
 
-    yield
+        with override_container(Container.create_minimal()):
+            yield
+    else:
+        yield
 
     # 测试结束后再次重置
     reset_container()

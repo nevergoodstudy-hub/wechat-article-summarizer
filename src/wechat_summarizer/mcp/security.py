@@ -110,6 +110,11 @@ class AuditLogger:
         re.compile(r"^[a-zA-Z0-9+/]{40,}={0,2}$"),  # Base64-like long strings (potential secrets)
         re.compile(r"^[a-f0-9]{32,}$", re.IGNORECASE),  # Hex strings (API keys, hashes)
     ]
+    EMBEDDED_SECRET_PATTERNS = [
+        re.compile(r"sk-[a-zA-Z0-9]{20,}"),
+        re.compile(r"key-[a-zA-Z0-9]{20,}"),
+        re.compile(r"Bearer\s+[a-zA-Z0-9._-]{20,}", re.IGNORECASE),
+    ]
 
     def _sanitize_args(self, args: dict[str, Any]) -> dict[str, Any]:
         """清洗参数（移除敏感信息）
@@ -164,6 +169,7 @@ class AuditLogger:
             # Check if string looks like an API key pattern
             if self._looks_like_secret(value):
                 return "***REDACTED***"
+            value = self._redact_embedded_secrets(value)
             # Truncate long strings
             if len(value) > self.MAX_STRING_LENGTH:
                 return value[: self.MAX_STRING_LENGTH] + "...[truncated]"
@@ -187,6 +193,13 @@ class AuditLogger:
         """
         # Check against known API key patterns
         return any(pattern.match(value) for pattern in self.API_KEY_PATTERNS)
+
+    def _redact_embedded_secrets(self, value: str) -> str:
+        """Redact token-looking substrings without dropping safe surrounding context."""
+        redacted = value
+        for pattern in self.EMBEDDED_SECRET_PATTERNS:
+            redacted = pattern.sub("***REDACTED***", redacted)
+        return redacted
 
     def get_recent_logs(self, limit: int = 100) -> list[dict[str, Any]]:
         """获取最近的审计日志

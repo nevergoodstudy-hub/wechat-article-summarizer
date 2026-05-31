@@ -11,6 +11,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
+from wechat_summarizer.infrastructure.config.container import override_container
 from wechat_summarizer.mcp import server
 
 
@@ -48,10 +49,6 @@ class TestMCPServerComposition:
         fake_container = _FakeContainer()
 
         monkeypatch.setattr(
-            "wechat_summarizer.infrastructure.config.container._container",
-            fake_container,
-        )
-        monkeypatch.setattr(
             server,
             "register_article_tools",
             lambda mcp, factory: calls.append(("article", factory())),
@@ -62,7 +59,8 @@ class TestMCPServerComposition:
             lambda mcp, factory: calls.append(("analysis", factory())),
         )
 
-        server._register_tools(fake_mcp)
+        with override_container(fake_container):  # type: ignore[arg-type]
+            server._register_tools(fake_mcp)
 
         assert calls == [
             ("article", fake_container.article_workflow_service),
@@ -78,17 +76,13 @@ class TestMCPServerComposition:
         fake_container = _FakeContainer()
 
         monkeypatch.setattr(
-            "wechat_summarizer.infrastructure.config.container._container",
-            fake_container,
-        )
-
-        monkeypatch.setattr(
             server,
             "register_article_resources",
             lambda mcp, factory: calls.append(("resources", factory())),
         )
 
-        server._register_resources(fake_mcp)
+        with override_container(fake_container):  # type: ignore[arg-type]
+            server._register_resources(fake_mcp)
 
         assert calls == [("resources", fake_container.article_workflow_service)]
 

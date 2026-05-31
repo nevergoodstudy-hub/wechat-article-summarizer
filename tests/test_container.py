@@ -12,6 +12,7 @@ import pytest
 from wechat_summarizer.infrastructure.config.container import (
     Container,
     get_container,
+    override_container,
     reset_container,
 )
 from wechat_summarizer.infrastructure.config.settings import AppSettings
@@ -166,3 +167,30 @@ class TestGlobalContainer:
         reset_container()
         container2 = get_container()
         assert container1 is not container2
+
+    @pytest.mark.unit
+    def test_override_container_restores_previous_instance(self) -> None:
+        """测试临时覆盖容器后会恢复原实例"""
+        original = get_container()
+        replacement = Container.create_minimal()
+
+        with override_container(replacement) as active:
+            assert active is replacement
+            assert get_container() is replacement
+
+        assert get_container() is original
+
+    @pytest.mark.unit
+    def test_override_container_supports_nested_overrides(self) -> None:
+        """测试嵌套覆盖容器按栈顺序恢复"""
+        original = get_container()
+        first = Container.create_minimal()
+        second = Container.create_minimal()
+
+        with override_container(first):
+            assert get_container() is first
+            with override_container(second):
+                assert get_container() is second
+            assert get_container() is first
+
+        assert get_container() is original

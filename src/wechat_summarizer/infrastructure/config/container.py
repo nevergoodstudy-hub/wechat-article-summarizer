@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -412,19 +414,45 @@ class Container:
 
 # 全局容器实例
 _container: Container | None = None
+_container_lock = threading.RLock()
 
 
 def get_container() -> Container:
     """获取全局容器实例"""
     global _container
     if _container is None:
-        _container = Container()
+        with _container_lock:
+            if _container is None:
+                _container = Container()
     return _container
 
 
 def reset_container() -> None:
     """重置容器（用于测试）"""
     global _container
-    if _container is not None:
-        _container.close()
-    _container = None
+    with _container_lock:
+        previous = _container
+        _container = None
+
+    if previous is not None:
+        previous.close()
+
+
+@contextmanager
+def override_container(container: Container) -> Iterator[Container]:
+    """Temporarily replace the process-wide container.
+
+    This is primarily used by tests and composition roots that need explicit
+    dependency injection without mutating private module state directly.
+    """
+    global _container
+
+    with _container_lock:
+        previous = _container
+        _container = container
+
+    try:
+        yield container
+    finally:
+        with _container_lock:
+            _container = previous

@@ -341,7 +341,7 @@ class WechatArticleFetcher:
         """并发获取多个公众号的文章列表
 
         使用 asyncio.Semaphore 控制并发数量，
-        配合 asyncio.gather 实现高效并发获取。
+        配合 asyncio.TaskGroup 实现结构化并发获取。
 
         Args:
             accounts: 要获取的公众号列表

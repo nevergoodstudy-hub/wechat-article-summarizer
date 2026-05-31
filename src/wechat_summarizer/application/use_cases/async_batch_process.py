@@ -164,11 +164,11 @@ class AsyncBatchProcessUseCase:
         for res in task_results:
             if res is not None:
                 result.articles.append(res)
-            # res 为 None 的情况已经在 process_one 中记录了
+
+        result.errors.extend(progress.errors)
 
         logger.info(
-            f"异步批量处理完成: 成功 {result.success_count}/{result.total}, "
-            f"失败 {result.failed_count}"
+            f"异步批量处理完成: 成功 {result.success_count}/{len(urls)}, 失败 {result.failed_count}"
         )
 
         return result

@@ -225,6 +225,39 @@ class TestAuditLogger:
         assert sanitized["cookie"] == "***REDACTED***"
         assert sanitized["url"] == "https://example.com"
 
+    def test_sanitize_redacts_nested_and_embedded_secrets(self, tmp_path: Path):
+        """参数清洗递归处理嵌套对象和嵌入式令牌"""
+        audit = AuditLogger(log_dir=tmp_path)
+        api_key = "sk-" + "a" * 24
+        bearer_token = "Bearer " + "b" * 24
+        sanitized = audit._sanitize_args(
+            {
+                "messages": [
+                    {
+                        "content": f"failed with {api_key}",
+                        "metadata": {"authorization": bearer_token},
+                    }
+                ],
+                "headers": {"x-request-id": "req-123"},
+            }
+        )
+
+        message = sanitized["messages"][0]
+        assert message["content"] == "failed with ***REDACTED***"
+        assert message["metadata"]["authorization"] == "***REDACTED***"
+        assert sanitized["headers"]["x-request-id"] == "req-123"
+        assert api_key not in str(sanitized)
+        assert bearer_token not in str(sanitized)
+
+    def test_sanitize_truncates_long_strings(self, tmp_path: Path):
+        """参数清洗会截断超长字符串，避免审计日志膨胀"""
+        audit = AuditLogger(log_dir=tmp_path)
+        long_value = "safe text " * 30
+
+        sanitized = audit._sanitize_args({"content": long_value})
+
+        assert sanitized["content"] == long_value[: audit.MAX_STRING_LENGTH] + "...[truncated]"
+
     def test_log_redacts_sensitive_error_message(self, tmp_path: Path):
         """写入审计日志时会脱敏错误消息中的敏感值"""
         audit = AuditLogger(log_dir=tmp_path)
