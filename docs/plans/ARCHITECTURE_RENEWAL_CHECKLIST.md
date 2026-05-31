@@ -69,8 +69,8 @@
 - [ ] IP canonicalization 后再判断内网/保留地址
 
 ### P1-6 安全存储审计
-- [ ] 校验 PBKDF2 盐值：随机、独立、长度>=16 bytes
-- [ ] 旧数据迁移策略与兼容读取实现
+- [x] 校验 PBKDF2 盐值：随机、独立、长度>=16 bytes
+- [x] 旧数据迁移策略与兼容读取实现
 
 ### P1-7 MCP 运行权限最小化
 - [ ] `security_config.py` 定义 allowed_dirs / allowed_hosts
