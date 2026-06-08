@@ -329,6 +329,7 @@ from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
 from wechat_summarizer.presentation.gui.utils import shortcuts as shortcuts_module
+from wechat_summarizer.presentation.gui.utils import transition as transition_module
 from wechat_summarizer.presentation.gui.utils.accessibility import (
     AccessibilityHelper,
     FocusableElement,
@@ -638,6 +639,29 @@ from wechat_summarizer.presentation.gui.utils.shortcuts_models import default_sh
 from wechat_summarizer.presentation.gui.utils.shortcuts_panel import (
     ShortcutHelpPanel as SplitShortcutHelpPanel,
 )
+from wechat_summarizer.presentation.gui.utils.transition import (
+    EasingFunction,
+    PageRouter,
+    PageTransition,
+    TransitionConfig,
+    TransitionType,
+)
+from wechat_summarizer.presentation.gui.utils.transition_easing import (
+    Easing as SplitTransitionEasing,
+)
+from wechat_summarizer.presentation.gui.utils.transition_models import (
+    EasingFunction as SplitTransitionEasingFunction,
+)
+from wechat_summarizer.presentation.gui.utils.transition_models import (
+    TransitionConfig as SplitTransitionConfig,
+)
+from wechat_summarizer.presentation.gui.utils.transition_models import (
+    TransitionType as SplitTransitionType,
+)
+from wechat_summarizer.presentation.gui.utils.transition_page import (
+    PageTransition as SplitPageTransition,
+)
+from wechat_summarizer.presentation.gui.utils.transition_router import PageRouter as SplitPageRouter
 
 
 @pytest.mark.unit
@@ -1571,6 +1595,147 @@ def test_shortcuts_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_panel.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_transition_module_keeps_compatibility_exports() -> None:
+    assert transition_module.Easing is SplitTransitionEasing
+    assert transition_module.EasingFunction is SplitTransitionEasingFunction
+    assert transition_module.TransitionConfig is SplitTransitionConfig
+    assert transition_module.TransitionType is SplitTransitionType
+    assert transition_module.PageTransition is SplitPageTransition
+    assert transition_module.PageRouter is SplitPageRouter
+    assert EasingFunction is SplitTransitionEasingFunction
+    assert TransitionConfig is SplitTransitionConfig
+    assert TransitionType is SplitTransitionType
+    assert PageTransition is SplitPageTransition
+    assert PageRouter is SplitPageRouter
+
+
+@pytest.mark.unit
+def test_transition_models_and_easing_preserve_values() -> None:
+    config = TransitionConfig()
+
+    assert TransitionType.FADE.value == "fade"
+    assert TransitionType.SLIDE_LEFT.value == "slide_left"
+    assert TransitionType.SCALE_FADE.value == "scale_fade"
+    assert TransitionType.NONE.value == "none"
+    assert EasingFunction.EASE_OUT_CUBIC.value == "ease_out_cubic"
+    assert config.type is TransitionType.FADE
+    assert config.duration == 300
+    assert config.easing is EasingFunction.EASE_OUT_CUBIC
+    assert config.delay == 0
+    assert SplitTransitionEasing.linear(0.25) == 0.25
+    assert SplitTransitionEasing.ease_in(0.5) == 0.25
+    assert SplitTransitionEasing.ease_out(0.5) == 0.75
+    assert SplitTransitionEasing.get(EasingFunction.LINEAR)(0.4) == 0.4
+
+
+@pytest.mark.unit
+def test_page_transition_preserves_limits_and_instant_switch() -> None:
+    class FakeContainer:
+        def winfo_width(self) -> int:
+            return 300
+
+        def winfo_height(self) -> int:
+            return 200
+
+        def after(self, _delay: int, callback):  # type: ignore[no-untyped-def]
+            callback()
+            return "after-id"
+
+        def after_cancel(self, _animation_id: str) -> None:
+            self.cancelled = _animation_id
+
+    class FakePage:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, dict[str, object]]] = []
+
+        def place(self, **kwargs) -> None:  # type: ignore[no-untyped-def]
+            self.calls.append(("place", kwargs))
+
+        def place_forget(self) -> None:
+            self.calls.append(("place_forget", {}))
+
+        def lift(self) -> None:
+            self.calls.append(("lift", {}))
+
+        def lower(self) -> None:
+            self.calls.append(("lower", {}))
+
+    transition = PageTransition(
+        FakeContainer(),
+        TransitionConfig(duration=5000, delay=5000, easing=EasingFunction.LINEAR),
+    )
+    page = FakePage()
+    completed: list[str] = []
+
+    transition.transition_to(page, lambda: completed.append("done"), TransitionType.NONE)
+
+    assert transition.config.duration == PageTransition.MAX_DURATION
+    assert transition.config.delay == 1000
+    assert transition.get_current_page() is page
+    assert transition.is_animating() is False
+    assert completed == ["done"]
+    assert page.calls == [("place", {"x": 0, "y": 0, "relwidth": 1.0, "relheight": 1.0})]
+
+
+@pytest.mark.unit
+def test_page_router_preserves_history_and_reverse_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transitions: list[tuple[object, TransitionType | None]] = []
+
+    class FakeTransition:
+        def __init__(self, _container, _config):  # type: ignore[no-untyped-def]
+            pass
+
+        def transition_to(self, page, on_complete, transition_type=None):  # type: ignore[no-untyped-def]
+            transitions.append((page, transition_type))
+            on_complete()
+
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.utils.transition_router.PageTransition",
+        FakeTransition,
+    )
+    router = PageRouter(object(), TransitionConfig(type=TransitionType.SLIDE_LEFT))
+    events: list[tuple[str, str]] = []
+    page_a = object()
+    page_b = object()
+
+    router.register_page("a", page_a)
+    router.register_page("b", page_b)
+    router.on_route_change(lambda old, new: events.append((old, new)))
+
+    router.navigate_to("a", TransitionType.NONE)
+    router.navigate_to("b")
+    went_back = router.go_back()
+
+    assert went_back is True
+    assert router.get_current_route() == "a"
+    assert router.get_history() == ["b"]
+    assert transitions == [
+        (page_a, TransitionType.NONE),
+        (page_b, None),
+        (page_a, TransitionType.SLIDE_RIGHT),
+    ]
+    assert events == [("a", "b"), ("b", "a")]
+
+
+@pytest.mark.unit
+def test_transition_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition_easing.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition_router.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/transition_demo.py",
     ]
 
     for target in targets:
