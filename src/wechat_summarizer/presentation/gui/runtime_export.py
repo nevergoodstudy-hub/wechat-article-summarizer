@@ -7,14 +7,20 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
 from loguru import logger
 
 from ...shared.progress import BatchProgressTracker, ProgressInfo
-from .dialogs.batch_archive_export import BatchArchiveExportDialog
+from .dialogs import (
+    BatchArchiveExportDialog,
+    choose_batch_output_directory,
+    choose_export_file_path,
+    show_batch_export_success,
+    show_export_error,
+    show_export_options_dialog,
+    show_export_success,
+)
 from .styles.colors import ModernColors
 
 
@@ -26,40 +32,13 @@ def on_export(gui: Any) -> None:
     if not gui._check_export_dir_configured():
         return
 
-    export_window = ctk.CTkToplevel(gui.root)
-    export_window.title("导出选项")
-    export_window.geometry("400x350")
-    export_window.transient(gui.root)
-    ctk.CTkLabel(
-        export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")
-    ).pack(pady=20)
-
     def export_as(target: str) -> None:
-        export_window.destroy()
         if target == "word":
             gui._show_word_preview()
         else:
             do_export(gui, target)
 
-    for name, info in gui._exporter_info.items():
-        btn_text = f"{('✓' if info.available else '✗')} {name.upper()}"
-        if name == "word" and info.available:
-            btn_text += " (预览)"
-        btn = ctk.CTkButton(
-            export_window,
-            text=btn_text,
-            font=ctk.CTkFont(size=14),
-            height=45,
-            corner_radius=10,
-            fg_color=ModernColors.INFO if info.available else ModernColors.NEUTRAL_BTN_DISABLED,
-            state="normal" if info.available else "disabled",
-            command=lambda t=name: export_as(t),
-        )
-        btn.pack(fill="x", padx=30, pady=5)
-        if not info.available and info.reason:
-            ctk.CTkLabel(
-                export_window, text=info.reason, font=ctk.CTkFont(size=11), text_color="gray"
-            ).pack()
+    show_export_options_dialog(gui.root, gui._exporter_info, export_as)
 
 
 def do_export(gui: Any, target: str) -> None:
@@ -86,11 +65,12 @@ def do_export(gui: Any, target: str) -> None:
         if default_dir and Path(default_dir).exists():
             initial_dir = default_dir
 
-    path = filedialog.asksaveasfilename(
-        defaultextension=ext_info[0],
-        filetypes=[(ext_info[1], ext_info[2])],
-        initialfile=f"{gui.current_article.title[:30]}{ext_info[0]}",
-        initialdir=initial_dir,
+    path = choose_export_file_path(
+        extension=ext_info[0],
+        filetype_name=ext_info[1],
+        filetype_pattern=ext_info[2],
+        article_title=gui.current_article.title,
+        initial_dir=initial_dir,
     )
     if not path:
         logger.info("导出已取消")
@@ -126,10 +106,10 @@ def export_complete(gui: Any, success: bool, message: str) -> None:
     gui.export_btn.configure(state="normal")
     if success:
         gui._set_status("导出完成", ModernColors.SUCCESS)
-        messagebox.showinfo("成功", f"导出成功: {message}")
+        show_export_success(message)
     else:
         gui._set_status("导出失败", ModernColors.ERROR)
-        messagebox.showerror("错误", f"导出失败: {message}")
+        show_export_error(message)
 
 
 def on_batch_export(gui: Any) -> None:
@@ -216,7 +196,7 @@ def archive_export_complete(gui: Any, result: str, archive_format: str) -> None:
 
     gui.batch_status_label.configure(text=f"{format_name} 导出完成")
     logger.success(f"批量导出成功: {result}")
-    messagebox.showinfo("成功", f"导出成功: {result}")
+    show_export_success(result)
 
 
 def archive_export_error(gui: Any, error: str) -> None:
@@ -225,7 +205,7 @@ def archive_export_error(gui: Any, error: str) -> None:
 
     enable_export_buttons(gui)
     gui.batch_status_label.configure(text="压缩导出失败")
-    messagebox.showerror("错误", f"导出失败: {error}")
+    show_export_error(error)
 
 
 def on_batch_export_format(gui: Any, target: str) -> None:
@@ -240,7 +220,7 @@ def on_batch_export_format(gui: Any, target: str) -> None:
         gui._show_batch_word_preview()
         return
 
-    dir_path = filedialog.askdirectory(title="选择输出目录")
+    dir_path = choose_batch_output_directory()
     if not dir_path:
         return
 
@@ -325,7 +305,7 @@ def batch_export_complete(gui: Any, success_count: int, failure_count: int, dir_
     gui.batch_status_label.configure(text=f"导出完成: {success_count} 成功, {failure_count} 失败")
     total = success_count + failure_count
     logger.success(f"批量导出完成: {success_count}/{total}")
-    messagebox.showinfo("成功", f"导出完成: {success_count}/{total} 篇\n输出目录: {dir_path}")
+    show_batch_export_success(success_count, total, dir_path)
 
 
 def batch_export_error(gui: Any, error: str) -> None:
@@ -334,7 +314,7 @@ def batch_export_error(gui: Any, error: str) -> None:
 
     enable_export_buttons(gui)
     gui.batch_status_label.configure(text="导出失败")
-    messagebox.showerror("错误", f"导出失败: {error}")
+    show_export_error(error)
 
 
 def disable_export_buttons(gui: Any) -> None:

@@ -53,6 +53,8 @@
 
 > 最新证据：已新增 `dialogs/settings_dialogs.py`，将设置页默认导出目录选择、API 密钥清空确认、导出设置重置确认、缺失目录创建确认、目录缺失提示、开机启动错误和目录创建错误从 `pages/settings_page.py` 与 `settings_api_actions.py` 抽离到 dialogs 层，并通过 `dialogs/__init__.py` 统一导出；`settings_page.py` 与 `settings_api_actions.py` 已无直接 `messagebox/filedialog/askdirectory/askyesno/showerror/showwarning/showinfo` 命中；`tests/test_gui_settings_dialogs.py` 新增 dialogs re-export、目录选择 initialdir、确认/提示文本、页面/mixin 委托和行数目标测试。由于 `app_actions.py`、`runtime_batch.py`、`runtime_export.py`、`pages/history_page.py` 仍有直接弹窗/文件选择逻辑，`dialogs` 总项暂不勾选。
 
+> 最新证据：已新增 `dialogs/export_dialogs.py`，将 `runtime_export.py` 中的单篇导出格式选择窗口、单篇保存路径选择、批量输出目录选择、单篇/压缩导出成功失败提示和批量导出完成提示抽离到 dialogs 层，并通过 `dialogs/__init__.py` 统一导出；`runtime_export.py` 已无直接 `messagebox/filedialog/CTkToplevel/CTkButton/CTkLabel/askdirectory/asksaveasfilename/showinfo/showerror` 命中，保留导出流程、后台线程和进度 UI 编排；`tests/test_gui_export_dialogs.py` 新增 dialogs re-export、保存路径参数、批量目录/提示文本、导出选项窗口按钮回调、runtime 委托和行数目标测试。由于 `app_actions.py`、`runtime_batch.py`、`pages/history_page.py` 仍有直接弹窗/文件选择逻辑，`dialogs` 总项暂不勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
