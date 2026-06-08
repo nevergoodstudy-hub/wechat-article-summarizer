@@ -101,8 +101,10 @@
 
 ### P1-4 / P1-5 SSRF 补强
 - [ ] 重定向链每跳合法性校验
-- [ ] host、ip、cidr 黑白名单统一入口
-- [ ] IP canonicalization 后再判断内网/保留地址
+- [x] host、ip、cidr 黑白名单统一入口
+- [x] IP canonicalization 后再判断内网/保留地址
+
+> 证据：新增 `shared/utils/network_policy.py` 的 `NetworkAccessPolicy` 作为统一网络策略入口，将 host allowlist、blocked hostnames、blocked CIDR 与 IP canonicalization 收敛到同一对象；`mcp/security_config.py` 的 `is_host_allowed` 已通过 `get_network_access_policy()` 复用统一入口，`shared/utils/ssrf_protection.py` 的 DNS/IP 校验也改为通过 `NETWORK_POLICY` 执行。`NetworkAccessPolicy.canonicalize_ip()` 会先把 IPv6-mapped IPv4 规范化为 IPv4，再进入 `is_ip_blocked()`/`require_ip_allowed()` 判断；直接 IP 字面量、DNS 解析结果、替代 IP 表示法均经过该入口。`tests/test_network_policy.py` 覆盖 canonicalization、CIDR 阻断、替代 IP 表示法、精确/显式通配 host allowlist 与 blocked hostname 优先级；`tests/test_ssrf_protection.py` 与 `tests/test_security_config.py` 覆盖 SSRF 与 MCP 对统一入口的复用。相关测试 `tests/test_network_policy.py tests/test_ssrf_protection.py tests/test_security_config.py tests/test_dns_rebinding_integration.py` 共 80 个用例通过。由于导出/RSS 等普通 HTTP 调用面仍需继续收敛到 `safe_fetch*`，`重定向链每跳合法性校验` 暂不勾选。
 
 ### P1-6 安全存储审计
 - [x] 校验 PBKDF2 盐值：随机、独立、长度>=16 bytes

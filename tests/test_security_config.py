@@ -19,6 +19,7 @@ from wechat_summarizer.mcp.security_config import (
     get_max_summary_length,
     get_max_text_length,
     get_max_topic_length,
+    get_network_access_policy,
     is_confirmation_required,
     is_host_allowed,
     is_human_confirmation_valid,
@@ -82,6 +83,16 @@ class TestMCPSecurityConfig:
             assert is_host_allowed("api.example.com") is True
             assert is_host_allowed("deep.api.example.com") is True
             assert is_host_allowed("example.com") is False
+
+    @pytest.mark.unit
+    def test_network_policy_uses_configured_allowed_hosts(self) -> None:
+        """MCP 主机策略应由统一网络策略入口提供。"""
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["api.example.com"])
+            policy = get_network_access_policy()
+
+            assert policy.is_host_allowed("api.example.com") is True
+            assert policy.is_host_allowed("other.example.com") is False
 
     # ---- is_confirmation_required ----
 

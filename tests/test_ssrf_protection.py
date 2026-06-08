@@ -69,6 +69,9 @@ class TestIsIpBlocked:
         assert SSRFSafeTransport.is_ip_blocked("::ffff:127.0.0.1") is True
         assert SSRFSafeTransport.is_ip_blocked("::ffff:10.0.0.1") is True
         assert SSRFSafeTransport.is_ip_blocked("::ffff:192.168.1.1") is True
+        assert str(SSRFSafeTransport.NETWORK_POLICY.canonicalize_ip("::ffff:127.0.0.1")) == (
+            "127.0.0.1"
+        )
 
     @pytest.mark.parametrize(
         "ip",
@@ -122,7 +125,7 @@ class TestResolveAndValidate:
         with pytest.raises(SSRFBlockedError, match="Blocked IP"):
             SSRFSafeTransport.resolve_and_validate("10.0.0.1")
 
-    @pytest.mark.parametrize("host", ["2130706433", "0177.0.0.1"])
+    @pytest.mark.parametrize("host", ["2130706433", "0177.0.0.1", "0x7f.0.0.1"])
     def test_blocks_alternative_ip_notation(self, host: str):
         """阻断替代 IP 表示法（十进制整型/前导零）"""
         with pytest.raises(SSRFBlockedError, match="alternative IP notation"):

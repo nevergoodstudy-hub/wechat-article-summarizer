@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from ..shared.utils.network_policy import NetworkAccessPolicy
+
 # MCP 安全配置（可通过环境变量或配置文件覆盖）
 MCP_SECURITY_CONFIG: dict[str, Any] = {
     # 允许 MCP 工具访问的目录（相对路径和绝对路径均可）
@@ -75,7 +77,12 @@ def get_allowed_hosts() -> list[str]:
 
 def normalize_host(host: str) -> str:
     """Normalize a host name for allowlist comparisons."""
-    return host.strip().lower().rstrip(".")
+    return NetworkAccessPolicy.normalize_host(host)
+
+
+def get_network_access_policy() -> NetworkAccessPolicy:
+    """Build the MCP network policy from current security configuration."""
+    return NetworkAccessPolicy(allowed_hosts=tuple(get_allowed_hosts()))
 
 
 def is_host_allowed(host: str) -> bool:
@@ -84,22 +91,7 @@ def is_host_allowed(host: str) -> bool:
     Exact host names are supported by default. Entries prefixed with ``*.`` also
     allow their subdomains while excluding the bare parent domain.
     """
-    normalized_host = normalize_host(host)
-    if not normalized_host:
-        return False
-
-    for allowed in get_allowed_hosts():
-        normalized_allowed = normalize_host(allowed)
-        if not normalized_allowed:
-            continue
-        if normalized_allowed.startswith("*."):
-            suffix = normalized_allowed[1:]
-            if normalized_host.endswith(suffix) and normalized_host != normalized_allowed[2:]:
-                return True
-        elif normalized_host == normalized_allowed:
-            return True
-
-    return False
+    return get_network_access_policy().is_host_allowed(host)
 
 
 def get_int_limit(key: str) -> int:

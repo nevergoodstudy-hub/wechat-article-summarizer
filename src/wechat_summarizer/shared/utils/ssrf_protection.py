@@ -19,6 +19,13 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from loguru import logger
 
+from .network_policy import (
+    DEFAULT_BLOCKED_HOSTNAMES,
+    DEFAULT_BLOCKED_NETWORKS,
+    DEFAULT_NETWORK_POLICY,
+    NetworkPolicyError,
+)
+
 
 class SSRFBlockedError(Exception):
     """SSRF 防护拦截异常"""
@@ -29,83 +36,36 @@ class _SSRFSafeBase:
 
     # 封锁的 IP 范围（包括 IPv4 和 IPv6）
     BLOCKED_NETWORKS: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...] = (
-        ipaddress.ip_network("0.0.0.0/8"),
-        ipaddress.ip_network("10.0.0.0/8"),
-        ipaddress.ip_network("100.64.0.0/10"),
-        ipaddress.ip_network("127.0.0.0/8"),
-        ipaddress.ip_network("169.254.0.0/16"),
-        ipaddress.ip_network("172.16.0.0/12"),
-        ipaddress.ip_network("192.0.0.0/24"),
-        ipaddress.ip_network("192.0.2.0/24"),
-        ipaddress.ip_network("192.88.99.0/24"),
-        ipaddress.ip_network("192.168.0.0/16"),
-        ipaddress.ip_network("198.18.0.0/15"),
-        ipaddress.ip_network("198.51.100.0/24"),
-        ipaddress.ip_network("203.0.113.0/24"),
-        ipaddress.ip_network("224.0.0.0/4"),
-        ipaddress.ip_network("240.0.0.0/4"),
-        ipaddress.ip_network("255.255.255.255/32"),
-        ipaddress.ip_network("::1/128"),
-        ipaddress.ip_network("fc00::/7"),
-        ipaddress.ip_network("fe80::/10"),
-        ipaddress.ip_network("ff00::/8"),
-        ipaddress.ip_network("::ffff:0.0.0.0/96"),
+        DEFAULT_BLOCKED_NETWORKS
     )
-
-    BLOCKED_HOSTNAMES: frozenset[str] = frozenset(
-        {
-            "localhost",
-            "instance-data",
-            "metadata.google.internal",
-            "metadata.internal",
-            "169.254.169.254",
-            "fd00:ec2::254",
-        }
-    )
+    BLOCKED_HOSTNAMES: frozenset[str] = DEFAULT_BLOCKED_HOSTNAMES
+    NETWORK_POLICY = DEFAULT_NETWORK_POLICY
 
     @classmethod
     def is_ip_blocked(cls, ip_str: str) -> bool:
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            return True
-
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            return True
-
-        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-            return cls.is_ip_blocked(str(ip.ipv4_mapped))
-
-        return any(ip in network for network in cls.BLOCKED_NETWORKS)
+        return cls.NETWORK_POLICY.is_ip_blocked(ip_str)
 
     @classmethod
     def _looks_like_alt_ip_notation(cls, hostname: str) -> bool:
-        # 纯数字（十进制整型 IPv4）
-        if hostname.isdigit():
-            return True
-
-        # 可疑点分十进制表示（如 0177.0.0.1）
-        parts = hostname.split(".")
-        if len(parts) == 4 and all(part.isdigit() for part in parts):
-            return any(len(part) > 1 and part.startswith("0") for part in parts)
-
-        return False
+        return cls.NETWORK_POLICY.looks_like_alternative_ip_notation(hostname)
 
     @classmethod
     def resolve_and_validate(cls, hostname: str, port: int | None = None) -> list[str]:
-        if hostname.lower() in cls.BLOCKED_HOSTNAMES:
-            raise SSRFBlockedError(f"Blocked hostname: {hostname}")
-
-        if cls._looks_like_alt_ip_notation(hostname):
-            raise SSRFBlockedError(f"Blocked alternative IP notation: {hostname}")
+        try:
+            cls.NETWORK_POLICY.require_host_allowed(hostname)
+        except ValueError as e:
+            raise SSRFBlockedError(str(e)) from e
 
         try:
-            ip = ipaddress.ip_address(hostname)
-            if cls.is_ip_blocked(str(ip)):
-                raise SSRFBlockedError(f"Blocked IP address: {ip}")
-            return [str(ip)]
+            ip = cls.NETWORK_POLICY.canonicalize_ip(hostname)
         except ValueError:
             pass
+        else:
+            try:
+                cls.NETWORK_POLICY.require_ip_allowed(str(ip))
+            except NetworkPolicyError as e:
+                raise SSRFBlockedError(str(e)) from e
+            return [str(ip)]
 
         try:
             addr_infos = socket.getaddrinfo(
@@ -120,10 +80,11 @@ class _SSRFSafeBase:
         validated_ips: list[str] = []
         for _family, _type, _proto, _canonname, sockaddr in addr_infos:
             ip_str = str(sockaddr[0])
-            if cls.is_ip_blocked(ip_str):
+            if cls.NETWORK_POLICY.is_ip_blocked(ip_str):
                 raise SSRFBlockedError(f"DNS resolved {hostname} to blocked IP: {ip_str}")
-            if ip_str not in validated_ips:
-                validated_ips.append(ip_str)
+            canonical_ip = str(cls.NETWORK_POLICY.canonicalize_ip(ip_str))
+            if canonical_ip not in validated_ips:
+                validated_ips.append(canonical_ip)
 
         if not validated_ips:
             raise SSRFBlockedError(f"No valid IP addresses for: {hostname}")
