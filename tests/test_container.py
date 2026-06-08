@@ -22,6 +22,36 @@ class TestContainer:
     """Container 单元测试（使用最小化容器，无外部依赖）"""
 
     @pytest.mark.unit
+    def test_container_constructor_is_lazy(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """创建容器本身不应初始化外部适配器或插件。"""
+        import wechat_summarizer.infrastructure.config.container as container_module
+
+        def fail_if_called(*args, **kwargs):
+            raise AssertionError("lazy dependency builder should not run during construction")
+
+        for builder_name in [
+            "build_archive_exporter",
+            "build_embedders",
+            "build_exporters",
+            "build_knowledge_graph_components",
+            "build_scrapers",
+            "build_storage",
+            "build_summarizers",
+            "build_vector_stores",
+        ]:
+            monkeypatch.setattr(container_module, builder_name, fail_if_called)
+        monkeypatch.setattr(container_module, "PluginLoader", fail_if_called)
+
+        container = Container()
+
+        assert container._scrapers is None
+        assert container._summarizers is None
+        assert container._exporters is None
+        assert container._storage is None
+        assert container._embedders is None
+        assert container._vector_stores is None
+
+    @pytest.mark.unit
     def test_container_creation(self) -> None:
         """测试容器创建"""
         container = Container()
@@ -152,6 +182,49 @@ class TestContainerIntegration:
 
 class TestGlobalContainer:
     """全局容器测试"""
+
+    @pytest.mark.unit
+    def test_unit_tests_use_minimal_container_override_by_default(self) -> None:
+        """普通单元测试默认使用最小化容器，避免外部依赖。"""
+        container = get_container()
+
+        assert container._scrapers == []
+        assert container._summarizers == {}
+        assert container._exporters == {}
+        assert container._storage is None
+        assert container._embedders == {}
+        assert container._vector_stores == {}
+
+    @pytest.mark.unit
+    def test_get_container_creation_is_lazy(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """全局容器初次创建不应初始化外部适配器。"""
+        import wechat_summarizer.infrastructure.config.container as container_module
+
+        def fail_if_called(*args, **kwargs):
+            raise AssertionError("lazy dependency builder should not run during get_container")
+
+        for builder_name in [
+            "build_archive_exporter",
+            "build_embedders",
+            "build_exporters",
+            "build_knowledge_graph_components",
+            "build_scrapers",
+            "build_storage",
+            "build_summarizers",
+            "build_vector_stores",
+        ]:
+            monkeypatch.setattr(container_module, builder_name, fail_if_called)
+        monkeypatch.setattr(container_module, "PluginLoader", fail_if_called)
+
+        reset_container()
+        container = get_container()
+
+        assert container._scrapers is None
+        assert container._summarizers is None
+        assert container._exporters is None
+        assert container._storage is None
+        assert container._embedders is None
+        assert container._vector_stores is None
 
     @pytest.mark.unit
     def test_get_container_singleton(self) -> None:

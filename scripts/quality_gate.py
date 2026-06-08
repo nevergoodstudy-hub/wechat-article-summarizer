@@ -45,6 +45,10 @@ def run_architecture() -> None:
     run([sys.executable, "scripts/check_architecture_boundaries.py"])
 
 
+def run_test_executability() -> None:
+    run([sys.executable, "scripts/check_test_executability.py", "--min-ratio", "0.90"])
+
+
 def run_tests() -> None:
     run(
         [
@@ -86,7 +90,9 @@ def run_security_smoke() -> None:
     for now to keep rollout incremental while still enabling a unified entry.
     """
 
-    rc = run([sys.executable, "-m", "pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5})
+    rc = run(
+        [sys.executable, "-m", "pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5}
+    )
     if rc == 5:
         print("[quality-gate] No SSRF/MCP smoke tests collected yet; treated as pass.")
 
@@ -112,6 +118,7 @@ def main() -> int:
             run_mypy()
         elif args.mode == "architecture":
             run_architecture()
+            run_test_executability()
         elif args.mode == "test":
             run_tests()
         elif args.mode == "security":
@@ -121,6 +128,7 @@ def main() -> int:
         else:
             run_lint()
             run_architecture()
+            run_test_executability()
             run_mypy()
             run_tests()
             run_security_smoke()

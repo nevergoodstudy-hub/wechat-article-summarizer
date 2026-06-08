@@ -18,10 +18,12 @@
 ## 1. P0 紧急修复（先做，预计 5~7 天）
 
 ### P0-1 容器与测试阻断治理
-- [ ] 将容器初始化彻底改为惰性加载（禁止导入即初始化外部依赖）
-- [ ] 提供测试容器覆盖入口（`tests/conftest.py` 统一注入）
-- [ ] 外部依赖（LLM/httpx/chromadb）在测试默认 mock/stub
-- [ ] 产物：测试可执行率提升到 >= 90%
+- [x] 将容器初始化彻底改为惰性加载（禁止导入即初始化外部依赖）
+- [x] 提供测试容器覆盖入口（`tests/conftest.py` 统一注入）
+- [x] 外部依赖（LLM/httpx/chromadb）在测试默认 mock/stub
+- [x] 产物：测试可执行率提升到 >= 90%
+
+> 证据：`tests/test_container.py` 覆盖构造/全局容器惰性加载与默认最小化测试容器；`scripts/check_test_executability.py` 统计默认 `not integration` 测试可执行率，当前 784/804 = 97.5%。
 
 ### P0-2 GUI 上帝对象彻底拆分
 - [ ] 保持 `presentation/gui/app.py` 仅为薄入口（< 150 行）
