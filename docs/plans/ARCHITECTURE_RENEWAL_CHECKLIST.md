@@ -45,6 +45,8 @@
 
 > 最新证据：已将 `viewmodels/single_process_viewmodel.py` 的显示模型、领域对象到显示模型映射、摘要器/导出器可用性顺序与不可用原因拆到 `single_process_models.py`、`single_process_mapping.py`、`single_process_availability.py`，主 ViewModel 降至 354 行，拆分后相关文件分别为 33/51/66 行，并保留 `SingleProcessViewModel`、`ArticleDisplayModel`、`SummaryDisplayModel` 旧公开导出；`tests/test_gui_single_process_viewmodel_composition.py` 新增兼容导出、文章/摘要转换、可用性顺序/原因和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 4 个 Python 文件 >=400 行（最高 `styles/typography.py` 420 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
+> 最新证据：已将 `styles/typography.py` 的字体 token、字体族栈、平台字体管理器、预定义文本样式/便捷函数和中文字体检测拆到 `typography_tokens.py`、`typography_families.py`、`typography_manager.py`、`typography_styles.py`、`typography_chinese.py`，兼容入口降至 23 行，拆分后相关文件分别为 75/45/79/63/53 行，并保留 `FontWeight`、`FontSize`、`LineHeight`、`LetterSpacing`、`FontFamily`、`Typography`、`TextStyles`、`ChineseFonts`、`get_font`、`get_font_family`、`get_text_style` 旧公开导出；`tests/test_gui_typography_composition.py` 新增兼容导出、token/字体族值、平台字体选择、便捷函数、中文字体缓存 fallback 和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 3 个 Python 文件 >=400 行（最高 `components/graph_viewer.py` 419 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
