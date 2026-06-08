@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wechat_summarizer.mcp.responses import RATE_LIMIT_ERROR_CODE
+from wechat_summarizer.mcp.responses import AUTHORIZATION_ERROR_CODE, RATE_LIMIT_ERROR_CODE
 from wechat_summarizer.mcp.security import (
     AuditEntry,
     AuditLogger,
@@ -373,6 +373,54 @@ class TestRequirePermission:
 
         mgr = get_security_manager()
         assert mgr.tool_permissions["write_tool"] == PermissionLevel.WRITE
+
+    def test_decorator_blocks_dangerous_operation_without_human_confirmation(self):
+        """危险操作缺少人工确认时直接返回授权错误。"""
+
+        @require_permission(PermissionLevel.WRITE)
+        async def write_tool() -> dict:
+            return {"done": True}
+
+        result = asyncio.run(write_tool())
+
+        assert result["success"] is False
+        assert result["isError"] is True
+        assert result["error_code"] == AUTHORIZATION_ERROR_CODE
+        assert result["error_type"] == "authorization"
+        assert "Human confirmation required" in result["error"]
+
+    def test_decorator_allows_dangerous_operation_with_human_confirmation(self):
+        """危险操作带人工确认后可以执行，确认标志不传入业务函数。"""
+
+        @require_permission(PermissionLevel.WRITE)
+        async def write_tool(payload: str) -> dict:
+            return {"done": True, "payload": payload}
+
+        result = asyncio.run(write_tool(payload="ok", human_confirmed=True))
+
+        assert result == {"done": True, "payload": "ok"}
+
+    def test_decorator_accepts_legacy_confirmed_alias(self):
+        """confirmed 兼容别名也可作为人工确认开关。"""
+
+        @require_permission(PermissionLevel.ADMIN, confirmation_operation="delete")
+        async def admin_delete_tool() -> dict:
+            return {"deleted": True}
+
+        result = asyncio.run(admin_delete_tool(confirmed=True))
+
+        assert result == {"deleted": True}
+
+    def test_decorator_does_not_require_confirmation_for_read_tools(self):
+        """只读工具不需要人工确认。"""
+
+        @require_permission(PermissionLevel.READ)
+        async def read_tool() -> dict:
+            return {"read": True}
+
+        result = asyncio.run(read_tool())
+
+        assert result == {"read": True}
 
     def test_decorator_rate_limited(self):
         """装饰器集成速率限制"""

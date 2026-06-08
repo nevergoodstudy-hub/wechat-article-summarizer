@@ -110,8 +110,10 @@
 
 ### P1-7 MCP 运行权限最小化
 - [x] `security_config.py` 定义 allowed_dirs / allowed_hosts
-- [ ] 危险操作增加人工确认开关（HITL）
+- [x] 危险操作增加人工确认开关（HITL）
 - [x] 远程监听默认拒绝，必须显式开启
+
+> 证据：`mcp/security.py` 的 `require_permission` 装饰器已接入 `security_config.is_human_confirmation_valid`，默认按权限操作名触发 HITL，支持 `human_confirmed=True` 与兼容别名 `confirmed=True`，未确认的危险 `write/delete/export` 操作返回统一 `authorization` 错误并写入审计；确认标志会从业务函数参数中剥离，避免工具签名漂移。`tests/test_mcp.py::TestRequirePermission` 覆盖未确认拒绝、确认后执行、`confirmed` 兼容别名与 READ 工具免确认；MCP 安全相关测试 `tests/test_mcp.py tests/test_mcp_toolsets.py tests/test_mcp_server_composition.py tests/test_security_config.py` 共 70 个用例通过。官方 MCP 安全实践强调 tool 输入验证、访问控制、速率限制与审计，tool annotations 只是提示而非强制安全边界，因此本项采用服务端装饰器硬拦截。
 
 ### P1-8 测试隔离改造
 - [x] 移除跨测试共享可变状态
