@@ -11,6 +11,41 @@ from wechat_summarizer.domain.entities import Article
 from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
 from wechat_summarizer.presentation.gui import app as gui_app
 from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
+from wechat_summarizer.presentation.gui.assets import icons as icons_module
+from wechat_summarizer.presentation.gui.assets.icons import (
+    ICON_PATHS,
+    IconManager,
+    IconSize,
+    IconStyle,
+    SVGPathParser,
+    get_icon,
+    get_icon_tk,
+    list_icons,
+)
+from wechat_summarizer.presentation.gui.assets.icons_facade import (
+    get_icon as split_get_icon,
+)
+from wechat_summarizer.presentation.gui.assets.icons_facade import (
+    get_icon_tk as split_get_icon_tk,
+)
+from wechat_summarizer.presentation.gui.assets.icons_facade import (
+    list_icons as split_list_icons,
+)
+from wechat_summarizer.presentation.gui.assets.icons_manager import (
+    IconManager as SplitIconManager,
+)
+from wechat_summarizer.presentation.gui.assets.icons_models import (
+    IconSize as SplitIconSize,
+)
+from wechat_summarizer.presentation.gui.assets.icons_models import (
+    IconStyle as SplitIconStyle,
+)
+from wechat_summarizer.presentation.gui.assets.icons_parser import (
+    SVGPathParser as SplitSVGPathParser,
+)
+from wechat_summarizer.presentation.gui.assets.icons_paths import (
+    ICON_PATHS as SPLIT_ICON_PATHS,
+)
 from wechat_summarizer.presentation.gui.components import border as border_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
 from wechat_summarizer.presentation.gui.components.border import (
@@ -438,6 +473,59 @@ def test_run_gui_uses_injected_dependencies(monkeypatch: pytest.MonkeyPatch) -> 
     assert calls["container"] is sentinel_container
     assert calls["settings"] is sentinel_settings
     assert calls["ran"] is True
+
+
+@pytest.mark.unit
+def test_icon_module_keeps_compatibility_exports() -> None:
+    assert icons_module.IconManager is SplitIconManager
+    assert icons_module.IconSize is SplitIconSize
+    assert icons_module.IconStyle is SplitIconStyle
+    assert icons_module.SVGPathParser is SplitSVGPathParser
+    assert icons_module.ICON_PATHS is SPLIT_ICON_PATHS
+    assert icons_module.get_icon is split_get_icon
+    assert icons_module.get_icon_tk is split_get_icon_tk
+    assert icons_module.list_icons is split_list_icons
+    assert IconManager is SplitIconManager
+    assert IconSize is SplitIconSize
+    assert IconStyle is SplitIconStyle
+    assert SVGPathParser is SplitSVGPathParser
+    assert ICON_PATHS is SPLIT_ICON_PATHS
+    assert get_icon is split_get_icon
+    assert get_icon_tk is split_get_icon_tk
+    assert list_icons is split_list_icons
+
+
+@pytest.mark.unit
+def test_icon_library_preserves_models_paths_and_parser_behavior() -> None:
+    available_icons = set(list_icons())
+    parsed_commands = SVGPathParser.parse("M0 0 L10 10 Z")
+
+    assert IconSize.MEDIUM.value == 24
+    assert IconStyle.OUTLINED.value == "outlined"
+    assert {"save", "settings", "today"}.issubset(available_icons)
+    assert [command for command, _points in parsed_commands] == ["move", "line", "close"]
+    assert IconManager._validate_color("#fff") is True
+    assert IconManager._validate_color("#123abc") is True
+    assert IconManager._validate_color("rgb(255, 255, 255)") is False
+    assert IconManager._parse_color("#fff") == (255, 255, 255, 255)
+
+
+@pytest.mark.unit
+def test_icon_asset_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_paths.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_runtime.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_parser.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_renderer.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/assets/icons_facade.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
 
 
 @pytest.mark.unit
