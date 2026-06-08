@@ -48,6 +48,7 @@ from wechat_summarizer.presentation.gui.assets.icons_paths import (
 )
 from wechat_summarizer.presentation.gui.components import border as border_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
+from wechat_summarizer.presentation.gui.components import select as select_module
 from wechat_summarizer.presentation.gui.components import sidebar as sidebar_module
 from wechat_summarizer.presentation.gui.components.border import (
     Divider,
@@ -170,6 +171,25 @@ from wechat_summarizer.presentation.gui.components.modal_factory import (
 )
 from wechat_summarizer.presentation.gui.components.modal_models import (
     ModalSize as SplitModalSize,
+)
+from wechat_summarizer.presentation.gui.components.select import (
+    ModernSelect,
+    SelectMode,
+    SelectOption,
+    create_select,
+)
+from wechat_summarizer.presentation.gui.components.select_dropdown import SelectDropdownMixin
+from wechat_summarizer.presentation.gui.components.select_factory import (
+    create_select as split_create_select,
+)
+from wechat_summarizer.presentation.gui.components.select_models import (
+    SelectMode as SplitSelectMode,
+)
+from wechat_summarizer.presentation.gui.components.select_models import (
+    SelectOption as SplitSelectOption,
+)
+from wechat_summarizer.presentation.gui.components.select_modern import (
+    ModernSelect as SplitModernSelect,
 )
 from wechat_summarizer.presentation.gui.components.sidebar import (
     CollapsibleSidebar,
@@ -822,6 +842,44 @@ def test_input_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_textarea.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_password.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_factories.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_select_module_keeps_compatibility_exports_and_composition() -> None:
+    option = SelectOption(value="markdown", label="Markdown", disabled=True)
+
+    assert select_module.ModernSelect is SplitModernSelect
+    assert select_module.SelectMode is SplitSelectMode
+    assert select_module.SelectOption is SplitSelectOption
+    assert select_module.create_select is split_create_select
+    assert ModernSelect is SplitModernSelect
+    assert SelectMode is SplitSelectMode
+    assert SelectOption is SplitSelectOption
+    assert create_select is split_create_select
+    assert SelectDropdownMixin in ModernSelect.__mro__
+    assert SelectMode.SINGLE.value == "single"
+    assert SelectMode.MULTIPLE.value == "multiple"
+    assert option.value == "markdown"
+    assert option.label == "Markdown"
+    assert option.disabled is True
+    assert ModernSelect.MAX_VISIBLE_OPTIONS == 8
+    assert ModernSelect.MAX_OPTIONS == 10000
+
+
+@pytest.mark.unit
+def test_select_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select_dropdown.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select_modern.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/select_factory.py",
     ]
 
     for target in targets:
