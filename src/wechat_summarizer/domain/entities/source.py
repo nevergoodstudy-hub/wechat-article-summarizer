@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from ..time import utc_now
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """来源类型"""
 
     WECHAT = "wechat"  # 微信公众号

@@ -9,7 +9,7 @@
 前置要求:
 1. 安装Windows SDK (包含makeappx.exe)
 2. 安装代码签名证书 (用于正式发布)
-3. Python 3.10+
+3. Python 3.11+
 
 构建流程:
 1. 验证环境 (Python版本, Windows SDK)
@@ -85,8 +85,8 @@ def check_environment() -> bool:
 
     # Python版本检查
     py_version = sys.version_info
-    if py_version.major < 3 or (py_version.major == 3 and py_version.minor < 10):
-        print_status("❌", f"Python 3.10+ required, got {py_version.major}.{py_version.minor}")
+    if py_version.major < 3 or (py_version.major == 3 and py_version.minor < 11):
+        print_status("❌", f"Python 3.11+ required, got {py_version.major}.{py_version.minor}")
         return False
     print_status("✓", f"Python {py_version.major}.{py_version.minor}.{py_version.micro}")
 

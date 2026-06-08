@@ -88,9 +88,9 @@
 ### P1-2 并发模型升级
 - [x] 批量并发由 `asyncio.gather` 迁移到 `TaskGroup`
 - [x] 增加并发限流（Semaphore）
-- [ ] 引入 `except*` 处理 ExceptionGroup
+- [x] 引入 `except*` 处理 ExceptionGroup
 
-> 注：项目当前仍支持 Python 3.10，主代码暂不能直接使用 `except*` 语法；本轮已通过 `StructuredConcurrencyError` 对 Python 3.11+ 原生 `ExceptionGroup` 做兼容展开，待版本下限提升后再完成字面 `except*` 迁移。
+> 证据：项目运行下限已提升为 Python 3.11+（`pyproject.toml`、CI 矩阵、README/入门/Windows 构建文档和构建脚本均已同步），`shared/utils/structured_concurrency.py` 删除 Python 3.10 fallback，直接使用原生 `asyncio.TaskGroup`，并通过 `except* Exception as exc_group` 处理 `ExceptionGroup` 后包装为稳定的 `StructuredConcurrencyError`；`tests/test_structured_concurrency.py` 覆盖顺序返回、Semaphore 限流、ExceptionGroup 叶子异常展开，并用 AST 锁定 `TryStar` 语法节点，防止退回普通 `except`。
 
 ### P1-3 MCP 审计日志脱敏
 - [x] 审计日志实现递归脱敏（dict/list/string）
@@ -172,7 +172,7 @@
 4. [x] P0-2 GUI 解耦
 5. [x] P1-1 边界守卫
 6. [x] P1-3 审计脱敏
-7. [ ] P1-2 TaskGroup 迁移
+7. [x] P1-2 TaskGroup 迁移
 8. [ ] P1-8 测试隔离
 9. [ ] P2 质量与 CI 平台化
 10. [ ] P3 持续优化

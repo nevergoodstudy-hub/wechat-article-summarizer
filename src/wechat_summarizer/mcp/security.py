@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from functools import wraps
 from pathlib import Path
 from threading import Lock
@@ -26,7 +26,7 @@ from .responses import rate_limit_error_response
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class PermissionLevel(str, Enum):
+class PermissionLevel(StrEnum):
     """权限级别"""
 
     READ = "read"  # 只读（查询、获取信息）

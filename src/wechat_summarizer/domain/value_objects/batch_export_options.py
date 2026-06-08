@@ -6,11 +6,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     """导出格式"""
 
     TXT = "txt"  # 纯文本，每行一个链接
@@ -19,7 +19,7 @@ class ExportFormat(str, Enum):
     MARKDOWN = "markdown"  # Markdown格式，带标题链接
 
 
-class LinkFormat(str, Enum):
+class LinkFormat(StrEnum):
     """链接格式"""
 
     RAW = "raw"  # 原始链接

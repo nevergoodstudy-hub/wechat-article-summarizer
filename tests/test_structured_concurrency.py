@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -63,3 +65,44 @@ async def test_run_structured_tasks_wraps_exception_groups() -> None:
         await run_structured_tasks([fail(), wait()])
 
     assert any(isinstance(error, ValueError) for error in exc_info.value.errors)
+
+
+@pytest.mark.unit
+async def test_run_structured_tasks_flattens_exception_group_leaves() -> None:
+    """Sibling failures should be exposed as leaf exceptions from ExceptionGroup."""
+
+    started = asyncio.Event()
+
+    async def fail_fast() -> None:
+        raise ValueError("fast")
+
+    async def fail_after_cancellation() -> None:
+        started.set()
+        try:
+            await asyncio.sleep(1)
+        finally:
+            raise RuntimeError("cleanup")
+
+    with pytest.raises(StructuredConcurrencyError) as exc_info:
+        await run_structured_tasks([fail_after_cancellation(), fail_fast()])
+
+    assert started.is_set()
+    error_types = {type(error) for error in exc_info.value.errors}
+    assert ValueError in error_types
+    assert RuntimeError in error_types
+
+
+@pytest.mark.unit
+def test_structured_concurrency_uses_except_star() -> None:
+    """P1-2 requires native except* handling for TaskGroup ExceptionGroup."""
+    source_path = (
+        Path(__file__).parents[1]
+        / "src"
+        / "wechat_summarizer"
+        / "shared"
+        / "utils"
+        / "structured_concurrency.py"
+    )
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+
+    assert any(isinstance(node, ast.TryStar) for node in ast.walk(tree))

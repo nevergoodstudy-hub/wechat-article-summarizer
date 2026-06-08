@@ -216,7 +216,7 @@ OUTPUT_DIR=./output
 
 ## 📦 依赖
 
-- Python 3.10+
+- Python 3.11+
 - httpx - HTTP 客户端
 - beautifulsoup4 - HTML 解析
 - customtkinter - 现代 GUI

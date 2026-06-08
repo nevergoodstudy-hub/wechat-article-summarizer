@@ -1,9 +1,8 @@
-"""Structured concurrency helpers with Python 3.10 compatibility."""
+"""Structured concurrency helpers backed by native Python 3.11 TaskGroup."""
 
 from __future__ import annotations
 
 import asyncio
-import builtins
 from collections.abc import Callable, Coroutine, Iterable
 from typing import Any, TypeVar
 
@@ -21,11 +20,10 @@ class StructuredConcurrencyError(Exception):
 
 
 def _flatten_exception_group(error: BaseException) -> list[BaseException]:
-    """Flatten native ExceptionGroup/BaseExceptionGroup without 3.11-only syntax."""
-    group_type = getattr(builtins, "BaseExceptionGroup", None)
-    if group_type is not None and isinstance(error, group_type):
+    """Flatten native ExceptionGroup/BaseExceptionGroup into leaf exceptions."""
+    if isinstance(error, BaseExceptionGroup):
         flattened: list[BaseException] = []
-        for nested in getattr(error, "exceptions", ()):
+        for nested in error.exceptions:
             flattened.extend(_flatten_exception_group(nested))
         return flattened
     return [error]
@@ -36,59 +34,21 @@ async def run_structured_tasks(
 ) -> list[T]:
     """Run child tasks with TaskGroup semantics and ordered results.
 
-    Python 3.11+ uses native ``asyncio.TaskGroup``. Python 3.10 falls back to
-    a small compatibility runner that cancels pending siblings on first error.
+    Native ``asyncio.TaskGroup`` cancels pending siblings on first failure and
+    raises an ``ExceptionGroup``. ``except*`` keeps that path explicit while the
+    public helper still exposes a stable ``StructuredConcurrencyError``.
     """
     coroutine_list = list(coroutines)
     if not coroutine_list:
         return []
 
-    if hasattr(asyncio, "TaskGroup"):
-        tasks: list[asyncio.Task[T]] = []
-        try:
-            async with asyncio.TaskGroup() as task_group:
-                tasks = [task_group.create_task(coroutine) for coroutine in coroutine_list]
-        except Exception as exc:
-            raise StructuredConcurrencyError(_flatten_exception_group(exc)) from exc
-        return [task.result() for task in tasks]
-
-    return await _run_structured_tasks_compat(coroutine_list)
-
-
-async def _run_structured_tasks_compat(
-    coroutines: list[Coroutine[Any, Any, T]],
-) -> list[T]:
-    """Python 3.10-compatible TaskGroup subset."""
-    tasks = [asyncio.create_task(coroutine) for coroutine in coroutines]
-
+    tasks: list[asyncio.Task[T]] = []
     try:
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
-        errors: list[BaseException] = []
-
-        for task in done:
-            if task.cancelled():
-                continue
-            error = task.exception()
-            if error is not None:
-                errors.append(error)
-
-        if errors:
-            for task in pending:
-                task.cancel()
-            if pending:
-                await asyncio.gather(*pending, return_exceptions=True)
-            raise StructuredConcurrencyError(errors)
-
-        if pending:
-            await asyncio.gather(*pending)
-
-        return [task.result() for task in tasks]
-    except BaseException:
-        for task in tasks:
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
-        raise
+        async with asyncio.TaskGroup() as task_group:
+            tasks = [task_group.create_task(coroutine) for coroutine in coroutine_list]
+    except* Exception as exc_group:
+        raise StructuredConcurrencyError(_flatten_exception_group(exc_group)) from exc_group
+    return [task.result() for task in tasks]
 
 
 async def run_limited_tasks(

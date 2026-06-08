@@ -144,8 +144,8 @@ def step_check_environment() -> bool:
     # Python 版本
     ver = sys.version_info
     print_status("🐍", f"Python {ver.major}.{ver.minor}.{ver.micro}")
-    if ver < (3, 10):
-        print_status("❌", "需要 Python >= 3.10")
+    if ver < (3, 11):
+        print_status("❌", "需要 Python >= 3.11")
         return False
 
     # 项目结构
