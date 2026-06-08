@@ -18,6 +18,18 @@ from wechat_summarizer.presentation.gui.components.border import (
     create_divider,
     create_gradient_border,
 )
+from wechat_summarizer.presentation.gui.components.datagrid import (
+    Column,
+    DataGrid,
+    VirtualScrollContainer,
+)
+from wechat_summarizer.presentation.gui.components.datagrid_data import DataGridDataMixin
+from wechat_summarizer.presentation.gui.components.datagrid_header import DataGridHeaderMixin
+from wechat_summarizer.presentation.gui.components.datagrid_rows import DataGridRowsMixin
+from wechat_summarizer.presentation.gui.components.datagrid_toolbar import DataGridToolbarMixin
+from wechat_summarizer.presentation.gui.components.datagrid_virtual import (
+    VirtualScrollContainer as SplitVirtualScrollContainer,
+)
 from wechat_summarizer.presentation.gui.frames import (
     HomeActionCardsFrame,
     HomeInfoRowFrame,
@@ -187,6 +199,38 @@ def test_border_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border_draw.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/divider.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_datagrid_keeps_compatibility_exports_and_composition() -> None:
+    column = Column(key="title", label="标题", width=120)
+
+    assert column.key == "title"
+    assert column.sortable is True
+    assert VirtualScrollContainer is SplitVirtualScrollContainer
+    assert DataGridToolbarMixin in DataGrid.__mro__
+    assert DataGridHeaderMixin in DataGrid.__mro__
+    assert DataGridRowsMixin in DataGrid.__mro__
+    assert DataGridDataMixin in DataGrid.__mro__
+    assert DataGrid.MAX_ROWS == 50000
+
+
+@pytest.mark.unit
+def test_datagrid_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_virtual.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_header.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_rows.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_toolbar.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_data.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_demo.py",
     ]
 
     for target in targets:
