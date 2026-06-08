@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -59,13 +58,15 @@ class TestRateLimiter:
     def test_refill_restores_tokens(self):
         """等待后令牌自动补充"""
         limiter = RateLimiter(max_tokens=10, refill_rate=1000.0)
-        # 耗尽所有令牌
-        limiter.consume(10)
-        assert limiter.consume(1) is False
+        base_time = 1_000.0
+        limiter._last_refill = base_time
 
-        # 等待一小段时间让令牌补充
-        time.sleep(0.02)
-        assert limiter.consume(1) is True
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time):
+            assert limiter.consume(10) is True
+            assert limiter.consume(1) is False
+
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time + 0.02):
+            assert limiter.consume(1) is True
 
     def test_refill_does_not_exceed_max(self):
         """补充不会超过桶容量"""

@@ -33,12 +33,12 @@ def run(cmd: list[str], *, allow_nonzero: set[int] | None = None) -> int:
 
 
 def run_lint() -> None:
-    run(["ruff", "check", "src/", "tests/"])
-    run(["ruff", "format", "--check", "src/", "tests/"])
+    run([sys.executable, "-m", "ruff", "check", "src/", "tests/"])
+    run([sys.executable, "-m", "ruff", "format", "--check", "src/", "tests/"])
 
 
 def run_mypy() -> None:
-    run(["mypy", "src/wechat_summarizer", "--ignore-missing-imports"])
+    run([sys.executable, "-m", "mypy", "src/wechat_summarizer", "--ignore-missing-imports"])
 
 
 def run_architecture() -> None:
@@ -48,6 +48,8 @@ def run_architecture() -> None:
 def run_tests() -> None:
     run(
         [
+            sys.executable,
+            "-m",
             "pytest",
             "tests/",
             "--cov=src/wechat_summarizer",
@@ -62,7 +64,9 @@ def run_tests() -> None:
 def run_security() -> None:
     run(
         [
-            "pip-audit",
+            sys.executable,
+            "-m",
+            "pip_audit",
             ".",
             "--desc",
             "on",
@@ -72,7 +76,7 @@ def run_security() -> None:
             str(PIP_AUDIT_CACHE),
         ]
     )
-    run(["bandit", "-r", "src/wechat_summarizer", "-ll"])
+    run([sys.executable, "-m", "bandit", "-r", "src/wechat_summarizer", "-ll"])
 
 
 def run_security_smoke() -> None:
@@ -82,7 +86,7 @@ def run_security_smoke() -> None:
     for now to keep rollout incremental while still enabling a unified entry.
     """
 
-    rc = run(["pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5})
+    rc = run([sys.executable, "-m", "pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5})
     if rc == 5:
         print("[quality-gate] No SSRF/MCP smoke tests collected yet; treated as pass.")
 
