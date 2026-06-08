@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from wechat_summarizer.bootstrap import gui as gui_bootstrap
+from wechat_summarizer.domain.entities import Article
+from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
 from wechat_summarizer.presentation.gui import app as gui_app
 from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
 from wechat_summarizer.presentation.gui.components import border as border_module
@@ -158,6 +160,25 @@ from wechat_summarizer.presentation.gui.components.tabs_modern import (
     ModernTabs as SplitModernTabs,
 )
 from wechat_summarizer.presentation.gui.components.tabs_selection import TabsSelectionMixin
+from wechat_summarizer.presentation.gui.dialogs import word_preview as word_preview_module
+from wechat_summarizer.presentation.gui.dialogs.word_preview import (
+    build_content_preview_with_images,
+    extract_images_from_article,
+    show_batch_word_preview,
+    show_word_preview,
+)
+from wechat_summarizer.presentation.gui.dialogs.word_preview_batch import (
+    show_batch_word_preview as split_show_batch_word_preview,
+)
+from wechat_summarizer.presentation.gui.dialogs.word_preview_content import (
+    build_content_preview_with_images as split_build_content_preview_with_images,
+)
+from wechat_summarizer.presentation.gui.dialogs.word_preview_content import (
+    extract_images_from_article as split_extract_images_from_article,
+)
+from wechat_summarizer.presentation.gui.dialogs.word_preview_single import (
+    show_word_preview as split_show_word_preview,
+)
 from wechat_summarizer.presentation.gui.frames import (
     HomeActionCardsFrame,
     HomeInfoRowFrame,
@@ -746,6 +767,65 @@ def test_animation_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_engine.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_facade.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_word_preview_module_keeps_compatibility_exports() -> None:
+    assert word_preview_module.build_content_preview_with_images is (
+        split_build_content_preview_with_images
+    )
+    assert word_preview_module.extract_images_from_article is split_extract_images_from_article
+    assert word_preview_module.show_batch_word_preview is split_show_batch_word_preview
+    assert word_preview_module.show_word_preview is split_show_word_preview
+    assert build_content_preview_with_images is split_build_content_preview_with_images
+    assert extract_images_from_article is split_extract_images_from_article
+    assert show_batch_word_preview is split_show_batch_word_preview
+    assert show_word_preview is split_show_word_preview
+
+
+@pytest.mark.unit
+def test_word_preview_content_preview_preserves_images_and_structures() -> None:
+    html = """
+    <div id="js_content">
+      <h2>章节标题</h2>
+      <p>第一段<img data-src="https://example.com/photo.png" /></p>
+      <ul><li>要点一</li><li>要点二</li></ul>
+      <blockquote>引用内容</blockquote>
+      <table><tr><th>列名</th></tr><tr><td>很长很长很长很长很长很长很长的单元格</td></tr></table>
+      <img src="https://example.com/emoji.png" />
+    </div>
+    """
+    article = Article(
+        url=ArticleURL.from_string("https://mp.weixin.qq.com/s/test-preview"),
+        title="预览测试",
+        content=ArticleContent.from_html(html),
+    )
+
+    preview = build_content_preview_with_images(article)
+    images = extract_images_from_article(article)
+
+    assert "【章节标题】" in preview
+    assert "[图片 1]" in preview
+    assert "  • 要点一" in preview
+    assert "「引用内容」" in preview
+    assert "┌────────── 表格 ──────────┐" in preview
+    assert images == ["https://example.com/photo.png", "https://example.com/emoji.png"]
+
+
+@pytest.mark.unit
+def test_word_preview_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview_batch.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview_content.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview_render.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview_single.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/dialogs/word_preview_window.py",
     ]
 
     for target in targets:
