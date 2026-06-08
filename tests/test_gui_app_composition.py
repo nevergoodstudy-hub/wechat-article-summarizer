@@ -64,6 +64,31 @@ from wechat_summarizer.presentation.gui.components.input_state import (
 from wechat_summarizer.presentation.gui.components.input_textarea import (
     ModernTextArea as SplitModernTextArea,
 )
+from wechat_summarizer.presentation.gui.components.tab_indicator import (
+    TabIndicator as SplitTabIndicator,
+)
+from wechat_summarizer.presentation.gui.components.tabs import (
+    ModernTabs,
+    TabIndicator,
+    TabItem,
+    TabPosition,
+    create_tabs,
+)
+from wechat_summarizer.presentation.gui.components.tabs_button import TabsButtonMixin
+from wechat_summarizer.presentation.gui.components.tabs_drag import TabsDragMixin
+from wechat_summarizer.presentation.gui.components.tabs_factory import (
+    create_tabs as split_create_tabs,
+)
+from wechat_summarizer.presentation.gui.components.tabs_models import (
+    TabItem as SplitTabItem,
+)
+from wechat_summarizer.presentation.gui.components.tabs_models import (
+    TabPosition as SplitTabPosition,
+)
+from wechat_summarizer.presentation.gui.components.tabs_modern import (
+    ModernTabs as SplitModernTabs,
+)
+from wechat_summarizer.presentation.gui.components.tabs_selection import TabsSelectionMixin
 from wechat_summarizer.presentation.gui.frames import (
     HomeActionCardsFrame,
     HomeInfoRowFrame,
@@ -296,6 +321,39 @@ def test_input_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_textarea.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_password.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_factories.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_tabs_module_keeps_compatibility_exports_and_composition() -> None:
+    assert ModernTabs is SplitModernTabs
+    assert TabIndicator is SplitTabIndicator
+    assert TabItem is SplitTabItem
+    assert TabPosition is SplitTabPosition
+    assert create_tabs is split_create_tabs
+    assert TabsButtonMixin in ModernTabs.__mro__
+    assert TabsSelectionMixin in ModernTabs.__mro__
+    assert TabsDragMixin in ModernTabs.__mro__
+    assert ModernTabs.MAX_TABS == 50
+    assert TabPosition.TOP.value == "top"
+
+
+@pytest.mark.unit
+def test_tabs_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tab_indicator.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_button.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_selection.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_drag.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_modern.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_factory.py",
     ]
 
     for target in targets:
