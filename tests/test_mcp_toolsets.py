@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 
 from wechat_summarizer.mcp.resources.article_content import register_article_resources
-from wechat_summarizer.mcp.responses import VALIDATION_ERROR_CODE
+from wechat_summarizer.mcp.responses import BUSINESS_ERROR_CODE, VALIDATION_ERROR_CODE
+from wechat_summarizer.mcp.security import SecurityManager, reset_security_manager
 from wechat_summarizer.mcp.security_config import MCP_SECURITY_CONFIG
 from wechat_summarizer.mcp.toolsets.analysis_tools import register_analysis_tools
 from wechat_summarizer.mcp.toolsets.article_tools import register_article_tools
@@ -36,6 +37,50 @@ class _CapturingMCP:
         return decorator
 
 
+@pytest.fixture(autouse=True)
+def _disable_mcp_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep toolset contract tests focused on tool responses, not global rate buckets."""
+    reset_security_manager()
+    manager = SecurityManager(enable_audit=False, enable_rate_limit=False)
+    monkeypatch.setattr(
+        "wechat_summarizer.mcp.security.get_security_manager",
+        lambda: manager,
+    )
+    yield
+    reset_security_manager()
+
+
+class _FailingArticleWorkflow:
+    def fetch(self, url: str) -> object:
+        raise RuntimeError("api_key=sk-secret-token fetch failed")
+
+    def summarize(self, url: str, method: str, max_length: int) -> object:
+        raise RuntimeError("summary failed")
+
+    def get_info(self, url: str) -> object:
+        raise RuntimeError("info failed")
+
+    def batch_summarize(self, urls: list[str], method: str, max_length: int) -> object:
+        raise RuntimeError("batch failed")
+
+    def list_available_methods(self) -> list[str]:
+        return ["simple"]
+
+
+class _FailingAnalysisWorkflow:
+    def graph_analyze(self, url: str) -> object:
+        raise RuntimeError("graph failed")
+
+    def compare_articles(self, urls: list[str], aspects: list[str]) -> object:
+        raise RuntimeError("compare failed")
+
+    def track_topic(self, urls: list[str], topic: str) -> object:
+        raise RuntimeError("topic failed")
+
+    def evaluate_summary(self, url: str, summary_text: str | None, method: str) -> object:
+        raise RuntimeError("evaluate failed")
+
+
 @pytest.mark.unit
 async def test_article_tools_return_standard_validation_error() -> None:
     """Article tools should expose the shared MCP validation error contract."""
@@ -45,7 +90,9 @@ async def test_article_tools_return_standard_validation_error() -> None:
     result = await mcp.tools["fetch_article"]("ftp://example.com/article")
 
     assert result["success"] is False
+    assert result["isError"] is True
     assert result["error_code"] == VALIDATION_ERROR_CODE
+    assert result["error_type"] == "validation"
     assert "参数校验失败" in result["error"]
 
 
@@ -75,6 +122,28 @@ async def test_article_tools_use_configured_url_and_summary_limits(
 
 
 @pytest.mark.unit
+async def test_article_tools_return_standard_business_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Article workflow failures should use the shared business error contract."""
+    monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["example.com"])
+    mcp = _CapturingMCP()
+    register_article_tools(mcp, lambda: _FailingArticleWorkflow())  # type: ignore[arg-type]
+
+    result = await mcp.tools["fetch_article"]("https://example.com/a")
+    batch_result = await mcp.tools["batch_summarize"](["https://example.com/a"])
+
+    assert result["success"] is False
+    assert result["isError"] is True
+    assert result["error_code"] == BUSINESS_ERROR_CODE
+    assert result["error_type"] == "business"
+    assert "api_key=***REDACTED***" in result["error"]
+    assert "sk-secret-token" not in result["error"]
+    assert batch_result["error_code"] == BUSINESS_ERROR_CODE
+    assert batch_result["error_type"] == "business"
+
+
+@pytest.mark.unit
 async def test_analysis_tools_return_standard_validation_error() -> None:
     """Analysis tools should use the same validation error shape."""
     mcp = _CapturingMCP()
@@ -83,7 +152,9 @@ async def test_analysis_tools_return_standard_validation_error() -> None:
     result = await mcp.tools["get_audit_logs"](limit=0)
 
     assert result["success"] is False
+    assert result["isError"] is True
     assert result["error_code"] == VALIDATION_ERROR_CODE
+    assert result["error_type"] == "validation"
     assert "limit must be in [1, 100]" in result["error"]
 
 
@@ -112,6 +183,45 @@ async def test_analysis_tools_use_configured_text_and_audit_limits(
     assert "Input too long: 6 > 5" in summary_result["error"]
     assert audit_result["error_code"] == VALIDATION_ERROR_CODE
     assert "limit must be in [1, 2]" in audit_result["error"]
+
+
+@pytest.mark.unit
+async def test_analysis_tools_return_standard_business_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Analysis workflow failures should be distinguishable from validation errors."""
+    monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["example.com"])
+    mcp = _CapturingMCP()
+    register_analysis_tools(mcp, lambda: _FailingAnalysisWorkflow())  # type: ignore[arg-type]
+
+    result = await mcp.tools["graph_analyze"]("https://example.com/a")
+
+    assert result["success"] is False
+    assert result["isError"] is True
+    assert result["error_code"] == BUSINESS_ERROR_CODE
+    assert result["error_type"] == "business"
+    assert result["error"] == "graph failed"
+
+
+@pytest.mark.unit
+async def test_analysis_tools_return_business_error_for_business_rules(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Local MCP business rules should not be reported as validation failures."""
+    monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["example.com"])
+    mcp = _CapturingMCP()
+    register_analysis_tools(mcp, lambda: _FailingAnalysisWorkflow())  # type: ignore[arg-type]
+
+    result = await mcp.tools["compare_articles"](["https://example.com/a"])
+    audit_result = await mcp.tools["get_audit_logs"]()
+
+    assert result["success"] is False
+    assert result["error_code"] == BUSINESS_ERROR_CODE
+    assert result["error_type"] == "business"
+    assert "至少需要 2 篇文章" in result["error"]
+    assert audit_result["error_code"] == BUSINESS_ERROR_CODE
+    assert audit_result["error_type"] == "business"
+    assert "审计日志未启用" in audit_result["error"]
 
 
 @pytest.mark.unit

@@ -13,6 +13,7 @@ from starlette.testclient import TestClient
 
 from wechat_summarizer.infrastructure.config.container import override_container
 from wechat_summarizer.mcp import server
+from wechat_summarizer.mcp.responses import AUTHORIZATION_ERROR_CODE
 
 
 class _FakeMCP:
@@ -109,7 +110,12 @@ class TestMCPServerComposition:
         response = client.get("/mcp/")
 
         assert response.status_code == 401
-        assert response.json()["error"] == "Unauthorized"
+        body = response.json()
+        assert body["success"] is False
+        assert body["isError"] is True
+        assert body["error_code"] == AUTHORIZATION_ERROR_CODE
+        assert body["error_type"] == "authorization"
+        assert body["error"] == "Unauthorized"
 
     def test_build_http_app_allows_authorized_request(self) -> None:
         app = server.build_http_app(_FakeMCP(), auth_token="secret-token")

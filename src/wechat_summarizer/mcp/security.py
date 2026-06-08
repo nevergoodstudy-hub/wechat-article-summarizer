@@ -21,6 +21,8 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 from platformdirs import user_data_dir
 
+from .responses import rate_limit_error_response
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -450,7 +452,7 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
                     execution_time_ms=0.0,
                     error_message=error_msg,
                 )
-                return {"success": False, "error": error_msg}
+                return rate_limit_error_response(error_msg)
 
             # 执行工具
             start_time = time.time()

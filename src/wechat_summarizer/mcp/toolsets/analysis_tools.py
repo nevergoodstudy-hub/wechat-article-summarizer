@@ -10,7 +10,7 @@ from loguru import logger
 
 from ...features.analysis_workflow import AnalysisWorkflowService
 from ..input_validator import MCPInputValidator, MCPValidationError
-from ..responses import validation_error_response
+from ..responses import business_error_response, validation_error_response
 from ..security import PermissionLevel, require_permission
 from ..security_config import get_max_audit_logs, get_max_text_length, get_max_topic_length
 
@@ -70,7 +70,7 @@ def register_analysis_tools(
             return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"知识图谱分析失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -84,7 +84,7 @@ def register_analysis_tools(
             aspects = MCPInputValidator.validate_aspects(aspects)
 
             if len(urls) < 2:
-                return {"success": False, "error": "至少需要 2 篇文章进行对比"}
+                return business_error_response("至少需要 2 篇文章进行对比")
 
             payload = await asyncio.to_thread(get_service().compare_articles, urls, aspects)
 
@@ -117,7 +117,7 @@ def register_analysis_tools(
             return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"文章对比分析失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -153,7 +153,7 @@ def register_analysis_tools(
             return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"主题追踪失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -198,7 +198,7 @@ def register_analysis_tools(
             return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"摘要评估失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.ADMIN)
@@ -215,7 +215,7 @@ def register_analysis_tools(
             )
             manager = get_security_manager()
             if manager.audit_logger is None:
-                return {"success": False, "error": "审计日志未启用"}
+                return business_error_response("审计日志未启用")
 
             logs = manager.audit_logger.get_recent_logs(limit)
             return {"success": True, "count": len(logs), "logs": logs}
@@ -223,4 +223,4 @@ def register_analysis_tools(
             return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"获取审计日志失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)

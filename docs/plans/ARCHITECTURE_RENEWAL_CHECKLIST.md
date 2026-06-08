@@ -44,7 +44,9 @@
 - [x] 所有 `@tool` 入参统一接入 `MCPInputValidator`
 - [x] URL、路径、文本、方法名、长度限制全面校验
 - [x] 阻断命令注入字符集与危险 payload
-- [ ] 错误返回统一化（业务错误 vs 校验错误）
+- [x] 错误返回统一化（业务错误 vs 校验错误）
+
+> 证据：`mcp/responses.py` 统一输出 `validation/business/rate_limit/authorization` 错误类型与 `isError`；文章/分析 toolsets、速率限制、HTTP token 鉴权入口已接入统一响应；`tests/test_mcp_toolsets.py`、`tests/test_mcp.py`、`tests/test_mcp_server_composition.py` 覆盖校验错误、业务错误、限流错误和鉴权错误。
 
 ---
 
@@ -136,9 +138,9 @@
 
 ## 6. 推荐执行顺序（严格版）
 
-1. [ ] P0-4 MCP 输入安全
+1. [x] P0-4 MCP 输入安全
 2. [ ] P0-3 SSRF Rebinding
-3. [ ] P0-1 容器测试阻断
+3. [x] P0-1 容器测试阻断
 4. [ ] P0-2 GUI 解耦
 5. [x] P1-1 边界守卫
 6. [x] P1-3 审计脱敏

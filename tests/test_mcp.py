@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
+from wechat_summarizer.mcp.responses import RATE_LIMIT_ERROR_CODE
 from wechat_summarizer.mcp.security import (
     AuditEntry,
     AuditLogger,
@@ -397,6 +398,9 @@ class TestRequirePermission:
             # 第二次应被速率限制
             r2 = asyncio.run(limited_tool())
             assert r2.get("success") is False
+            assert r2.get("isError") is True
+            assert r2.get("error_code") == RATE_LIMIT_ERROR_CODE
+            assert r2.get("error_type") == "rate_limit"
             assert "速率限制" in r2.get("error", "")
 
     def test_decorator_propagates_exceptions(self):

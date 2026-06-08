@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from .resources import register_article_resources
+from .responses import authorization_error_response
 from .toolsets import register_analysis_tools, register_article_tools
 
 if TYPE_CHECKING:
@@ -82,7 +83,7 @@ def build_http_app(mcp_instance: FastMCP, auth_token: str | None = None) -> Star
                 request_token = request.headers.get("x-mcp-token")
                 if request_token != auth_token:
                     return JSONResponse(
-                        {"success": False, "error": "Unauthorized"},
+                        authorization_error_response(),
                         status_code=401,
                     )
             return await call_next(request)
