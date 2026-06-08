@@ -284,6 +284,7 @@ from wechat_summarizer.presentation.gui.utils import clipboard_detector as clipb
 from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
+from wechat_summarizer.presentation.gui.utils import shortcuts as shortcuts_module
 from wechat_summarizer.presentation.gui.utils.accessibility import (
     AccessibilityHelper,
     FocusableElement,
@@ -579,6 +580,19 @@ from wechat_summarizer.presentation.gui.utils.performance_overlay import (
 )
 from wechat_summarizer.presentation.gui.utils.performance_timer import (
     PerformanceTimer as SplitPerformanceTimer,
+)
+from wechat_summarizer.presentation.gui.utils.shortcuts import (
+    KeyboardShortcutManager,
+    Shortcut,
+    ShortcutHelpPanel,
+)
+from wechat_summarizer.presentation.gui.utils.shortcuts_manager import (
+    KeyboardShortcutManager as SplitKeyboardShortcutManager,
+)
+from wechat_summarizer.presentation.gui.utils.shortcuts_models import Shortcut as SplitShortcut
+from wechat_summarizer.presentation.gui.utils.shortcuts_models import default_shortcuts
+from wechat_summarizer.presentation.gui.utils.shortcuts_panel import (
+    ShortcutHelpPanel as SplitShortcutHelpPanel,
 )
 
 
@@ -1360,6 +1374,39 @@ def test_lazy_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_image.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_facade.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_shortcuts_module_keeps_compatibility_exports() -> None:
+    shortcut = Shortcut(id="save", name="保存", keys="Ctrl+S", group="文件")
+
+    assert shortcuts_module.KeyboardShortcutManager is SplitKeyboardShortcutManager
+    assert shortcuts_module.Shortcut is SplitShortcut
+    assert shortcuts_module.ShortcutHelpPanel is SplitShortcutHelpPanel
+    assert KeyboardShortcutManager is SplitKeyboardShortcutManager
+    assert Shortcut is SplitShortcut
+    assert ShortcutHelpPanel is SplitShortcutHelpPanel
+    assert KeyboardShortcutManager.MAX_SHORTCUTS == 100
+    assert KeyboardShortcutManager.MODIFIER_MAP["Ctrl"] == "Control"
+    assert shortcut.keys == "Ctrl+S"
+    assert shortcut.enabled is True
+    assert any(item.id == "select_all" for item in default_shortcuts())
+
+
+@pytest.mark.unit
+def test_shortcuts_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_storage.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_panel.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_demo.py",
     ]
 
     for target in targets:
