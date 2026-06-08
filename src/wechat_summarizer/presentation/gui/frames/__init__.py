@@ -6,6 +6,14 @@ from .home_dashboard import (
     HomeWelcomeFrame,
 )
 from .home_info import HomeInfoRowFrame, HomeRecentRecordsFrame, HomeStatusOverviewFrame
+from .settings_preferences import (
+    SettingsExportSection,
+    SettingsLanguageSection,
+    SettingsPerformanceSection,
+    SettingsQuickActionsFrame,
+    SettingsSystemSection,
+)
+from .settings_service import SettingsApiKeysSection, SettingsSummarizerSection
 
 __all__ = [
     "HomeActionCardsFrame",
@@ -14,4 +22,11 @@ __all__ = [
     "HomeStatusOverviewFrame",
     "HomeTipBarFrame",
     "HomeWelcomeFrame",
+    "SettingsApiKeysSection",
+    "SettingsExportSection",
+    "SettingsLanguageSection",
+    "SettingsPerformanceSection",
+    "SettingsQuickActionsFrame",
+    "SettingsSummarizerSection",
+    "SettingsSystemSection",
 ]

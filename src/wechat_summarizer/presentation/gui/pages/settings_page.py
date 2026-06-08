@@ -8,13 +8,21 @@ from __future__ import annotations
 
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from ..frames import (
+    SettingsApiKeysSection,
+    SettingsExportSection,
+    SettingsLanguageSection,
+    SettingsPerformanceSection,
+    SettingsQuickActionsFrame,
+    SettingsSummarizerSection,
+    SettingsSystemSection,
+)
+from ..settings_api_actions import SettingsApiActionsMixin
 from ..styles.colors import ModernColors
 from ..utils.i18n import set_language, tr
-from ..widgets.helpers import LOW_MEMORY_THRESHOLD_GB, get_available_memory_gb
 from ..widgets.toast_notification import ToastNotification
 
 _ctk_available = True
@@ -23,11 +31,8 @@ try:
 except ImportError:
     _ctk_available = False
 
-if TYPE_CHECKING:
-    pass
 
-
-class SettingsPage(ctk.CTkFrame):
+class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
     """设置页面
 
     Args:
@@ -80,458 +85,118 @@ class SettingsPage(ctk.CTkFrame):
 
         # 摘要服务状态
         self._build_summarizer_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # API 密钥配置
         self._build_api_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # 导出设置
         self._build_export_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # 系统设置
         self._build_system_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # 性能设置
         self._build_perf_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # 语言设置
         self._build_lang_section(settings_card)
-        ctk.CTkFrame(
-            settings_card,
-            height=2,
-            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
-        ).pack(fill="x", padx=30, pady=15)
+        self._add_separator(settings_card)
 
         # 快捷操作 + 保存
         self._build_quick_section(settings_card)
 
+    def _add_separator(self, parent):
+        ctk.CTkFrame(
+            parent,
+            height=2,
+            fg_color=(ModernColors.LIGHT_SEPARATOR, ModernColors.DARK_SEPARATOR),
+        ).pack(fill="x", padx=30, pady=15)
+
     def _build_summarizer_section(self, parent):
         """摘要服务状态"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=(20, 10))
-        ctk.CTkLabel(
-            section,
-            text=tr("🤖 摘要服务状态"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        self.summarizer_status_frame = ctk.CTkFrame(
-            section, corner_radius=10, fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET)
-        )
-        self.summarizer_status_frame.pack(fill="x", pady=5)
+        self.summarizer_section = SettingsSummarizerSection(parent, gui=self.gui)
+        self.summarizer_section.pack(fill="x", padx=30, pady=(20, 10))
+        self.summarizer_status_frame = self.summarizer_section.status_frame
 
     def _build_api_section(self, parent):
         """API 密钥配置"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("🔑 API 密钥配置"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 5))
-        ctk.CTkLabel(
-            section,
-            text=tr("配置 API 密钥后可使用对应的AI摘要服务，密钥将安全地保存在本地"),
-            font=ctk.CTkFont(size=12),
-            text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-        ).pack(anchor="w", pady=(0, 15))
-
-        self._api_key_entries = {}
-
-        # 各 API 密钥配置
-        api_configs = [
-            ("openai", "OpenAI:", "sk-... (用于GPT-4等模型)"),
-            ("deepseek", "DeepSeek:", "sk-... (国产高性能模型，推荐)"),
-            ("anthropic", "Anthropic:", "sk-ant-... (用于Claude模型)"),
-            ("zhipu", "智谱AI:", "智谱AI API Key (用于GLM模型)"),
-        ]
-        for provider, label_text, placeholder in api_configs:
-            frame = ctk.CTkFrame(section, fg_color="transparent")
-            frame.pack(fill="x", pady=8)
-            ctk.CTkLabel(
-                frame, text=label_text, font=ctk.CTkFont(size=14), width=100, anchor="w"
-            ).pack(side="left")
-
-            entry = ctk.CTkEntry(
-                frame,
-                placeholder_text=placeholder,
-                height=38,
-                corner_radius=8,
-                font=ctk.CTkFont(size=12),
-                show="•",
-            )
-            entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-            self._api_key_entries[provider] = entry
-
-            saved_key = self.gui.user_prefs.get_api_key(provider)
-            if saved_key:
-                entry.insert(0, saved_key)
-
-            show_var = ctk.BooleanVar(value=False)
-            setattr(self, f"_{provider}_show_var", show_var)
-            ctk.CTkCheckBox(
-                frame,
-                text=tr("显示"),
-                variable=show_var,
-                width=60,
-                font=ctk.CTkFont(size=11),
-                command=lambda p=provider: self._toggle_key_visibility(p),
-            ).pack(side="left")
-
-        api_btn_frame = ctk.CTkFrame(section, fg_color="transparent")
-        api_btn_frame.pack(fill="x", pady=(15, 5))
-        ctk.CTkButton(
-            api_btn_frame,
-            text=tr("💾 保存 API 密钥"),
-            width=150,
-            height=38,
-            corner_radius=8,
-            fg_color=ModernColors.SUCCESS,
-            command=self._save_api_keys,
-        ).pack(side="left", padx=(0, 10))
-        ctk.CTkButton(
-            api_btn_frame,
-            text=tr("🗑️ 清除所有密钥"),
-            width=150,
-            height=38,
-            corner_radius=8,
-            fg_color=ModernColors.NEUTRAL_BTN,
-            hover_color=ModernColors.ERROR,
-            command=self._clear_api_keys,
-        ).pack(side="left")
-        self.api_status_label = ctk.CTkLabel(
-            api_btn_frame, text="", font=ctk.CTkFont(size=12), text_color=ModernColors.SUCCESS
+        self.api_keys_section = SettingsApiKeysSection(
+            parent,
+            gui=self.gui,
+            on_toggle_visibility=self._toggle_key_visibility,
+            on_save=self._save_api_keys,
+            on_clear=self._clear_api_keys,
         )
-        self.api_status_label.pack(side="left", padx=20)
+        self.api_keys_section.pack(fill="x", padx=30, pady=10)
+        self._api_key_entries = self.api_keys_section.api_key_entries
+        self.api_status_label = self.api_keys_section.status_label
+        for provider, show_var in self.api_keys_section.show_vars.items():
+            setattr(self, f"_{provider}_show_var", show_var)
 
     def _build_export_section(self, parent):
         """导出设置"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("📁 导出设置"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        export_dir_frame = ctk.CTkFrame(section, fg_color="transparent")
-        export_dir_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            export_dir_frame,
-            text=tr("默认导出目录:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-        self.export_dir_entry = ctk.CTkEntry(
-            export_dir_frame,
-            placeholder_text=tr("留空则每次手动选择..."),
-            height=40,
-            corner_radius=8,
-            font=ctk.CTkFont(size=13),
+        self.export_section = SettingsExportSection(
+            parent,
+            gui=self.gui,
+            on_browse=self._browse_export_dir,
+            on_remember_change=self._on_remember_dir_change,
+            on_format_change=self._on_default_format_change,
         )
-        self.export_dir_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        saved_dir = self.gui.user_prefs.export_dir
-        if saved_dir:
-            self.export_dir_entry.insert(0, saved_dir)
-        ctk.CTkButton(
-            export_dir_frame,
-            text=tr("📂 浏览"),
-            width=80,
-            height=40,
-            corner_radius=8,
-            fg_color=ModernColors.INFO,
-            command=self._browse_export_dir,
-        ).pack(side="left")
-
-        remember_frame = ctk.CTkFrame(section, fg_color="transparent")
-        remember_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            remember_frame,
-            text=tr("记住上次导出目录:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-        self.remember_dir_var = ctk.BooleanVar(value=self.gui.user_prefs.remember_export_dir)
-        ctk.CTkSwitch(
-            remember_frame,
-            text=tr("启用后，导出时将自动打开上次使用的目录"),
-            variable=self.remember_dir_var,
-            font=ctk.CTkFont(size=12),
-            command=self._on_remember_dir_change,
-        ).pack(side="left")
-
-        format_frame = ctk.CTkFrame(section, fg_color="transparent")
-        format_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            format_frame, text=tr("默认导出格式:"), font=ctk.CTkFont(size=14), width=140, anchor="w"
-        ).pack(side="left")
-        self.default_format_var = ctk.StringVar(value=self.gui.user_prefs.default_export_format)
-        ctk.CTkSegmentedButton(
-            format_frame,
-            values=["word", "html", "markdown"],
-            variable=self.default_format_var,
-            command=self._on_default_format_change,
-            font=ctk.CTkFont(size=12),
-        ).pack(side="left")
+        self.export_section.pack(fill="x", padx=30, pady=10)
+        self.export_dir_entry = self.export_section.export_dir_entry
+        self.remember_dir_var = self.export_section.remember_dir_var
+        self.default_format_var = self.export_section.default_format_var
 
     def _build_system_section(self, parent):
         """系统设置"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("⚙️ 系统设置"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        autostart_frame = ctk.CTkFrame(section, fg_color="transparent")
-        autostart_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            autostart_frame,
-            text=tr("开机自启动:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-        self.autostart_var = ctk.BooleanVar(value=self.gui.user_prefs.auto_start_enabled)
-        ctk.CTkSwitch(
-            autostart_frame,
-            text=tr("系统启动时自动运行本程序"),
-            variable=self.autostart_var,
-            font=ctk.CTkFont(size=12),
-            command=self._on_autostart_change,
-        ).pack(side="left")
-
-        minimize_frame = ctk.CTkFrame(section, fg_color="transparent")
-        minimize_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            minimize_frame,
-            text=tr("最小化到托盘:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-        self.minimize_tray_var = ctk.BooleanVar(value=self.gui.user_prefs.minimize_to_tray)
-        ctk.CTkSwitch(
-            minimize_frame,
-            text=tr("关闭窗口时最小化到系统托盘而不是退出"),
-            variable=self.minimize_tray_var,
-            font=ctk.CTkFont(size=12),
-            command=self._on_minimize_tray_change,
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            section,
-            text=tr("💡 提示：开启开机自启动后，程序将在后台静默运行"),
-            font=ctk.CTkFont(size=11),
-            text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-        ).pack(anchor="w", pady=(5, 0))
+        self.system_section = SettingsSystemSection(
+            parent,
+            gui=self.gui,
+            on_autostart_change=self._on_autostart_change,
+            on_minimize_tray_change=self._on_minimize_tray_change,
+        )
+        self.system_section.pack(fill="x", padx=30, pady=10)
+        self.autostart_var = self.system_section.autostart_var
+        self.minimize_tray_var = self.system_section.minimize_tray_var
 
     def _build_perf_section(self, parent):
         """性能设置"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("🚀 性能设置"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        # 内存状态显示
-        memory_status_frame = ctk.CTkFrame(section, fg_color="transparent")
-        memory_status_frame.pack(fill="x", pady=5)
-        ctk.CTkLabel(
-            memory_status_frame,
-            text=tr("当前可用内存:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-
-        available_mem = get_available_memory_gb()
-        if available_mem is not None:
-            mem_color = (
-                ModernColors.SUCCESS
-                if available_mem >= LOW_MEMORY_THRESHOLD_GB
-                else ModernColors.WARNING
-            )
-            mem_text = f"{available_mem:.1f} GB"
-            if available_mem < LOW_MEMORY_THRESHOLD_GB:
-                mem_text += f" (低于 {LOW_MEMORY_THRESHOLD_GB:.0f} GB 阈值)"
-        else:
-            mem_color = ModernColors.LIGHT_TEXT_SECONDARY
-            mem_text = tr("无法检测 (psutil 未安装)")
-
-        self.memory_status_label = ctk.CTkLabel(
-            memory_status_frame,
-            text=mem_text,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=mem_color,
+        self.performance_section = SettingsPerformanceSection(
+            parent,
+            gui=self.gui,
+            on_low_memory_change=self._on_low_memory_change,
         )
-        self.memory_status_label.pack(side="left")
-
-        # 低内存模式开关
-        low_memory_frame = ctk.CTkFrame(section, fg_color="transparent")
-        low_memory_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            low_memory_frame,
-            text=tr("低内存模式:"),
-            font=ctk.CTkFont(size=14),
-            width=140,
-            anchor="w",
-        ).pack(side="left")
-        self.low_memory_var = ctk.BooleanVar(value=self.gui.user_prefs.low_memory_mode)
-        ctk.CTkSwitch(
-            low_memory_frame,
-            text=tr("减少内存占用（禁用部分动画、限制日志缓存）"),
-            variable=self.low_memory_var,
-            font=ctk.CTkFont(size=12),
-            command=self._on_low_memory_change,
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            section,
-            text=tr("💡 提示：当系统可用内存低于 4GB 时，建议开启低内存模式以获得更流畅的体验"),
-            font=ctk.CTkFont(size=11),
-            text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-        ).pack(anchor="w", pady=(5, 0))
+        self.performance_section.pack(fill="x", padx=30, pady=10)
+        self.low_memory_var = self.performance_section.low_memory_var
+        self.memory_status_label = self.performance_section.memory_status_label
 
     def _build_lang_section(self, parent):
         """语言设置"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("🌐 语言设置"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        lang_frame = ctk.CTkFrame(section, fg_color="transparent")
-        lang_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(
-            lang_frame, text=tr("界面语言:"), font=ctk.CTkFont(size=14), width=140, anchor="w"
-        ).pack(side="left")
-
-        # 语言选择下拉框
-        lang_values = ["跟随系统", "简体中文", "English"]
-        lang_code_map = {"跟随系统": "auto", "简体中文": "zh_CN", "English": "en"}
-        lang_display_map = {"auto": "跟随系统", "zh_CN": "简体中文", "en": "English"}
-
-        current_lang = self.gui.user_prefs.language
-        current_display = lang_display_map.get(current_lang, "跟随系统")
-
-        self.language_var = ctk.StringVar(value=current_display)
-        self.language_menu = ctk.CTkOptionMenu(
-            lang_frame,
-            values=lang_values,
-            variable=self.language_var,
-            width=180,
-            height=36,
-            corner_radius=8,
-            font=ctk.CTkFont(size=13),
-            command=lambda v: self._on_language_change(v, lang_code_map),
+        self.language_section = SettingsLanguageSection(
+            parent,
+            gui=self.gui,
+            on_language_change=self._on_language_change,
         )
-        self.language_menu.pack(side="left")
-
-        ctk.CTkLabel(
-            section,
-            text=tr("💡 提示：切换语言后需要重启应用才能完全生效"),
-            font=ctk.CTkFont(size=11),
-            text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-        ).pack(anchor="w", pady=(5, 0))
+        self.language_section.pack(fill="x", padx=30, pady=10)
+        self.language_var = self.language_section.language_var
+        self.language_menu = self.language_section.language_menu
 
     def _build_quick_section(self, parent):
         """快捷操作 + 保存"""
-        section = ctk.CTkFrame(parent, fg_color="transparent")
-        section.pack(fill="x", padx=30, pady=10)
-        ctk.CTkLabel(
-            section,
-            text=tr("📂 快捷操作"),
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-        ).pack(anchor="w", pady=(0, 15))
-
-        btn_frame = ctk.CTkFrame(section, fg_color="transparent")
-        btn_frame.pack(fill="x")
-        ctk.CTkButton(
-            btn_frame,
-            text=tr("📁 打开导出目录"),
-            width=150,
-            height=40,
-            corner_radius=8,
-            fg_color=ModernColors.SUCCESS,
-            command=self._open_export_dir,
-        ).pack(side="left", padx=(0, 10))
-        ctk.CTkButton(
-            btn_frame,
-            text=tr("🗑️ 清空设置"),
-            width=150,
-            height=40,
-            corner_radius=8,
-            fg_color=ModernColors.NEUTRAL_BTN,
-            command=self._reset_export_settings,
-        ).pack(side="left", padx=(0, 10))
-        ctk.CTkButton(
-            btn_frame,
-            text=tr("🔄 刷新服务状态"),
-            width=150,
-            height=40,
-            corner_radius=8,
-            fg_color=ModernColors.NEUTRAL_BTN,
-            command=self.gui._refresh_availability,
-        ).pack(side="left")
-
-        save_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        save_frame.pack(fill="x", padx=30, pady=20)
-        ctk.CTkButton(
-            save_frame,
-            text=tr("✔️ 保存设置"),
-            width=150,
-            height=45,
-            corner_radius=10,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=ModernColors.SUCCESS,
-            command=self._save_settings,
-        ).pack(side="right")
-
-        info_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        info_frame.pack(fill="x", padx=30, pady=(0, 20))
-        self.settings_status_label = ctk.CTkLabel(
-            info_frame, text="", font=ctk.CTkFont(size=12), text_color=ModernColors.SUCCESS
+        self.quick_actions_frame = SettingsQuickActionsFrame(
+            parent,
+            gui=self.gui,
+            on_open_export_dir=self._open_export_dir,
+            on_reset_export_settings=self._reset_export_settings,
+            on_save_settings=self._save_settings,
         )
-        self.settings_status_label.pack(anchor="w")
+        self.quick_actions_frame.pack(fill="x")
+        self.settings_status_label = self.quick_actions_frame.status_label
 
     # ============================================================
     # 设置处理器 (从 app.py 迁移)
@@ -715,89 +380,10 @@ class SettingsPage(ctk.CTkFrame):
 
     def update_summarizer_status_display(self):
         """更新摘要器状态显示"""
-        for widget in self.summarizer_status_frame.winfo_children():
-            widget.destroy()
-        for name, info in self.gui._summarizer_info.items():
-            row_frame = ctk.CTkFrame(self.summarizer_status_frame, fg_color="transparent")
-            row_frame.pack(fill="x", padx=15, pady=4)
-            icon = "✓" if info.available else "✗"
-            color = ModernColors.SUCCESS if info.available else ModernColors.ERROR
-            display_names = {
-                "simple": "简单摘要",
-                "textrank": "TextRank",
-                "ollama": "Ollama",
-                "openai": "OpenAI",
-                "deepseek": "DeepSeek",
-                "anthropic": "Anthropic",
-                "zhipu": "智谱AI",
-            }
-            display_name = display_names.get(name, name)
-            ctk.CTkLabel(
-                row_frame,
-                text=f"{icon} {display_name}",
-                font=ctk.CTkFont(size=13, weight="bold" if info.available else "normal"),
-                text_color=color,
-                width=120,
-                anchor="w",
-            ).pack(side="left")
-            ctk.CTkLabel(
-                row_frame,
-                text=info.reason,
-                font=ctk.CTkFont(size=11),
-                text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-                anchor="w",
-            ).pack(side="left", padx=(10, 0))
+        self.summarizer_section.update_status(self.gui._summarizer_info)
 
     def _on_navigate_event(self, *, from_page: str, to_page: str) -> None:
         """响应导航事件。"""
         _ = from_page
         if to_page == self.gui.PAGE_SETTINGS:
             self.update_summarizer_status_display()
-
-    def _toggle_key_visibility(self, provider: str):
-        """切换API密钥可见性"""
-        entry = self._api_key_entries.get(provider)
-        if not entry:
-            return None
-        show_var = getattr(self, f"_{provider}_show_var", None)
-        if show_var and show_var.get():
-            entry.configure(show="")
-        else:
-            entry.configure(show="•")
-
-    def _save_api_keys(self):
-        """保存API密钥"""
-        saved_count = 0
-        api_keys = {}
-        for provider, entry in self._api_key_entries.items():
-            key = entry.get().strip()
-            self.gui.user_prefs.set_api_key(provider, key)
-            if key:
-                saved_count += 1
-                api_keys[provider] = key
-        self.gui.container.settings_workflow_service.reload_summarizers(api_keys)
-        self.gui._summarizer_info = self.gui._get_summarizer_info()
-        self.update_summarizer_status_display()
-        self.gui._refresh_summarizer_menus()
-        if saved_count > 0:
-            self.api_status_label.configure(
-                text=f"✓ 已保存 {saved_count} 个 API 密钥", text_color=ModernColors.SUCCESS
-            )
-            logger.success(f"已保存 {saved_count} 个 API 密钥")
-        else:
-            self.api_status_label.configure(text="✓ 密钥已清除", text_color=ModernColors.WARNING)
-            logger.info("API 密钥已清除")
-        self.gui._set_status("API密钥已更新", ModernColors.SUCCESS)
-
-    def _clear_api_keys(self):
-        """清除所有API密钥"""
-        if not messagebox.askyesno("确认", "确定要清除所有API密钥吗？"):
-            return None
-        for provider, entry in self._api_key_entries.items():
-            entry.delete(0, "end")
-            self.gui.user_prefs.set_api_key(provider, "")
-        self.gui._summarizer_info = self.gui._get_summarizer_info()
-        self.update_summarizer_status_display()
-        self.gui._refresh_summarizer_menus()
-        self.api_status_label.configure(text="✓ 所有密钥已清除", text_color=ModernColors.WARNING)
-        logger.info("所有 API 密钥已清除")

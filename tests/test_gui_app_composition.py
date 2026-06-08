@@ -14,8 +14,17 @@ from wechat_summarizer.presentation.gui.frames import (
     HomeInfoRowFrame,
     HomeTipBarFrame,
     HomeWelcomeFrame,
+    SettingsApiKeysSection,
+    SettingsExportSection,
+    SettingsLanguageSection,
+    SettingsPerformanceSection,
+    SettingsQuickActionsFrame,
+    SettingsSummarizerSection,
+    SettingsSystemSection,
 )
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
+from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
+from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
 
 
 @pytest.mark.unit
@@ -109,6 +118,34 @@ def test_home_dashboard_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/pages/home_page.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/home_dashboard.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/home_info.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_settings_page_delegates_preference_sections_to_frames() -> None:
+    assert "_build" in SettingsSummarizerSection.__dict__
+    assert "_build" in SettingsApiKeysSection.__dict__
+    assert "_build" in SettingsExportSection.__dict__
+    assert "_build" in SettingsSystemSection.__dict__
+    assert "_build" in SettingsPerformanceSection.__dict__
+    assert "_build" in SettingsLanguageSection.__dict__
+    assert "_build" in SettingsQuickActionsFrame.__dict__
+    assert "update_status" in SettingsSummarizerSection.__dict__
+    assert SettingsApiActionsMixin in SettingsPage.__mro__
+    assert "_build_provider_row" not in SettingsPage.__dict__
+
+
+@pytest.mark.unit
+def test_settings_gui_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/pages/settings_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_service.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_preferences.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/settings_api_actions.py",
     ]
 
     for target in targets:
