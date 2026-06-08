@@ -81,9 +81,11 @@
 ## 2. P1 高优先级（预计 7~12 天）
 
 ### P1-1 架构边界自动守卫
-- [ ] 新增 `scripts/check_domain_boundary.py`
+- [x] 新增 `scripts/check_domain_boundary.py`
 - [x] CI 强制执行 domain boundary check
 - [x] 违规依赖改为 `Protocol` 端口抽象
+
+> 证据：新增 `scripts/check_domain_boundary.py` 作为 domain 层专项 AST import 守卫，阻断 domain 直接导入 `application/features/infrastructure/mcp/presentation/shared` 外层项目模块，并接入 `scripts/quality_gate.py --mode architecture`；`tests/test_domain_boundary.py` 覆盖当前 domain 无违规、绝对导入违规、相对导入违规、domain 内部导入允许与标准库导入允许。`scripts/quality_gate.py --mode architecture` 当前输出 `[domain-boundary] PASS`。
 
 ### P1-2 并发模型升级
 - [x] 批量并发由 `asyncio.gather` 迁移到 `TaskGroup`

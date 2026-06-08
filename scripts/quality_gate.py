@@ -43,6 +43,7 @@ def run_mypy() -> None:
 
 def run_architecture() -> None:
     run([sys.executable, "scripts/check_architecture_boundaries.py"])
+    run([sys.executable, "scripts/check_domain_boundary.py"])
     run([sys.executable, "scripts/check_test_filesystem_isolation.py"])
 
 
