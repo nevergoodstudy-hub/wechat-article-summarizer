@@ -47,6 +47,8 @@
 
 > 最新证据：已将 `styles/typography.py` 的字体 token、字体族栈、平台字体管理器、预定义文本样式/便捷函数和中文字体检测拆到 `typography_tokens.py`、`typography_families.py`、`typography_manager.py`、`typography_styles.py`、`typography_chinese.py`，兼容入口降至 23 行，拆分后相关文件分别为 75/45/79/63/53 行，并保留 `FontWeight`、`FontSize`、`LineHeight`、`LetterSpacing`、`FontFamily`、`Typography`、`TextStyles`、`ChineseFonts`、`get_font`、`get_font_family`、`get_text_style` 旧公开导出；`tests/test_gui_typography_composition.py` 新增兼容导出、token/字体族值、平台字体选择、便捷函数、中文字体缓存 fallback 和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 3 个 Python 文件 >=400 行（最高 `components/graph_viewer.py` 419 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
+> 最新证据：已将 `components/graph_viewer.py` 的可选 CustomTkinter 运行时、节点位置/颜色/标签模型、知识图谱/字典数据归一化、力导向布局、Canvas 渲染和命中检测拆到 `graph_viewer_runtime.py`、`graph_viewer_models.py`、`graph_viewer_data.py`、`graph_viewer_layout.py`、`graph_viewer_render.py`、`graph_viewer_interaction.py`，兼容入口降至 209 行，拆分后相关文件分别为 22/45/75/111/102/23 行，并保留 `GraphViewerComponent`、`NodePosition`、`ctk`、`_ctk_available` 旧公开导出；`tests/test_gui_graph_viewer_composition.py` 新增兼容导出、字典载入归一化、布局边界、Canvas 渲染调用、命中检测、私有方法委托和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 2 个 Python 文件 >=400 行（最高 `components/progress.py` 411 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
