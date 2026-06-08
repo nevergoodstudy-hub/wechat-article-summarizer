@@ -105,6 +105,45 @@ from wechat_summarizer.presentation.gui.frames import (
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
+from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
+from wechat_summarizer.presentation.gui.utils.microinteractions import (
+    CollapseExpand,
+    FocusRing,
+    HoverEffect,
+    MicroInteractions,
+    PulseEffect,
+    RippleEffect,
+    ScaleEffect,
+    SkeletonLoader,
+    Spinner,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_feedback import (
+    HoverEffect as SplitHoverEffect,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_feedback import (
+    RippleEffect as SplitRippleEffect,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_feedback import (
+    ScaleEffect as SplitScaleEffect,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_focus import (
+    FocusRing as SplitFocusRing,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_loading import (
+    SkeletonLoader as SplitSkeletonLoader,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_loading import (
+    Spinner as SplitSpinner,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_manager import (
+    MicroInteractions as SplitMicroInteractions,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_motion import (
+    CollapseExpand as SplitCollapseExpand,
+)
+from wechat_summarizer.presentation.gui.utils.microinteractions_motion import (
+    PulseEffect as SplitPulseEffect,
+)
 
 
 @pytest.mark.unit
@@ -354,6 +393,45 @@ def test_tabs_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_drag.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_modern.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/tabs_factory.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_microinteractions_module_keeps_compatibility_exports() -> None:
+    assert microinteractions_module.RippleEffect is SplitRippleEffect
+    assert microinteractions_module.ScaleEffect is SplitScaleEffect
+    assert microinteractions_module.HoverEffect is SplitHoverEffect
+    assert microinteractions_module.SkeletonLoader is SplitSkeletonLoader
+    assert microinteractions_module.Spinner is SplitSpinner
+    assert microinteractions_module.PulseEffect is SplitPulseEffect
+    assert microinteractions_module.CollapseExpand is SplitCollapseExpand
+    assert microinteractions_module.FocusRing is SplitFocusRing
+    assert microinteractions_module.MicroInteractions is SplitMicroInteractions
+    assert RippleEffect is SplitRippleEffect
+    assert ScaleEffect is SplitScaleEffect
+    assert HoverEffect is SplitHoverEffect
+    assert SkeletonLoader is SplitSkeletonLoader
+    assert Spinner is SplitSpinner
+    assert PulseEffect is SplitPulseEffect
+    assert CollapseExpand is SplitCollapseExpand
+    assert FocusRing is SplitFocusRing
+    assert MicroInteractions is SplitMicroInteractions
+
+
+@pytest.mark.unit
+def test_microinteractions_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_feedback.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_loading.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_motion.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_focus.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_demo.py",
     ]
 
     for target in targets:
