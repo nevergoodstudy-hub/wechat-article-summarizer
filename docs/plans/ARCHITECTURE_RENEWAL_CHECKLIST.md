@@ -43,6 +43,8 @@
 
 > 最新证据：已将 `utils/windows_integration.py` 的任务栏进度、系统通知、资源管理器/默认程序打开、快捷方式创建、特殊目录和 Windows 11 标题栏样式拆到 `windows_taskbar.py`、`windows_notifications.py`、`windows_shell.py`、`windows_paths.py`、`windows_platform.py`、`windows_style.py`，兼容入口降至 109 行，拆分后相关文件分别为 55/81/133/36/53/85 行，并保留 `WindowsIntegration`、`Windows11StyleHelper`、`windows` 旧公开导出；`tests/test_gui_windows_integration_composition.py` 新增兼容导出、门面委托、PowerShell 单引号转义、非 Windows 任务栏 no-op 与行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 5 个 Python 文件 >=400 行（最高 `viewmodels/single_process_viewmodel.py` 424 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
+> 最新证据：已将 `viewmodels/single_process_viewmodel.py` 的显示模型、领域对象到显示模型映射、摘要器/导出器可用性顺序与不可用原因拆到 `single_process_models.py`、`single_process_mapping.py`、`single_process_availability.py`，主 ViewModel 降至 354 行，拆分后相关文件分别为 33/51/66 行，并保留 `SingleProcessViewModel`、`ArticleDisplayModel`、`SummaryDisplayModel` 旧公开导出；`tests/test_gui_single_process_viewmodel_composition.py` 新增兼容导出、文章/摘要转换、可用性顺序/原因和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 4 个 Python 文件 >=400 行（最高 `styles/typography.py` 420 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
