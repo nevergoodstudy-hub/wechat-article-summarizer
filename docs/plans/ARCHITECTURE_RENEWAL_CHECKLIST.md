@@ -174,9 +174,11 @@
 ## 5. 分阶段验收标准（DoD）
 
 ### Phase A（P0 完成）
-- [ ] 核心功能回归通过
-- [ ] MCP 安全基线全部生效
-- [ ] GUI 主入口完成瘦身并稳定运行
+- [x] 核心功能回归通过
+- [x] MCP 安全基线全部生效
+- [x] GUI 主入口完成瘦身并稳定运行
+
+> 证据：新增 `scripts/quality_gate.py --mode phase-a` 作为 Phase A 可重复验收入口；核心回归组覆盖 `tests/test_use_cases.py`、`tests/test_cli.py::TestFetchCommand`、`tests/test_cli.py::TestBatchCommand` 与 `tests/test_entrypoints.py`，当前 37 个用例通过，覆盖抓取、摘要、导出、批量、CLI JSON 与入口路由；MCP 安全基线组覆盖 `tests/test_mcp.py`、`tests/test_mcp_input_validator.py`、`tests/test_mcp_toolsets.py`、`tests/test_mcp_server_composition.py` 与 `tests/test_security_config.py`，当前 135 个用例通过，覆盖输入校验、权限/HITL、限流、审计脱敏、HTTP token、远程监听默认拒绝与安全配置限制；GUI 稳定组覆盖 `tests/test_gui_app_composition.py` 与 `tests/test_gui_i18n_hardcoded_guard.py`，当前 77 个用例通过，锁定薄入口依赖注入、GUI 组合拆分、单文件 <400 行目标和 i18n 0/0 守卫。`scripts/quality_gate.py --mode all` 已将 `phase-a` 纳入默认全量门禁链路，`tests/test_quality_gate.py` 锁定该入口不会被移除。
 
 ### Phase B（P1 完成）
 - [x] 边界检查进入 CI 且可阻断违规

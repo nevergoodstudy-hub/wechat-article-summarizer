@@ -105,11 +105,59 @@ def run_security_smoke() -> None:
         print("[quality-gate] No SSRF/MCP smoke tests collected yet; treated as pass.")
 
 
+def run_phase_a() -> None:
+    """Run the Phase A acceptance pack for core, MCP security, and GUI startup."""
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_use_cases.py",
+            "tests/test_cli.py::TestFetchCommand",
+            "tests/test_cli.py::TestBatchCommand",
+            "tests/test_entrypoints.py",
+            "-q",
+        ]
+    )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_mcp.py",
+            "tests/test_mcp_input_validator.py",
+            "tests/test_mcp_toolsets.py",
+            "tests/test_mcp_server_composition.py",
+            "tests/test_security_config.py",
+            "-q",
+        ]
+    )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_gui_app_composition.py",
+            "tests/test_gui_i18n_hardcoded_guard.py",
+            "-q",
+        ]
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Unified quality gate runner")
     parser.add_argument(
         "--mode",
-        choices=["all", "lint", "mypy", "architecture", "test", "security", "security-smoke"],
+        choices=[
+            "all",
+            "lint",
+            "mypy",
+            "architecture",
+            "test",
+            "security",
+            "security-smoke",
+            "phase-a",
+        ],
         default="all",
         help="Which gate to run",
     )
@@ -133,6 +181,8 @@ def main() -> int:
             run_security()
         elif args.mode == "security-smoke":
             run_security_smoke()
+        elif args.mode == "phase-a":
+            run_phase_a()
         else:
             run_lint()
             run_architecture()
@@ -140,6 +190,7 @@ def main() -> int:
             run_mypy()
             run_tests()
             run_security_smoke()
+            run_phase_a()
         print("\n[quality-gate] PASS")
         return 0
     except GateError as exc:
