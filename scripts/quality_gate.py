@@ -46,8 +46,11 @@ def run_architecture() -> None:
     run([sys.executable, "scripts/check_domain_boundary.py"])
     run([sys.executable, "scripts/check_http_fetch_security.py"])
     run([sys.executable, "scripts/check_test_filesystem_isolation.py"])
+    run([sys.executable, "scripts/check_pytest_markers.py"])
     run([sys.executable, "scripts/check_ci_python_matrix.py"])
     run([sys.executable, "scripts/check_mypy_core_strictness.py"])
+    run([sys.executable, "scripts/check_adr_docs.py"])
+    run([sys.executable, "scripts/check_gui_i18n_hardcoded.py"])
 
 
 def run_test_executability() -> None:

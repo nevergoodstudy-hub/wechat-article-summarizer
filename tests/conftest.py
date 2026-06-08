@@ -96,19 +96,29 @@ def pytest_runtest_teardown(item: pytest.Item) -> None:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """默认跳过 integration 测试，避免无外部依赖环境下阻塞。
+    """Apply test layer defaults and skip external suites unless enabled.
 
     通过设置环境变量 `RUN_INTEGRATION_TESTS=1` 可显式启用 integration 测试。
+    通过设置环境变量 `RUN_E2E_TESTS=1` 可显式启用 e2e 测试。
     """
-    if os.getenv("RUN_INTEGRATION_TESTS", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        return
+    layer_markers = {"unit", "integration", "e2e"}
+    enabled_values = {"1", "true", "yes", "on"}
+    run_integration = os.getenv("RUN_INTEGRATION_TESTS", "0").strip().lower() in enabled_values
+    run_e2e = os.getenv("RUN_E2E_TESTS", "0").strip().lower() in enabled_values
 
     skip_integration = pytest.mark.skip(
         reason="integration tests disabled by default; set RUN_INTEGRATION_TESTS=1 to enable",
     )
+    skip_e2e = pytest.mark.skip(
+        reason="e2e tests disabled by default; set RUN_E2E_TESTS=1 to enable"
+    )
     for item in items:
-        if "integration" in item.keywords:
+        if not any(marker in item.keywords for marker in layer_markers):
+            item.add_marker(pytest.mark.unit)
+        if "integration" in item.keywords and not run_integration:
             item.add_marker(skip_integration)
+        if "e2e" in item.keywords and not run_e2e:
+            item.add_marker(skip_e2e)
 
 
 # ============== 基础夹具 ==============

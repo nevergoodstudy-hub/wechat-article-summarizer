@@ -11,7 +11,9 @@
 - [x] 每步完成后运行：`ruff` + `pytest`（最少核心集）
 - [x] 不允许在 `domain/` 引入 `infrastructure/presentation/mcp`
 - [x] MCP 新增工具默认：参数校验 + 权限校验 + 审计脱敏
-- [ ] 每周更新风险看板（阻塞项/回滚点/覆盖率）
+- [x] 每周更新风险看板（阻塞项/回滚点/覆盖率）
+
+> 证据：新增 `docs/plans/RISK_BOARD.md`，记录当前 P3 i18n 历史硬编码、GUI 运行态验收、核心回归/MCP 安全基线等阻塞项，并列出 CLI JSON、pytest marker、ADR、GUI i18n 守卫的回滚点和 lint/architecture/mypy/test/security-smoke 门禁口径。
 
 ---
 
@@ -155,9 +157,17 @@
 ## 4. P3 持续改进（滚动推进）
 
 - [ ] i18n 文案抽离完整化（禁止新增硬编码）
-- [ ] CLI 增加批量 JSON 标准输出
-- [ ] 测试标记分层（unit/integration/e2e/slow）
-- [ ] 架构 ADR 文档化（关键决策可追溯）
+- [x] CLI 增加批量 JSON 标准输出
+- [x] 测试标记分层（unit/integration/e2e/slow）
+- [x] 架构 ADR 文档化（关键决策可追溯）
+
+> 证据：`batch --output-format json` 已改为通过 `_emit_json_stdout()` 输出单一 JSON stdout，并在 JSON 模式下禁用 Rich 进度/人工提示；无 URL 错误也输出标准 JSON 错误对象。`tests/test_cli.py` 覆盖成功批量 JSON 可 `json.loads()` 解析、无人工提示污染、缺 URL 错误 JSON 结构。Click 官方测试实践使用 `CliRunner` 调用命令并断言输出，本项目用该方式锁定 CLI JSON stdout 行为。
+
+> 证据：`pyproject.toml` 注册 `unit/integration/e2e/slow` markers 且保持 `--strict-markers`；`tests/conftest.py` 在收集阶段为未显式分层测试补 `unit`，并通过 `RUN_INTEGRATION_TESTS`、`RUN_E2E_TESTS` 显式启用外部集成/e2e 套件。新增 `scripts/check_pytest_markers.py` 并接入 `scripts/quality_gate.py --mode architecture`，`tests/test_pytest_markers.py` 覆盖当前配置、缺失 e2e marker、缺失默认 unit 分层策略。
+
+> 证据：新增 `docs/adr/` 与 5 份 ADR：Clean Architecture 边界、SSRF 网络访问策略、TaskGroup 结构化并发、统一质量门禁、性能采样与缓存治理；新增 `scripts/check_adr_docs.py` 并接入 `scripts/quality_gate.py --mode architecture`，`tests/test_adr_docs.py` 覆盖当前 ADR 索引、必需章节与索引缺失场景。ADR 模板遵循本地 `architecture` skill 的上下文/决策/理由/取舍/后果结构，并参考 MADR 风格的轻量决策记录。
+
+> i18n 当前状态：已新增 `scripts/check_gui_i18n_hardcoded.py` 并接入 `scripts/quality_gate.py --mode architecture`，对 GUI 用户可见硬编码与不可翻译 `tr(...)` 调用建立当前基线，禁止新增净硬编码；`tests/test_gui_i18n_hardcoded_guard.py` 覆盖当前基线、用户可见 literal 检测、缺失/动态翻译 key 检测。由于 `presentation/gui` 仍有历史硬编码残留，`i18n 文案抽离完整化` 暂不勾选。
 
 ---
 
@@ -170,8 +180,10 @@
 
 ### Phase B（P1 完成）
 - [x] 边界检查进入 CI 且可阻断违规
-- [ ] 并发模型完成迁移，异常可观测
+- [x] 并发模型完成迁移，异常可观测
 - [x] 审计日志无敏感泄露
+
+> 证据：`shared/utils/structured_concurrency.py` 使用 Python 3.11+ 原生 `asyncio.TaskGroup`、Semaphore 限流与 `except* Exception` 处理 `ExceptionGroup`，并包装为稳定的 `StructuredConcurrencyError`；`tests/test_structured_concurrency.py` 覆盖顺序返回、并发上限、异常组叶子展开与 AST `TryStar` 节点，P1-2 迁移证据可支撑此 DoD。
 
 ### Phase C（P2 完成）
 - [x] CI 全链路稳定

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json as json_lib
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -77,6 +78,12 @@ def _console_safe_text(text: str, target_console: Console | None = None) -> str:
         return text
     except UnicodeEncodeError:
         return text.encode(encoding, errors="replace").decode(encoding)
+
+
+def _emit_json_stdout(data: dict[str, Any]) -> None:
+    """Emit machine-readable JSON without Rich markup or progress noise."""
+
+    click.echo(json_lib.dumps(data, ensure_ascii=False, indent=2, default=str))
 
 
 def _process_single(
@@ -237,10 +244,10 @@ def batch(
         wechat-summarizer batch -f urls.txt -e markdown -o ./output
         wechat-summarizer batch --from-clipboard
     """
-    import json as json_lib
-
     # 收集 URLs
     url_list: list[str] = list(urls) if urls else []
+    json_output = output_format == "json"
+    suppress_human_output = quiet or json_output
 
     # 从文件读取
     if input_file:
@@ -272,16 +279,50 @@ def batch(
                 ]
                 url_list.extend(clipboard_urls)
         except Exception as e:
-            if not quiet:
+            if json_output:
+                _emit_json_stdout(
+                    {
+                        "success": False,
+                        "error": {
+                            "type": "clipboard_error",
+                            "message": str(e),
+                        },
+                        "total": 0,
+                        "success_count": 0,
+                        "failed_count": 0,
+                        "results": [],
+                        "exported_files": [],
+                    }
+                )
+                sys.exit(1)
+            if not suppress_human_output:
                 console.print(f"[yellow]读取剪贴板失败: {e}[/yellow]")
 
     if not url_list:
-        console.print("[red]没有提供 URL，请通过参数、--input-file 或 --from-clipboard 提供[/red]")
+        if json_output:
+            _emit_json_stdout(
+                {
+                    "success": False,
+                    "error": {
+                        "type": "missing_urls",
+                        "message": "没有提供 URL，请通过参数、--input-file 或 --from-clipboard 提供",
+                    },
+                    "total": 0,
+                    "success_count": 0,
+                    "failed_count": 0,
+                    "results": [],
+                    "exported_files": [],
+                }
+            )
+        else:
+            console.print(
+                "[red]没有提供 URL，请通过参数、--input-file 或 --from-clipboard 提供[/red]"
+            )
         sys.exit(1)
 
     container = get_container()
 
-    if not quiet:
+    if not suppress_human_output:
         console.print(f"[bold]开始批量处理 {len(url_list)} 篇文章...[/bold]")
 
     success_count = 0
@@ -289,7 +330,7 @@ def batch(
     articles = []
     results_data = []  # 用于 JSON 输出
 
-    with Progress(console=console, disable=quiet) as progress:
+    with Progress(console=console, disable=suppress_human_output) as progress:
         task = progress.add_task("处理中...", total=len(url_list))
 
         for url in url_list:
@@ -322,7 +363,7 @@ def batch(
                     result_entry["summary_method"] = article.summary.method.value
                 results_data.append(result_entry)
 
-                if not quiet:
+                if not suppress_human_output:
                     console.print(f"[green]OK[/green] {article.title[:40]}...")
 
             except Exception as e:
@@ -334,7 +375,7 @@ def batch(
                         "error": str(e),
                     }
                 )
-                if not quiet:
+                if not suppress_human_output:
                     console.print(f"[red]ERR[/red] {url[:50]}... - {e}")
 
             progress.advance(task)
@@ -342,7 +383,7 @@ def batch(
     # 批量导出
     exported_files = []
     if export and articles:
-        if not quiet:
+        if not suppress_human_output:
             console.print("\n[bold]导出文章...[/bold]")
         for article in articles:
             try:
@@ -352,24 +393,25 @@ def batch(
                     path=output_dir,
                 )
                 exported_files.append(export_result)
-                if not quiet:
+                if not suppress_human_output:
                     console.print(f"[green]已导出:[/green] {export_result}")
             except Exception as e:
-                if not quiet:
+                if not suppress_human_output:
                     console.print(f"[red]导出失败:[/red] {e}")
 
     # 输出结果
     if output_format == "json":
         output_data = {
             "timestamp": utc_now().isoformat(),
+            "success": failed_count == 0,
             "success_count": success_count,
             "failed_count": failed_count,
             "total": len(url_list),
             "results": results_data,
             "exported_files": exported_files,
         }
-        console.print(json_lib.dumps(output_data, ensure_ascii=False, indent=2))
-    elif not quiet:
+        _emit_json_stdout(output_data)
+    elif not suppress_human_output:
         console.print(f"\n[bold]处理完成:[/bold] 成功 {success_count}, 失败 {failed_count}")
 
 
@@ -377,8 +419,6 @@ def batch(
 @click.option("--json", "output_json", is_flag=True, help="以 JSON 格式输出")
 def config(output_json: bool):
     """显示当前配置"""
-    import json as json_lib
-
     settings = get_settings()
 
     config_data = {
@@ -392,7 +432,7 @@ def config(output_json: bool):
     }
 
     if output_json:
-        console.print(json_lib.dumps(config_data, ensure_ascii=False, indent=2))
+        _emit_json_stdout(config_data)
         return
 
     table = Table(title="当前配置")
