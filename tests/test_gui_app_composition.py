@@ -174,9 +174,28 @@ from wechat_summarizer.presentation.gui.frames import (
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
+from wechat_summarizer.presentation.gui.utils import animation as animation_module
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
+from wechat_summarizer.presentation.gui.utils.animation import (
+    AnimationEngine,
+    Easing,
+    EasingType,
+    Tween,
+    animate,
+)
+from wechat_summarizer.presentation.gui.utils.animation_easing import Easing as SplitEasing
+from wechat_summarizer.presentation.gui.utils.animation_engine import (
+    AnimationEngine as SplitAnimationEngine,
+)
+from wechat_summarizer.presentation.gui.utils.animation_facade import (
+    animate as split_animate,
+)
+from wechat_summarizer.presentation.gui.utils.animation_models import (
+    EasingType as SplitEasingType,
+)
+from wechat_summarizer.presentation.gui.utils.animation_models import Tween as SplitTween
 from wechat_summarizer.presentation.gui.utils.autosave import (
     DEFAULT_DEBOUNCE_MS,
     DRAFT_EXPIRE_DAYS,
@@ -693,6 +712,40 @@ def test_microinteractions_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_focus.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_animation_module_keeps_compatibility_exports() -> None:
+    assert animation_module.AnimationEngine is SplitAnimationEngine
+    assert animation_module.Easing is SplitEasing
+    assert animation_module.EasingType is SplitEasingType
+    assert animation_module.Tween is SplitTween
+    assert animation_module.animate is split_animate
+    assert AnimationEngine is SplitAnimationEngine
+    assert Easing is SplitEasing
+    assert EasingType is SplitEasingType
+    assert Tween is SplitTween
+    assert animate is split_animate
+    assert EasingType.EASE_OUT_CUBIC.value == "ease_out_cubic"
+    assert Easing.get(EasingType.LINEAR)(0.4) == 0.4
+    assert AnimationEngine.MAX_ANIMATIONS == 50
+    assert AnimationEngine.MAX_DURATION == 10000
+
+
+@pytest.mark.unit
+def test_animation_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_easing.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_engine.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_facade.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_demo.py",
     ]
 
     for target in targets:
