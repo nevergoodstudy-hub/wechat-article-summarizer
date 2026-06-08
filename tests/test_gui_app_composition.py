@@ -145,7 +145,58 @@ from wechat_summarizer.presentation.gui.frames import (
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
+from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
+from wechat_summarizer.presentation.gui.utils.autosave import (
+    DEFAULT_DEBOUNCE_MS,
+    DRAFT_EXPIRE_DAYS,
+    MAX_DRAFT_SIZE,
+    MAX_DRAFTS_PER_FORM,
+    MAX_TOTAL_SIZE,
+    AutoSaveManager,
+    Draft,
+    DraftStorage,
+    FormField,
+    RestoreDialog,
+    SimpleEncryptor,
+    check_and_restore,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_constants import (
+    DEFAULT_DEBOUNCE_MS as SPLIT_DEFAULT_DEBOUNCE_MS,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_constants import (
+    DRAFT_EXPIRE_DAYS as SPLIT_DRAFT_EXPIRE_DAYS,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_constants import (
+    MAX_DRAFT_SIZE as SPLIT_MAX_DRAFT_SIZE,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_constants import (
+    MAX_DRAFTS_PER_FORM as SPLIT_MAX_DRAFTS_PER_FORM,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_constants import (
+    MAX_TOTAL_SIZE as SPLIT_MAX_TOTAL_SIZE,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_dialog import (
+    RestoreDialog as SplitRestoreDialog,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_dialog import (
+    check_and_restore as split_check_and_restore,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_encryptor import (
+    SimpleEncryptor as SplitSimpleEncryptor,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_manager import (
+    AutoSaveManager as SplitAutoSaveManager,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_models import (
+    Draft as SplitDraft,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_models import (
+    FormField as SplitFormField,
+)
+from wechat_summarizer.presentation.gui.utils.autosave_storage import (
+    DraftStorage as SplitDraftStorage,
+)
 from wechat_summarizer.presentation.gui.utils.microinteractions import (
     CollapseExpand,
     FocusRing,
@@ -506,6 +557,47 @@ def test_microinteractions_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_focus.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/microinteractions_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_autosave_module_keeps_compatibility_exports() -> None:
+    assert autosave_module.AutoSaveManager is SplitAutoSaveManager
+    assert autosave_module.Draft is SplitDraft
+    assert autosave_module.FormField is SplitFormField
+    assert autosave_module.DraftStorage is SplitDraftStorage
+    assert autosave_module.RestoreDialog is SplitRestoreDialog
+    assert autosave_module.SimpleEncryptor is SplitSimpleEncryptor
+    assert autosave_module.check_and_restore is split_check_and_restore
+    assert AutoSaveManager is SplitAutoSaveManager
+    assert Draft is SplitDraft
+    assert FormField is SplitFormField
+    assert DraftStorage is SplitDraftStorage
+    assert RestoreDialog is SplitRestoreDialog
+    assert SimpleEncryptor is SplitSimpleEncryptor
+    assert check_and_restore is split_check_and_restore
+    assert SPLIT_MAX_DRAFT_SIZE == MAX_DRAFT_SIZE
+    assert SPLIT_MAX_TOTAL_SIZE == MAX_TOTAL_SIZE
+    assert SPLIT_MAX_DRAFTS_PER_FORM == MAX_DRAFTS_PER_FORM
+    assert SPLIT_DRAFT_EXPIRE_DAYS == DRAFT_EXPIRE_DAYS
+    assert SPLIT_DEFAULT_DEBOUNCE_MS == DEFAULT_DEBOUNCE_MS
+
+
+@pytest.mark.unit
+def test_autosave_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_constants.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_encryptor.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_storage.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_dialog.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_demo.py",
     ]
 
     for target in targets:
