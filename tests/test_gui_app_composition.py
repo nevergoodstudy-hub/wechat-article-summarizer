@@ -9,6 +9,15 @@ import pytest
 from wechat_summarizer.bootstrap import gui as gui_bootstrap
 from wechat_summarizer.presentation.gui import app as gui_app
 from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
+from wechat_summarizer.presentation.gui.components import border as border_module
+from wechat_summarizer.presentation.gui.components.border import (
+    Divider,
+    GlowIntensity,
+    GradientBorder,
+    GradientDirection,
+    create_divider,
+    create_gradient_border,
+)
 from wechat_summarizer.presentation.gui.frames import (
     HomeActionCardsFrame,
     HomeInfoRowFrame,
@@ -146,6 +155,38 @@ def test_settings_gui_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_service.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_preferences.py",
         repo_root / "src/wechat_summarizer/presentation/gui/settings_api_actions.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_border_module_keeps_compatibility_exports() -> None:
+    assert border_module.GradientBorder is GradientBorder
+    assert border_module.Divider is Divider
+    assert border_module.GradientDirection is GradientDirection
+    assert border_module.GlowIntensity is GlowIntensity
+    assert border_module.create_gradient_border is create_gradient_border
+    assert border_module.create_divider is create_divider
+    assert border_module._validate_hex_color("#abc") is True
+    assert border_module.validate_hex_color("#aabbcc") is True
+    assert border_module._hex_to_rgb("#abc") == (170, 187, 204)
+    assert border_module.hex_to_rgb("#11223344") == (17, 34, 51)
+    assert border_module._rgb_to_hex((300, -1, 16)) == "#ff0010"
+    assert border_module.interpolate_color("#000000", "#ffffff", 0.5) == "#7f7f7f"
+    assert "GradientBorder" in border_module.__all__
+
+
+@pytest.mark.unit
+def test_border_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/border.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/border_utils.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border_draw.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/divider.py",
     ]
 
     for target in targets:
