@@ -126,7 +126,7 @@ def test_i18n_manager_preserves_rtl_helpers() -> None:
 
 @pytest.mark.unit
 def test_i18n_sanitizer_escapes_markup_and_event_handlers() -> None:
-    sanitized = sanitize_translation_text('<script>alert(1)</script>按钮 onclick=bad')
+    sanitized = sanitize_translation_text("<script>alert(1)</script>按钮 onclick=bad")
 
     assert "<script" not in sanitized.lower()
     assert "onclick=" not in sanitized.lower()
