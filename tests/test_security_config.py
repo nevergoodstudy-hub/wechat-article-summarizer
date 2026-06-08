@@ -20,6 +20,8 @@ from wechat_summarizer.mcp.security_config import (
     get_max_text_length,
     get_max_topic_length,
     is_confirmation_required,
+    is_host_allowed,
+    is_human_confirmation_valid,
 )
 
 
@@ -64,6 +66,23 @@ class TestMCPSecurityConfig:
         assert "api.openai.com" in hosts
         assert "api.anthropic.com" in hosts
 
+    @pytest.mark.unit
+    def test_host_allowlist_requires_exact_match_by_default(self) -> None:
+        """默认主机白名单使用精确匹配，避免后缀混淆"""
+        assert is_host_allowed("mp.weixin.qq.com") is True
+        assert is_host_allowed("MP.WEIXIN.QQ.COM.") is True
+        assert is_host_allowed("evil-mp.weixin.qq.com") is False
+        assert is_host_allowed("example.com") is False
+
+    @pytest.mark.unit
+    def test_host_allowlist_supports_explicit_wildcards(self) -> None:
+        """显式通配符只允许子域名，不允许裸域名"""
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["*.example.com"])
+            assert is_host_allowed("api.example.com") is True
+            assert is_host_allowed("deep.api.example.com") is True
+            assert is_host_allowed("example.com") is False
+
     # ---- is_confirmation_required ----
 
     @pytest.mark.unit
@@ -98,6 +117,13 @@ class TestMCPSecurityConfig:
         """未知操作不需要确认"""
         assert is_confirmation_required("summarize") is False
         assert is_confirmation_required("fetch") is False
+
+    @pytest.mark.unit
+    def test_human_confirmation_policy(self) -> None:
+        """危险操作需要显式确认，普通操作直接通过"""
+        assert is_human_confirmation_valid("export", confirmed=False) is False
+        assert is_human_confirmation_valid("export", confirmed=True) is True
+        assert is_human_confirmation_valid("read", confirmed=False) is True
 
     # ---- config limits ----
 

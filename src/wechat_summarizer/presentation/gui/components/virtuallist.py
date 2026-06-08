@@ -19,9 +19,9 @@ import contextlib
 import logging
 import time
 import tkinter as tk
+import tkinter.ttk as ttk
 from collections.abc import Callable
 from dataclasses import dataclass
-from tkinter import ttk
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)

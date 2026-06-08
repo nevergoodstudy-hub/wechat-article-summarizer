@@ -56,6 +56,7 @@ async def test_article_tools_use_configured_url_and_summary_limits(
     """Article tools should consume MCP security limits."""
     monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_batch_urls", 1)
     monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_summary_length", 80)
+    monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["example.com"])
     mcp = _CapturingMCP()
     register_article_tools(mcp, lambda: object())  # type: ignore[arg-type]
 
@@ -94,6 +95,7 @@ async def test_analysis_tools_use_configured_text_and_audit_limits(
     monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_topic_length", 3)
     monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_text_length", 5)
     monkeypatch.setitem(MCP_SECURITY_CONFIG, "max_audit_logs", 2)
+    monkeypatch.setitem(MCP_SECURITY_CONFIG, "allowed_network_hosts", ["example.com"])
     mcp = _CapturingMCP()
     register_analysis_tools(mcp, lambda: object())  # type: ignore[arg-type]
 

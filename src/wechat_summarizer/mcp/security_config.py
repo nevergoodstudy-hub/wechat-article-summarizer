@@ -73,6 +73,35 @@ def get_allowed_hosts() -> list[str]:
     return cast(list[str], MCP_SECURITY_CONFIG["allowed_network_hosts"])
 
 
+def normalize_host(host: str) -> str:
+    """Normalize a host name for allowlist comparisons."""
+    return host.strip().lower().rstrip(".")
+
+
+def is_host_allowed(host: str) -> bool:
+    """Check whether a host is allowed by MCP network policy.
+
+    Exact host names are supported by default. Entries prefixed with ``*.`` also
+    allow their subdomains while excluding the bare parent domain.
+    """
+    normalized_host = normalize_host(host)
+    if not normalized_host:
+        return False
+
+    for allowed in get_allowed_hosts():
+        normalized_allowed = normalize_host(allowed)
+        if not normalized_allowed:
+            continue
+        if normalized_allowed.startswith("*."):
+            suffix = normalized_allowed[1:]
+            if normalized_host.endswith(suffix) and normalized_host != normalized_allowed[2:]:
+                return True
+        elif normalized_host == normalized_allowed:
+            return True
+
+    return False
+
+
 def get_int_limit(key: str) -> int:
     """获取 MCP 安全整数限制。"""
     value = MCP_SECURITY_CONFIG[key]
@@ -127,3 +156,8 @@ def is_confirmation_required(operation: str) -> bool:
     """
     required_ops = cast(list[str], MCP_SECURITY_CONFIG["require_confirmation_for"])
     return operation.lower() in required_ops
+
+
+def is_human_confirmation_valid(operation: str, confirmed: bool = False) -> bool:
+    """Return whether a dangerous operation has the required human confirmation."""
+    return not is_confirmation_required(operation) or confirmed

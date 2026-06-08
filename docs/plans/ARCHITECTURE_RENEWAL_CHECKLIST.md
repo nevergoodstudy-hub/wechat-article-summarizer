@@ -7,10 +7,10 @@
 
 ## 0. 执行总则（必须遵守）
 
-- [ ] 所有改动走小步提交（每项清单可独立回滚）
-- [ ] 每步完成后运行：`ruff` + `pytest`（最少核心集）
-- [ ] 不允许在 `domain/` 引入 `infrastructure/presentation/mcp`
-- [ ] MCP 新增工具默认：参数校验 + 权限校验 + 审计脱敏
+- [x] 所有改动走小步提交（每项清单可独立回滚）
+- [x] 每步完成后运行：`ruff` + `pytest`（最少核心集）
+- [x] 不允许在 `domain/` 引入 `infrastructure/presentation/mcp`
+- [x] MCP 新增工具默认：参数校验 + 权限校验 + 审计脱敏
 - [ ] 每周更新风险看板（阻塞项/回滚点/覆盖率）
 
 ---
@@ -32,16 +32,16 @@
 - [ ] 文件上限：单文件目标 < 400 行
 
 ### P0-3 SSRF DNS Rebinding 修复
-- [ ] 实现“一次解析+固定IP连接”策略（transport 层）
-- [ ] 禁止自动跟随重定向，重定向目标逐跳校验
-- [ ] 拦截替代 IP 表示法（十进制/八进制/IPv6-mapped）
-- [ ] 拦截云元数据地址段（如 169.254.169.254）
+- [x] 实现“一次解析+固定IP连接”策略（transport 层）
+- [x] 禁止自动跟随重定向，重定向目标逐跳校验
+- [x] 拦截替代 IP 表示法（十进制/八进制/IPv6-mapped）
+- [x] 拦截云元数据地址段（如 169.254.169.254）
 - [ ] 增加集成测试：DNS rebinding / redirect / alt-IP
 
 ### P0-4 MCP 输入安全加固
-- [ ] 所有 `@tool` 入参统一接入 `MCPInputValidator`
-- [ ] URL、路径、文本、方法名、长度限制全面校验
-- [ ] 阻断命令注入字符集与危险 payload
+- [x] 所有 `@tool` 入参统一接入 `MCPInputValidator`
+- [x] URL、路径、文本、方法名、长度限制全面校验
+- [x] 阻断命令注入字符集与危险 payload
 - [ ] 错误返回统一化（业务错误 vs 校验错误）
 
 ---
@@ -50,8 +50,8 @@
 
 ### P1-1 架构边界自动守卫
 - [ ] 新增 `scripts/check_domain_boundary.py`
-- [ ] CI 强制执行 domain boundary check
-- [ ] 违规依赖改为 `Protocol` 端口抽象
+- [x] CI 强制执行 domain boundary check
+- [x] 违规依赖改为 `Protocol` 端口抽象
 
 ### P1-2 并发模型升级
 - [ ] 批量并发由 `asyncio.gather` 迁移到 `TaskGroup`
@@ -59,9 +59,9 @@
 - [ ] 引入 `except*` 处理 ExceptionGroup
 
 ### P1-3 MCP 审计日志脱敏
-- [ ] 审计日志实现递归脱敏（dict/list/string）
-- [ ] 匹配 token/api_key/password/bearer/sk- 等敏感模式
-- [ ] 超长字段截断（如 >200 chars）
+- [x] 审计日志实现递归脱敏（dict/list/string）
+- [x] 匹配 token/api_key/password/bearer/sk- 等敏感模式
+- [x] 超长字段截断（如 >200 chars）
 
 ### P1-4 / P1-5 SSRF 补强
 - [ ] 重定向链每跳合法性校验
@@ -73,14 +73,14 @@
 - [x] 旧数据迁移策略与兼容读取实现
 
 ### P1-7 MCP 运行权限最小化
-- [ ] `security_config.py` 定义 allowed_dirs / allowed_hosts
+- [x] `security_config.py` 定义 allowed_dirs / allowed_hosts
 - [ ] 危险操作增加人工确认开关（HITL）
-- [ ] 远程监听默认拒绝，必须显式开启
+- [x] 远程监听默认拒绝，必须显式开启
 
 ### P1-8 测试隔离改造
-- [ ] 移除跨测试共享可变状态
+- [x] 移除跨测试共享可变状态
 - [ ] 文件系统副作用统一 `tmp_path`
-- [ ] 增加随机顺序执行检查（如 pytest-randomly）
+- [x] 增加随机顺序执行检查（如 pytest-randomly）
 
 ---
 
@@ -92,8 +92,8 @@
 - [ ] 引入 `mypy` 渐进严格策略（先核心模块）
 
 ### CI/CD 与供应链安全
-- [ ] CI 拆分阶段：lint/type/test/security/build
-- [ ] 引入 `pip-audit` 依赖漏洞扫描
+- [x] CI 拆分阶段：lint/type/test/security/build
+- [x] 引入 `pip-audit` 依赖漏洞扫描
 - [ ] 加入测试矩阵（Python 3.12~3.14）
 
 ### 性能与资源治理
@@ -119,14 +119,14 @@
 - [ ] GUI 主入口完成瘦身并稳定运行
 
 ### Phase B（P1 完成）
-- [ ] 边界检查进入 CI 且可阻断违规
+- [x] 边界检查进入 CI 且可阻断违规
 - [ ] 并发模型完成迁移，异常可观测
-- [ ] 审计日志无敏感泄露
+- [x] 审计日志无敏感泄露
 
 ### Phase C（P2 完成）
-- [ ] CI 全链路稳定
+- [x] CI 全链路稳定
 - [ ] 类型检查覆盖核心模块
-- [ ] 依赖安全扫描常态化
+- [x] 依赖安全扫描常态化
 
 ---
 
@@ -136,8 +136,8 @@
 2. [ ] P0-3 SSRF Rebinding
 3. [ ] P0-1 容器测试阻断
 4. [ ] P0-2 GUI 解耦
-5. [ ] P1-1 边界守卫
-6. [ ] P1-3 审计脱敏
+5. [x] P1-1 边界守卫
+6. [x] P1-3 审计脱敏
 7. [ ] P1-2 TaskGroup 迁移
 8. [ ] P1-8 测试隔离
 9. [ ] P2 质量与 CI 平台化

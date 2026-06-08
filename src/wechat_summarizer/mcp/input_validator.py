@@ -15,10 +15,12 @@ from urllib.parse import urlparse
 
 from .security_config import (
     MCP_SECURITY_CONFIG,
+    get_allowed_hosts,
     get_max_aspect_length,
     get_max_aspects,
     get_max_batch_urls,
     get_max_summary_length,
+    is_host_allowed,
 )
 
 
@@ -126,6 +128,13 @@ class MCPInputValidator:
         invalid_host_chars = set("\"'<>\\^")
         if any(ch in invalid_host_chars for ch in netloc):
             raise MCPValidationError("Invalid character in URL hostname")
+
+        if not is_host_allowed(parsed.hostname):
+            allowed_hosts = ", ".join(sorted(get_allowed_hosts()))
+            raise MCPValidationError(
+                f"URL host not allowed by MCP network policy: {parsed.hostname!r}. "
+                f"Allowed hosts: {allowed_hosts}"
+            )
 
         # SSRF 防护（延迟导入避免循环依赖）
         from ..shared.utils.ssrf_protection import SSRFBlockedError, SSRFSafeTransport

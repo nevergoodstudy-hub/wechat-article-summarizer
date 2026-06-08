@@ -26,10 +26,10 @@ import os
 import threading
 import time
 import tkinter as tk
+import tkinter.ttk as ttk
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from tkinter import ttk
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)

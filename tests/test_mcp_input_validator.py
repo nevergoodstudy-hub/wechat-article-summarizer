@@ -53,11 +53,18 @@ class TestValidateUrl:
         with pytest.raises(MCPValidationError, match="Suspicious character"):
             MCPInputValidator.validate_url("https://evil.com;rm -rf/")
 
+    def test_rejects_hosts_outside_network_allowlist(self):
+        with pytest.raises(MCPValidationError, match="host not allowed"):
+            MCPInputValidator.validate_url("https://example.com/article")
+
     def test_strips_invisible_unicode(self):
         """移除零宽字符后仍应正确验证"""
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            return_value="https://example.com/article",
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                return_value="https://example.com/article",
+            ),
         ):
             result = MCPInputValidator.validate_url("https://example.com/\u200barticle")
             assert "\u200b" not in result
@@ -93,18 +100,24 @@ class TestValidateUrls:
             MCPInputValidator.validate_urls(["https://example.com/ok", "ftp://evil.com/bad"])
 
     def test_accepts_valid_url_list(self):
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=lambda u: u,
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=lambda u: u,
+            ),
         ):
             urls = ["https://example.com/1", "https://example.com/2"]
             result = MCPInputValidator.validate_urls(urls)
             assert len(result) == 2
 
     def test_accepts_url_list_at_max_count_boundary(self):
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=lambda u: u,
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=lambda u: u,
+            ),
         ):
             urls = [f"https://example.com/{i}" for i in range(10)]
             result = MCPInputValidator.validate_urls(urls, max_count=10)

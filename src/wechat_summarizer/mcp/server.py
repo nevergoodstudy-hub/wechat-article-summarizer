@@ -114,8 +114,11 @@ def run_mcp_server(
     if is_remote_host and not allow_remote:
         raise ValueError("远程监听已被禁止。若确需远程访问，请显式传入 --allow-remote。")
 
+    if is_remote_host and not auth_token:
+        raise ValueError("远程 MCP HTTP 监听必须配置认证 token。")
+
     if is_remote_host:
-        logger.warning("MCP HTTP 正在远程监听，请确保网络隔离与鉴权配置。")
+        logger.warning("MCP HTTP 正在远程监听，请确保网络隔离配置。")
 
     import uvicorn
 

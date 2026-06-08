@@ -129,6 +129,15 @@ class TestMCPServerComposition:
         with pytest.raises(ValueError, match="远程监听已被禁止"):
             server.run_mcp_server(transport="http", host="0.0.0.0")
 
+    def test_run_mcp_server_rejects_remote_http_without_token(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(server, "_ensure_mcp", lambda: _FakeMCP())
+
+        with pytest.raises(ValueError, match="必须配置认证 token"):
+            server.run_mcp_server(transport="http", host="0.0.0.0", allow_remote=True)
+
     def test_run_mcp_server_http_invokes_uvicorn_with_built_app(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -156,3 +165,32 @@ class TestMCPServerComposition:
         )
 
         assert captured == {"app": fake_app, "host": "127.0.0.1", "port": 8765}
+
+    def test_run_mcp_server_remote_http_requires_token_before_uvicorn(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        captured: dict[str, object] = {}
+        fake_mcp = _FakeMCP()
+        fake_app = Starlette()
+
+        class _FakeUvicorn:
+            @staticmethod
+            def run(app, host: str, port: int) -> None:
+                captured["app"] = app
+                captured["host"] = host
+                captured["port"] = port
+
+        monkeypatch.setattr(server, "_ensure_mcp", lambda: fake_mcp)
+        monkeypatch.setattr(server, "build_http_app", lambda mcp, auth_token=None: fake_app)
+        monkeypatch.setitem(sys.modules, "uvicorn", types.SimpleNamespace(run=_FakeUvicorn.run))
+
+        server.run_mcp_server(
+            transport="http",
+            host="0.0.0.0",
+            port=8765,
+            auth_token="token",
+            allow_remote=True,
+        )
+
+        assert captured == {"app": fake_app, "host": "0.0.0.0", "port": 8765}

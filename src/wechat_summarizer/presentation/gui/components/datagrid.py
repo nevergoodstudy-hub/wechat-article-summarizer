@@ -21,9 +21,9 @@ import contextlib
 import html
 import logging
 import tkinter as tk
+import tkinter.ttk as ttk
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from tkinter import ttk
 from typing import Any, Literal, cast
 
 logger = logging.getLogger(__name__)
