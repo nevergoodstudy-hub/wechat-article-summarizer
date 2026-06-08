@@ -33,7 +33,7 @@
 - [x] 抽离 `viewmodels`（状态与命令，不直接操作复杂UI细节）
 - [ ] 文件上限：单文件目标 < 400 行
 
-> 证据：`presentation/gui/app.py` 当前 110 行，仅组合 mixins、创建根窗口并委托 `MainWindow`；`main_window.py` 当前 36 行，封装 app_factory/build/run 协调入口；`viewmodels/` 已包含 `MainViewModel`、`SettingsViewModel`、`SingleProcessViewModel`、`BatchProcessViewModel` 与 ports；本轮新增 `app_layout.py` 将 shell 布局、页面装配、快捷键、响应式与日志面板从 bootstrap 流程中剥离，`app_bootstrap.py` 降至 167 行。
+> 证据：`presentation/gui/app.py` 当前 110 行，仅组合 mixins、创建根窗口并委托 `MainWindow`；`main_window.py` 当前 36 行，封装 app_factory/build/run 协调入口；`viewmodels/` 已包含 `MainViewModel`、`SettingsViewModel`、`SingleProcessViewModel`、`BatchProcessViewModel` 与 ports；`app_layout.py` 将 shell 布局、页面装配、快捷键、响应式与日志面板从 bootstrap 流程中剥离，`app_bootstrap.py` 降至 167 行；本轮新增 `frames/home_dashboard.py` 与 `frames/home_info.py`，将首页欢迎/快捷入口/导航卡片/状态总览/最近记录/提示条从 `pages/home_page.py` 抽离，`home_page.py` 当前 66 行，首页相关文件均 <400 行，并由 `tests/test_gui_app_composition.py` 锁定组合关系与行数目标。
 
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）

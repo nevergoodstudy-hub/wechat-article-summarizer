@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from wechat_summarizer.bootstrap import gui as gui_bootstrap
 from wechat_summarizer.presentation.gui import app as gui_app
 from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
+from wechat_summarizer.presentation.gui.frames import (
+    HomeActionCardsFrame,
+    HomeInfoRowFrame,
+    HomeTipBarFrame,
+    HomeWelcomeFrame,
+)
+from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 
 
 @pytest.mark.unit
@@ -78,3 +87,29 @@ def test_gui_shell_layout_is_extracted_from_bootstrap() -> None:
     assert "_build_log_panel" in GUILayoutMixin.__dict__
     assert "_build_ui" not in gui_app.GUIBootstrapMixin.__dict__
     assert "_build_sidebar" not in gui_app.GUIBootstrapMixin.__dict__
+
+
+@pytest.mark.unit
+def test_home_page_delegates_dashboard_sections_to_frames() -> None:
+    assert "_build_welcome" not in HomePage.__dict__
+    assert "_build_action_cards" not in HomePage.__dict__
+    assert "_build_status_overview" not in HomePage.__dict__
+    assert "_build_recent_records" not in HomePage.__dict__
+    assert "_build_tip_bar" not in HomePage.__dict__
+    assert "_build" in HomeWelcomeFrame.__dict__
+    assert "_build" in HomeActionCardsFrame.__dict__
+    assert "_build" in HomeInfoRowFrame.__dict__
+    assert "_build" in HomeTipBarFrame.__dict__
+
+
+@pytest.mark.unit
+def test_home_dashboard_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/pages/home_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/home_dashboard.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/home_info.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
