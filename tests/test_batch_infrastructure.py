@@ -1,6 +1,5 @@
 """批量获取基础设施组件的单元测试"""
 
-import tempfile
 import time
 from pathlib import Path
 
@@ -200,10 +199,9 @@ class TestArticleListCache:
     """文章列表缓存测试"""
 
     @pytest.fixture
-    def temp_cache_dir(self):
+    def temp_cache_dir(self, tmp_path: Path) -> Path:
         """创建临时缓存目录"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            yield Path(tmpdir)
+        return tmp_path / "article_list_cache"
 
     def test_create_cache(self, temp_cache_dir):
         """测试创建缓存"""

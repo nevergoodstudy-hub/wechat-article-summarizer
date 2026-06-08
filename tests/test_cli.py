@@ -503,7 +503,7 @@ class TestBatchCommand:
             assert result.exit_code == 0
             assert "处理完成" in result.output
 
-    def test_batch_from_file(self, runner: CliRunner, sample_article) -> None:
+    def test_batch_from_file(self, runner: CliRunner, sample_article, tmp_path: Path) -> None:
         """测试从文件读取 URL"""
         mock_container = MagicMock()
         mock_container.fetch_use_case.execute.return_value = sample_article
@@ -519,7 +519,7 @@ class TestBatchCommand:
                 "wechat_summarizer.presentation.cli.app.get_container",
                 return_value=mock_container,
             ),
-            runner.isolated_filesystem(),
+            runner.isolated_filesystem(temp_dir=tmp_path),
         ):
             url_file = Path("urls.txt")
             url_file.write_text(

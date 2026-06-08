@@ -113,8 +113,10 @@
 
 ### P1-8 测试隔离改造
 - [x] 移除跨测试共享可变状态
-- [ ] 文件系统副作用统一 `tmp_path`
+- [x] 文件系统副作用统一 `tmp_path`
 - [x] 增加随机顺序执行检查（如 pytest-randomly）
+
+> 证据：`tests/test_batch_infrastructure.py` 将文章列表缓存测试从 `tempfile.TemporaryDirectory()` 改为 `tmp_path`；`tests/test_security.py` 将凭据权限测试从 `NamedTemporaryFile(delete=False)` + 手动 `os.unlink` 改为 `tmp_path` 文件；`tests/test_gui_app_composition.py` 将 sidebar home 目录路径通过 monkeypatch 绑定到 `tmp_path`；`tests/test_cli.py` 将 Click `isolated_filesystem` 显式绑定到 `tmp_path`。新增 `scripts/check_test_filesystem_isolation.py` 并接入 `scripts/quality_gate.py --mode architecture`，通过 AST 阻断测试源码中的 `tempfile` helper、直接 `Path.home()` 和未绑定 `tmp_path` 的 `CliRunner.isolated_filesystem()`；`tests/test_test_filesystem_isolation.py` 覆盖当前测试套件、违规 tempfile、违规 Path.home、违规 Click 隔离目录和合法 tmp_path 用法。
 
 ---
 
@@ -173,7 +175,7 @@
 5. [x] P1-1 边界守卫
 6. [x] P1-3 审计脱敏
 7. [x] P1-2 TaskGroup 迁移
-8. [ ] P1-8 测试隔离
+8. [x] P1-8 测试隔离
 9. [ ] P2 质量与 CI 平台化
 10. [ ] P3 持续优化
 

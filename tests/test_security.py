@@ -11,7 +11,7 @@ import json
 import os
 import stat
 import sys
-import tempfile
+from pathlib import Path
 
 import pytest
 from pydantic import SecretStr
@@ -153,28 +153,24 @@ class TestUrlValidation:
 class TestCredentialFileSecurity:
     """测试凭据文件安全性"""
 
-    def test_credentials_file_should_be_user_only(self):
+    def test_credentials_file_should_be_user_only(self, tmp_path: Path):
         """验证凭据文件应该只有用户可读写"""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write('{"token": "test"}')
-            temp_path = f.name
+        credentials_path = tmp_path / "credentials.json"
+        credentials_path.write_text('{"token": "test"}', encoding="utf-8")
 
-        try:
-            # 设置为用户只读写
-            os.chmod(temp_path, stat.S_IRUSR | stat.S_IWUSR)
+        # 设置为用户只读写
+        os.chmod(credentials_path, stat.S_IRUSR | stat.S_IWUSR)
 
-            # 验证权限
-            file_stat = os.stat(temp_path)
-            mode = file_stat.st_mode
+        # 验证权限
+        file_stat = credentials_path.stat()
+        mode = file_stat.st_mode
 
-            # 检查其他用户没有权限（仅在Unix系统上有效）
-            if sys.platform != "win32":
-                assert not (mode & stat.S_IRGRP)
-                assert not (mode & stat.S_IWGRP)
-                assert not (mode & stat.S_IROTH)
-                assert not (mode & stat.S_IWOTH)
-        finally:
-            os.unlink(temp_path)
+        # 检查其他用户没有权限（仅在Unix系统上有效）
+        if sys.platform != "win32":
+            assert not (mode & stat.S_IRGRP)
+            assert not (mode & stat.S_IWGRP)
+            assert not (mode & stat.S_IROTH)
+            assert not (mode & stat.S_IWOTH)
 
 
 class TestCredentialEncryptionSecurity:

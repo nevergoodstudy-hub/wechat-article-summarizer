@@ -285,6 +285,9 @@ from wechat_summarizer.presentation.gui.components.sidebar_state import (
     default_sidebar_state_file as split_default_sidebar_state_file,
 )
 from wechat_summarizer.presentation.gui.components.sidebar_state import (
+    os as sidebar_state_os,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_state import (
     resolve_sidebar_state_file as split_resolve_sidebar_state_file,
 )
 from wechat_summarizer.presentation.gui.components.sidebar_tooltip import Tooltip as SplitTooltip
@@ -1487,10 +1490,14 @@ def test_sidebar_module_keeps_compatibility_exports_and_composition() -> None:
 
 
 @pytest.mark.unit
-def test_sidebar_state_path_validation_uses_safe_default(tmp_path: Path) -> None:
+def test_sidebar_state_path_validation_uses_safe_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sidebar_state_os.path, "expanduser", lambda value: str(tmp_path))
     default_path = default_sidebar_state_file()
     repo_root = Path(__file__).resolve().parents[1]
-    user_state_file = Path.home() / ".wechat_summarizer" / "sidebar-user-owned.json"
+    user_state_file = tmp_path / ".wechat_summarizer" / "sidebar-user-owned.json"
     local_state_file = (
         repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_state.json"
     )
