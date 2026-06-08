@@ -280,6 +280,7 @@ from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiA
 from wechat_summarizer.presentation.gui.utils import accessibility as accessibility_module
 from wechat_summarizer.presentation.gui.utils import animation as animation_module
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
+from wechat_summarizer.presentation.gui.utils import clipboard_detector as clipboard_module
 from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
@@ -388,6 +389,46 @@ from wechat_summarizer.presentation.gui.utils.autosave_models import (
 )
 from wechat_summarizer.presentation.gui.utils.autosave_storage import (
     DraftStorage as SplitDraftStorage,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_auto import (
+    AutoLinkDetector as SplitAutoLinkDetector,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_browser import (
+    BrowserDetector as SplitBrowserDetector,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_detector import (
+    MAX_TEXT_LENGTH as CLIPBOARD_MAX_TEXT_LENGTH,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_detector import (
+    MAX_URL_LENGTH as CLIPBOARD_MAX_URL_LENGTH,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_detector import (
+    MAX_URLS as CLIPBOARD_MAX_URLS,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_detector import (
+    AutoLinkDetector,
+    BrowserDetector,
+    ClipboardManager,
+    DetectionResult,
+    WeChatLinkDetector,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_manager import (
+    ClipboardManager as SplitClipboardManager,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_models import (
+    MAX_TEXT_LENGTH as SPLIT_CLIPBOARD_MAX_TEXT_LENGTH,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_models import (
+    MAX_URL_LENGTH as SPLIT_CLIPBOARD_MAX_URL_LENGTH,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_models import (
+    MAX_URLS as SPLIT_CLIPBOARD_MAX_URLS,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_models import (
+    DetectionResult as SplitDetectionResult,
+)
+from wechat_summarizer.presentation.gui.utils.clipboard_wechat import (
+    WeChatLinkDetector as SplitWeChatLinkDetector,
 )
 from wechat_summarizer.presentation.gui.utils.lazy import (
     ALLOWED_MODULE_PREFIX,
@@ -1234,6 +1275,47 @@ def test_autosave_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_dialog.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_clipboard_detector_module_keeps_compatibility_exports() -> None:
+    result = DetectionResult(
+        links=["https://mp.weixin.qq.com/s/example123"], source="text", message="ok"
+    )
+
+    assert clipboard_module.AutoLinkDetector is SplitAutoLinkDetector
+    assert clipboard_module.BrowserDetector is SplitBrowserDetector
+    assert clipboard_module.ClipboardManager is SplitClipboardManager
+    assert clipboard_module.DetectionResult is SplitDetectionResult
+    assert clipboard_module.WeChatLinkDetector is SplitWeChatLinkDetector
+    assert AutoLinkDetector is SplitAutoLinkDetector
+    assert BrowserDetector is SplitBrowserDetector
+    assert ClipboardManager is SplitClipboardManager
+    assert DetectionResult is SplitDetectionResult
+    assert WeChatLinkDetector is SplitWeChatLinkDetector
+    assert CLIPBOARD_MAX_TEXT_LENGTH == SPLIT_CLIPBOARD_MAX_TEXT_LENGTH
+    assert CLIPBOARD_MAX_URL_LENGTH == SPLIT_CLIPBOARD_MAX_URL_LENGTH
+    assert CLIPBOARD_MAX_URLS == SPLIT_CLIPBOARD_MAX_URLS
+    assert result.links == ["https://mp.weixin.qq.com/s/example123"]
+    assert result.source == "text"
+    assert WeChatLinkDetector.is_valid_wechat_link("https://mp.weixin.qq.com/s/example123")
+    assert not WeChatLinkDetector.is_valid_wechat_link("https://example.com/s/example123")
+
+
+@pytest.mark.unit
+def test_clipboard_detector_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_detector.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_wechat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_browser.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/clipboard_auto.py",
     ]
 
     for target in targets:
