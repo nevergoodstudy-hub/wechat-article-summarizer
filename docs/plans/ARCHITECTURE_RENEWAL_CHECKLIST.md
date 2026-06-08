@@ -28,7 +28,7 @@
 ### P0-2 GUI 上帝对象彻底拆分
 - [x] 保持 `presentation/gui/app.py` 仅为薄入口（< 150 行）
 - [x] 抽离 `main_window` 协调器（页面装配+事件路由）
-- [ ] 抽离 `frames`（sidebar/article/summarization/export/settings）
+- [x] 抽离 `frames`（sidebar/article/summarization/export/settings）
 - [x] 抽离 `dialogs`（导出确认/API配置/退出确认）
 - [x] 抽离 `viewmodels`（状态与命令，不直接操作复杂UI细节）
 - [x] 文件上限：单文件目标 < 400 行
@@ -49,7 +49,9 @@
 
 > 最新证据：已将 `components/graph_viewer.py` 的可选 CustomTkinter 运行时、节点位置/颜色/标签模型、知识图谱/字典数据归一化、力导向布局、Canvas 渲染和命中检测拆到 `graph_viewer_runtime.py`、`graph_viewer_models.py`、`graph_viewer_data.py`、`graph_viewer_layout.py`、`graph_viewer_render.py`、`graph_viewer_interaction.py`，兼容入口降至 209 行，拆分后相关文件分别为 22/45/75/111/102/23 行，并保留 `GraphViewerComponent`、`NodePosition`、`ctk`、`_ctk_available` 旧公开导出；`tests/test_gui_graph_viewer_composition.py` 新增兼容导出、字典载入归一化、布局边界、Canvas 渲染调用、命中检测、私有方法委托和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 2 个 Python 文件 >=400 行（最高 `components/progress.py` 411 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
-> 最新证据：已将 `components/progress.py` 的 CustomTkinter/Tk 兼容层、主题颜色、线性进度、圆形进度、步骤进度和工厂函数拆到 `progress_runtime.py`、`progress_colors.py`、`progress_linear.py`、`progress_circular.py`、`progress_step.py`、`progress_factory.py`，兼容入口降至 20 行，拆分后相关文件分别为 27/46/89/89/103/34 行；已将 `components/toast.py` 的运行时兼容层、通知类型/颜色/图标、单个 Toast、ToastManager 和全局门面拆到 `toast_runtime.py`、`toast_models.py`、`toast_item.py`、`toast_manager.py`、`toast_facade.py`，兼容入口降至 33 行，拆分后相关文件分别为 20/57/152/102/67 行，并保留 `LinearProgress`、`CircularProgress`、`StepProgress`、`create_linear_progress`、`create_circular_progress`、`Toast`、`ToastManager`、`ToastType`、`init_toast_manager`、`show_toast`、`show_success`、`show_error`、`show_warning`、`show_info` 旧公开导出；`tests/test_gui_progress_toast_composition.py` 新增兼容导出、主题颜色、Toast 类型/图标/颜色和行数目标测试。最新复核发现当前 `presentation/gui` 下 Python 文件 >=400 行为 0 个，因此 `文件上限：单文件目标 < 400 行` 已完成；由于 `frames` 总项仍有未完成子要求，P0-2 GUI 解耦整体仍保持未完成。
+> 最新证据：已将 `components/progress.py` 的 CustomTkinter/Tk 兼容层、主题颜色、线性进度、圆形进度、步骤进度和工厂函数拆到 `progress_runtime.py`、`progress_colors.py`、`progress_linear.py`、`progress_circular.py`、`progress_step.py`、`progress_factory.py`，兼容入口降至 20 行，拆分后相关文件分别为 27/46/89/89/103/34 行；已将 `components/toast.py` 的运行时兼容层、通知类型/颜色/图标、单个 Toast、ToastManager 和全局门面拆到 `toast_runtime.py`、`toast_models.py`、`toast_item.py`、`toast_manager.py`、`toast_facade.py`，兼容入口降至 33 行，拆分后相关文件分别为 20/57/152/102/67 行，并保留 `LinearProgress`、`CircularProgress`、`StepProgress`、`create_linear_progress`、`create_circular_progress`、`Toast`、`ToastManager`、`ToastType`、`init_toast_manager`、`show_toast`、`show_success`、`show_error`、`show_warning`、`show_info` 旧公开导出；`tests/test_gui_progress_toast_composition.py` 新增兼容导出、主题颜色、Toast 类型/图标/颜色和行数目标测试。最新复核发现当前 `presentation/gui` 下 Python 文件 >=400 行为 0 个，因此 `文件上限：单文件目标 < 400 行` 已完成。
+
+> 最新证据：已新增 `frames/single_clipboard.py`，将单篇页剪贴板智能提示横幅从 `pages/single_page.py` 抽离为 `SingleClipboardBannerFrame`；已新增 `frames/batch_export.py`，将批量处理结果区的 Word/Markdown/压缩/HTML 导出按钮组从 `BatchResultsFrame` 抽离为 `BatchExportActionsFrame`，保留旧公开按钮属性别名；已新增 `frames/history.py`，将历史页标题/缓存统计/刷新与清空按钮、历史列表容器、历史记录行抽离为 `HistoryHeaderFrame`、`HistoryListFrame`、`HistoryItemFrame`，`pages/history_page.py` 保留导航、存储读取、查看/删除/清空事件协调；`frames/__init__.py` 已统一导出新增 frame；`tests/test_gui_app_composition.py` 覆盖单篇页、批量页、历史页委托到 frames，验证页面不再持有批量导出与历史条目构建细节，并覆盖新增 frame 文件行数目标；GUI 组合测试 `tests/test_gui_app_composition.py tests/test_gui_i18n_composition.py tests/test_gui_remaining_dialogs.py tests/test_gui_settings_dialogs.py tests/test_gui_export_dialogs.py` 共 97 个用例通过；当前 `presentation/gui` 下 Python 文件 >=400 行为 0 个。因此 `frames` 总项已完成，P0-2 GUI 上帝对象拆分完成。
 
 > 最新证据：已新增 `dialogs/settings_dialogs.py`，将设置页默认导出目录选择、API 密钥清空确认、导出设置重置确认、缺失目录创建确认、目录缺失提示、开机启动错误和目录创建错误从 `pages/settings_page.py` 与 `settings_api_actions.py` 抽离到 dialogs 层，并通过 `dialogs/__init__.py` 统一导出；`settings_page.py` 与 `settings_api_actions.py` 已无直接 `messagebox/filedialog/askdirectory/askyesno/showerror/showwarning/showinfo` 命中；`tests/test_gui_settings_dialogs.py` 新增 dialogs re-export、目录选择 initialdir、确认/提示文本、页面/mixin 委托和行数目标测试。后续已继续抽离其它入口，最终状态见下方最新 dialogs 证据。
 
@@ -167,7 +169,7 @@
 1. [x] P0-4 MCP 输入安全
 2. [x] P0-3 SSRF Rebinding
 3. [x] P0-1 容器测试阻断
-4. [ ] P0-2 GUI 解耦
+4. [x] P0-2 GUI 解耦
 5. [x] P1-1 边界守卫
 6. [x] P1-3 审计脱敏
 7. [ ] P1-2 TaskGroup 迁移

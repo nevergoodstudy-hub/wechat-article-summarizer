@@ -17,8 +17,7 @@ from ..dialogs import (
     show_clear_cache_success,
     show_delete_history_error,
 )
-from ..styles.colors import ModernColors
-from ..utils.i18n import tr
+from ..frames.history import HistoryHeaderFrame, HistoryListFrame
 
 _ctk_available = True
 try:
@@ -45,6 +44,8 @@ class HistoryPage(ctk.CTkFrame):
         # 公开属性
         self.cache_stats_label = None
         self.history_frame = None
+        self.header_frame = None
+        self.list_frame = None
         self._unsubscribe_navigate = None
         if hasattr(self.gui, "event_bus"):
             self._unsubscribe_navigate = self.gui.event_bus.subscribe(
@@ -55,47 +56,17 @@ class HistoryPage(ctk.CTkFrame):
 
     def _build(self):
         """构建历史记录页面"""
-        header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", pady=(0, 20))
-        ctk.CTkLabel(header, text=tr("📜 历史记录"), font=ctk.CTkFont(size=24, weight="bold")).pack(
-            side="left"
+        self.header_frame = HistoryHeaderFrame(
+            self,
+            on_refresh=self._refresh_history,
+            on_clear=self._on_clear_cache,
         )
+        self.header_frame.pack(fill="x", pady=(0, 20))
+        self.cache_stats_label = self.header_frame.cache_stats_label
 
-        ctk.CTkButton(
-            header,
-            text=tr("🔄 刷新"),
-            width=80,
-            height=35,
-            corner_radius=8,
-            fg_color=ModernColors.NEUTRAL_BTN,
-            command=self._refresh_history,
-        ).pack(side="right", padx=5)
-
-        ctk.CTkButton(
-            header,
-            text=tr("🗑️ 清空缓存"),
-            width=100,
-            height=35,
-            corner_radius=8,
-            fg_color=ModernColors.ERROR,
-            command=self._on_clear_cache,
-        ).pack(side="right", padx=5)
-
-        self.cache_stats_label = ctk.CTkLabel(
-            header,
-            text="",
-            font=ctk.CTkFont(size=12),
-            text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
-        )
-        self.cache_stats_label.pack(side="right", padx=20)
-
-        list_card = ctk.CTkFrame(
-            self, corner_radius=15, fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD)
-        )
-        list_card.pack(fill="both", expand=True)
-
-        self.history_frame = ctk.CTkScrollableFrame(list_card, corner_radius=10)
-        self.history_frame.pack(fill="both", expand=True, padx=15, pady=15)
+        self.list_frame = HistoryListFrame(self)
+        self.list_frame.pack(fill="both", expand=True)
+        self.history_frame = self.list_frame.history_frame
 
     # ── 历史记录业务逻辑（从 app.py 迁移） ─────────────────────
 
@@ -111,69 +82,34 @@ class HistoryPage(ctk.CTkFrame):
 
     def _refresh_history(self):
         """刷新历史记录列表"""
-        for widget in self.history_frame.winfo_children():
-            widget.destroy()
+        self.list_frame.clear_items()
         storage = self.gui.container.storage
         if not storage:
-            ctk.CTkLabel(self.history_frame, text="缓存存储不可用", text_color="gray").pack(pady=30)
+            self.list_frame.show_storage_unavailable()
             return None
         try:
             stats = storage.get_stats()
-            self.cache_stats_label.configure(
-                text=f"缓存: {stats.total_entries} 条 | {stats.total_size_bytes / 1024:.1f} KB"
+            self.header_frame.update_cache_stats(
+                total_entries=stats.total_entries,
+                total_size_bytes=stats.total_size_bytes,
             )
             articles = storage.list_recent(limit=50)
             if not articles:
-                ctk.CTkLabel(self.history_frame, text="暂无历史记录", text_color="gray").pack(
-                    pady=30
-                )
+                self.list_frame.show_empty()
             else:
                 for article in articles:
                     self._add_history_item(article)
         except Exception as e:
             logger.error(f"加载历史失败: {e}")
-            ctk.CTkLabel(
-                self.history_frame, text=f"加载失败: {e}", text_color=ModernColors.ERROR
-            ).pack(pady=30)
+            self.list_frame.show_error(e)
 
     def _add_history_item(self, article: Article):
         """添加单条历史记录项"""
-        frame = ctk.CTkFrame(
-            self.history_frame,
-            corner_radius=10,
-            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
+        self.list_frame.add_article(
+            article,
+            on_view=self._view_history_article,
+            on_delete=self._delete_history_article,
         )
-        frame.pack(fill="x", pady=4)
-        title = article.title[:45] + "..." if len(article.title) > 45 else article.title
-        ctk.CTkLabel(frame, text=title, anchor="w", font=ctk.CTkFont(size=13)).pack(
-            side="left", padx=15, pady=10, fill="x", expand=True
-        )
-        if article.created_at:
-            time_str = article.created_at.strftime("%m-%d %H:%M")
-            ctk.CTkLabel(frame, text=time_str, text_color="gray", font=ctk.CTkFont(size=11)).pack(
-                side="left", padx=5
-            )
-        ctk.CTkButton(
-            frame,
-            text="查看",
-            width=60,
-            height=28,
-            corner_radius=6,
-            font=ctk.CTkFont(size=11),
-            fg_color=ModernColors.INFO,
-            command=lambda a=article: self._view_history_article(a),
-        ).pack(side="right", padx=5, pady=8)
-        ctk.CTkButton(
-            frame,
-            text="删除",
-            width=60,
-            height=28,
-            corner_radius=6,
-            font=ctk.CTkFont(size=11),
-            fg_color=ModernColors.NEUTRAL_BTN,
-            hover_color=ModernColors.ERROR,
-            command=lambda a=article: self._delete_history_article(a),
-        ).pack(side="right", padx=2, pady=8)
 
     def _view_history_article(self, article: Article):
         """查看历史文章 — 跨页导航委托给 GUI 控制器"""

@@ -15,8 +15,7 @@ import contextlib
 import re
 
 from ..frames.single_article import SingleArticleInputFrame, SingleArticleResultFrame
-from ..styles.colors import ModernColors
-from ..styles.spacing import Spacing
+from ..frames.single_clipboard import SingleClipboardBannerFrame
 from ..utils.i18n import tr
 
 _ctk_available = True
@@ -85,59 +84,14 @@ class SinglePage(ctk.CTkFrame):
     def _show_clipboard_banner(self, url: str) -> None:
         """显示剪贴板智能提示横幅"""
         self._dismiss_clipboard_banner()
-        banner = ctk.CTkFrame(
+        banner = SingleClipboardBannerFrame(
             self,
-            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_SURFACE_ALT),
-            corner_radius=Spacing.RADIUS_MD,
+            url=url,
+            on_apply=self._apply_clipboard,
+            on_dismiss=self._dismiss_clipboard_banner,
         )
         # 插入到最顶部
         banner.pack(fill="x", pady=(0, 8), before=self.winfo_children()[0])
-
-        inner = ctk.CTkFrame(banner, fg_color="transparent")
-        inner.pack(fill="x", padx=14, pady=8)
-
-        short = url if len(url) <= 50 else url[:48] + "…"
-        ctk.CTkLabel(
-            inner,
-            text=f"📋 检测到剪贴板链接: {short}",
-            font=ctk.CTkFont(size=12),
-            text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-            anchor="w",
-        ).pack(side="left", fill="x", expand=True)
-
-        ctk.CTkButton(
-            inner,
-            text="粘贴使用",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            width=80,
-            height=28,
-            corner_radius=Spacing.RADIUS_SM,
-            fg_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-            hover_color=(
-                ModernColors.LIGHT_ACCENT_HOVER,
-                ModernColors.DARK_ACCENT_HOVER,
-            ),
-            command=lambda: self._apply_clipboard(url),
-        ).pack(side="right", padx=(8, 0))
-
-        ctk.CTkButton(
-            inner,
-            text="✕",
-            width=28,
-            height=28,
-            corner_radius=Spacing.RADIUS_SM,
-            fg_color="transparent",
-            text_color=(
-                ModernColors.LIGHT_TEXT_MUTED,
-                ModernColors.DARK_TEXT_MUTED,
-            ),
-            hover_color=(
-                ModernColors.LIGHT_HOVER_SUBTLE,
-                ModernColors.DARK_HOVER_SUBTLE,
-            ),
-            command=self._dismiss_clipboard_banner,
-        ).pack(side="right")
-
         self._clipboard_banner = banner
 
     def _apply_clipboard(self, url: str) -> None:

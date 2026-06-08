@@ -368,8 +368,12 @@ from wechat_summarizer.presentation.gui.dialogs.word_preview_single import (
     show_word_preview as split_show_word_preview,
 )
 from wechat_summarizer.presentation.gui.frames import (
+    BatchExportActionsFrame,
     BatchInputFrame,
     BatchResultsFrame,
+    HistoryHeaderFrame,
+    HistoryItemFrame,
+    HistoryListFrame,
     HomeActionCardsFrame,
     HomeInfoRowFrame,
     HomeTipBarFrame,
@@ -383,8 +387,10 @@ from wechat_summarizer.presentation.gui.frames import (
     SettingsSystemSection,
     SingleArticleInputFrame,
     SingleArticleResultFrame,
+    SingleClipboardBannerFrame,
 )
 from wechat_summarizer.presentation.gui.pages.batch_page import BatchPage
+from wechat_summarizer.presentation.gui.pages.history_page import HistoryPage
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.pages.single_page import SinglePage
@@ -975,9 +981,13 @@ def test_single_page_delegates_article_sections_to_frames() -> None:
     assert "_build" in SingleArticleInputFrame.__dict__
     assert "_build" in SingleArticleResultFrame.__dict__
     assert "_build_textbox_section" in SingleArticleResultFrame.__dict__
+    assert "_build" in SingleClipboardBannerFrame.__dict__
+    assert SingleClipboardBannerFrame.format_url("a" * 51) == f"{'a' * 48}…"
     assert "on_page_shown" in SinglePage.__dict__
     assert "_show_clipboard_banner" in SinglePage.__dict__
     assert "_copy_textbox" in SinglePage.__dict__
+    assert "SingleClipboardBannerFrame" in SinglePage._show_clipboard_banner.__globals__
+    assert "ModernColors" not in SinglePage._show_clipboard_banner.__globals__
 
 
 @pytest.mark.unit
@@ -986,6 +996,7 @@ def test_single_page_files_stay_below_gui_file_target() -> None:
     targets = [
         repo_root / "src/wechat_summarizer/presentation/gui/pages/single_page.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/single_article.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/single_clipboard.py",
     ]
 
     for target in targets:
@@ -994,6 +1005,7 @@ def test_single_page_files_stay_below_gui_file_target() -> None:
 
 @pytest.mark.unit
 def test_batch_page_delegates_processing_sections_to_frames() -> None:
+    assert "_build" in BatchExportActionsFrame.__dict__
     assert "_build" in BatchInputFrame.__dict__
     assert "_build_url_actions" in BatchInputFrame.__dict__
     assert "_build_options" in BatchInputFrame.__dict__
@@ -1001,6 +1013,7 @@ def test_batch_page_delegates_processing_sections_to_frames() -> None:
     assert "_build" in BatchResultsFrame.__dict__
     assert "_build_progress_detail" in BatchResultsFrame.__dict__
     assert "_build_export_buttons" in BatchResultsFrame.__dict__
+    assert "BatchExportActionsFrame" in BatchResultsFrame._build_export_buttons.__globals__
     assert "set_processing_state" in BatchPage.__dict__
     assert "_build_progress_detail" not in BatchPage.__dict__
     assert "_build_export_buttons" not in BatchPage.__dict__
@@ -1012,6 +1025,33 @@ def test_batch_page_files_stay_below_gui_file_target() -> None:
     targets = [
         repo_root / "src/wechat_summarizer/presentation/gui/pages/batch_page.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/batch_processing.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/batch_export.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_history_page_delegates_history_sections_to_frames() -> None:
+    assert "_build" in HistoryHeaderFrame.__dict__
+    assert "update_cache_stats" in HistoryHeaderFrame.__dict__
+    assert "_build" in HistoryListFrame.__dict__
+    assert "add_article" in HistoryListFrame.__dict__
+    assert "_build" in HistoryItemFrame.__dict__
+    assert HistoryItemFrame.format_title("a" * 46) == f"{'a' * 45}..."
+    assert "HistoryHeaderFrame" in HistoryPage._build.__globals__
+    assert "HistoryListFrame" in HistoryPage._build.__globals__
+    assert "ModernColors" not in HistoryPage._add_history_item.__globals__
+    assert "add_article" in HistoryPage._add_history_item.__code__.co_names
+
+
+@pytest.mark.unit
+def test_history_page_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/pages/history_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/history.py",
     ]
 
     for target in targets:

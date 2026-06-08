@@ -1,6 +1,8 @@
 """Reusable GUI frame sections."""
 
+from .batch_export import BatchExportActionsFrame
 from .batch_processing import BatchInputFrame, BatchResultsFrame
+from .history import HistoryHeaderFrame, HistoryItemFrame, HistoryListFrame
 from .home_dashboard import (
     HomeActionCardsFrame,
     HomeTipBarFrame,
@@ -16,10 +18,15 @@ from .settings_preferences import (
 )
 from .settings_service import SettingsApiKeysSection, SettingsSummarizerSection
 from .single_article import SingleArticleInputFrame, SingleArticleResultFrame
+from .single_clipboard import SingleClipboardBannerFrame
 
 __all__ = [
+    "BatchExportActionsFrame",
     "BatchInputFrame",
     "BatchResultsFrame",
+    "HistoryHeaderFrame",
+    "HistoryItemFrame",
+    "HistoryListFrame",
     "HomeActionCardsFrame",
     "HomeInfoRowFrame",
     "HomeRecentRecordsFrame",
@@ -35,4 +42,5 @@ __all__ = [
     "SettingsSystemSection",
     "SingleArticleInputFrame",
     "SingleArticleResultFrame",
+    "SingleClipboardBannerFrame",
 ]
