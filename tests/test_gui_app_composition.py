@@ -10,6 +10,7 @@ from wechat_summarizer.bootstrap import gui as gui_bootstrap
 from wechat_summarizer.presentation.gui import app as gui_app
 from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
 from wechat_summarizer.presentation.gui.components import border as border_module
+from wechat_summarizer.presentation.gui.components import modal as modal_module
 from wechat_summarizer.presentation.gui.components.border import (
     Divider,
     GlowIntensity,
@@ -103,6 +104,34 @@ from wechat_summarizer.presentation.gui.components.input_state import (
 )
 from wechat_summarizer.presentation.gui.components.input_textarea import (
     ModernTextArea as SplitModernTextArea,
+)
+from wechat_summarizer.presentation.gui.components.modal import (
+    AlertModal,
+    ConfirmModal,
+    Modal,
+    ModalSize,
+    show_alert,
+    show_confirm,
+    show_modal,
+)
+from wechat_summarizer.presentation.gui.components.modal_alert import (
+    AlertModal as SplitAlertModal,
+)
+from wechat_summarizer.presentation.gui.components.modal_base import Modal as SplitModal
+from wechat_summarizer.presentation.gui.components.modal_confirm import (
+    ConfirmModal as SplitConfirmModal,
+)
+from wechat_summarizer.presentation.gui.components.modal_factory import (
+    show_alert as split_show_alert,
+)
+from wechat_summarizer.presentation.gui.components.modal_factory import (
+    show_confirm as split_show_confirm,
+)
+from wechat_summarizer.presentation.gui.components.modal_factory import (
+    show_modal as split_show_modal,
+)
+from wechat_summarizer.presentation.gui.components.modal_models import (
+    ModalSize as SplitModalSize,
 )
 from wechat_summarizer.presentation.gui.components.tab_indicator import (
     TabIndicator as SplitTabIndicator,
@@ -485,6 +514,44 @@ def test_input_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_textarea.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_password.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/input_factories.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_modal_module_keeps_compatibility_exports() -> None:
+    assert modal_module.Modal is SplitModal
+    assert modal_module.ConfirmModal is SplitConfirmModal
+    assert modal_module.AlertModal is SplitAlertModal
+    assert modal_module.ModalSize is SplitModalSize
+    assert modal_module.show_modal is split_show_modal
+    assert modal_module.show_confirm is split_show_confirm
+    assert modal_module.show_alert is split_show_alert
+    assert Modal is SplitModal
+    assert ConfirmModal is SplitConfirmModal
+    assert AlertModal is SplitAlertModal
+    assert ModalSize is SplitModalSize
+    assert show_modal is split_show_modal
+    assert show_confirm is split_show_confirm
+    assert show_alert is split_show_alert
+    assert Modal._modal_stack is SplitModal._modal_stack
+    assert ModalSize.SMALL.value == (400, 200)
+    assert ModalSize.FULLSCREEN.value == (0, 0)
+
+
+@pytest.mark.unit
+def test_modal_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_base.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_confirm.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_alert.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/modal_factory.py",
     ]
 
     for target in targets:
