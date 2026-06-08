@@ -397,6 +397,7 @@ from wechat_summarizer.presentation.gui.utils import clipboard_detector as clipb
 from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
+from wechat_summarizer.presentation.gui.utils import responsive as responsive_module
 from wechat_summarizer.presentation.gui.utils import shortcuts as shortcuts_module
 from wechat_summarizer.presentation.gui.utils import theme_manager as theme_manager_module
 from wechat_summarizer.presentation.gui.utils import transition as transition_module
@@ -695,6 +696,36 @@ from wechat_summarizer.presentation.gui.utils.performance_overlay import (
 )
 from wechat_summarizer.presentation.gui.utils.performance_timer import (
     PerformanceTimer as SplitPerformanceTimer,
+)
+from wechat_summarizer.presentation.gui.utils.responsive import (
+    Breakpoint,
+    BreakpointConfig,
+    BreakpointManager,
+    DrawerSidebar,
+    ResponsiveGrid,
+    ResponsiveLayout,
+    ResponsiveValue,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_breakpoints import (
+    BreakpointManager as SplitBreakpointManager,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_drawer import (
+    DrawerSidebar as SplitDrawerSidebar,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_grid import (
+    ResponsiveGrid as SplitResponsiveGrid,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_layout import (
+    ResponsiveLayout as SplitResponsiveLayout,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_models import (
+    Breakpoint as SplitBreakpoint,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_models import (
+    BreakpointConfig as SplitBreakpointConfig,
+)
+from wechat_summarizer.presentation.gui.utils.responsive_value import (
+    ResponsiveValue as SplitResponsiveValue,
 )
 from wechat_summarizer.presentation.gui.utils.shortcuts import (
     KeyboardShortcutManager,
@@ -2085,6 +2116,49 @@ def test_performance_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_overlay.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_facade.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_responsive_module_keeps_compatibility_exports() -> None:
+    config = BreakpointConfig(xs_max=600, sm_max=900, md_max=1200, lg_max=1600)
+
+    assert responsive_module.Breakpoint is SplitBreakpoint
+    assert responsive_module.BreakpointConfig is SplitBreakpointConfig
+    assert responsive_module.BreakpointManager is SplitBreakpointManager
+    assert responsive_module.ResponsiveGrid is SplitResponsiveGrid
+    assert responsive_module.ResponsiveValue is SplitResponsiveValue
+    assert responsive_module.DrawerSidebar is SplitDrawerSidebar
+    assert responsive_module.ResponsiveLayout is SplitResponsiveLayout
+    assert Breakpoint is SplitBreakpoint
+    assert BreakpointConfig is SplitBreakpointConfig
+    assert BreakpointManager is SplitBreakpointManager
+    assert ResponsiveGrid is SplitResponsiveGrid
+    assert ResponsiveValue is SplitResponsiveValue
+    assert DrawerSidebar is SplitDrawerSidebar
+    assert ResponsiveLayout is SplitResponsiveLayout
+    assert Breakpoint.XS.value == "xs"
+    assert Breakpoint.XL.value == "xl"
+    assert config.xs_max == 600
+    assert BreakpointManager.MAX_CALLBACKS == 50
+    assert BreakpointManager.THROTTLE_MS == 100
+
+
+@pytest.mark.unit
+def test_responsive_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_breakpoints.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_grid.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_value.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_drawer.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_layout.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/responsive_demo.py",
     ]
 
     for target in targets:
