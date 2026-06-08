@@ -1,0 +1,20 @@
+"""Constants for GUI performance monitoring."""
+
+from __future__ import annotations
+
+MAX_HISTORY_SIZE = 1000
+MAX_SLOW_OPS_LOG = 100
+SLOW_OP_THRESHOLD_MS = 100
+WARNING_MEMORY_MB = 500
+CRITICAL_MEMORY_MB = 1000
+MONITOR_INTERVAL_MS = 100
+
+
+__all__ = [
+    "CRITICAL_MEMORY_MB",
+    "MAX_HISTORY_SIZE",
+    "MAX_SLOW_OPS_LOG",
+    "MONITOR_INTERVAL_MS",
+    "SLOW_OP_THRESHOLD_MS",
+    "WARNING_MEMORY_MB",
+]

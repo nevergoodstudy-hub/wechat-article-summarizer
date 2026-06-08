@@ -176,6 +176,7 @@ from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
+from wechat_summarizer.presentation.gui.utils import performance as performance_module
 from wechat_summarizer.presentation.gui.utils.autosave import (
     DEFAULT_DEBOUNCE_MS,
     DRAFT_EXPIRE_DAYS,
@@ -263,6 +264,74 @@ from wechat_summarizer.presentation.gui.utils.microinteractions_motion import (
 )
 from wechat_summarizer.presentation.gui.utils.microinteractions_motion import (
     PulseEffect as SplitPulseEffect,
+)
+from wechat_summarizer.presentation.gui.utils.performance import (
+    CRITICAL_MEMORY_MB,
+    MAX_HISTORY_SIZE,
+    MAX_SLOW_OPS_LOG,
+    MONITOR_INTERVAL_MS,
+    SLOW_OP_THRESHOLD_MS,
+    WARNING_MEMORY_MB,
+    PerformanceLevel,
+    PerformanceMetrics,
+    PerformanceMonitor,
+    PerformanceOverlay,
+    PerformanceTimer,
+    SlowOperation,
+    get_monitor,
+    show_overlay,
+    start_monitoring,
+    stop_monitoring,
+    timer,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    CRITICAL_MEMORY_MB as SPLIT_CRITICAL_MEMORY_MB,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    MAX_HISTORY_SIZE as SPLIT_MAX_HISTORY_SIZE,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    MAX_SLOW_OPS_LOG as SPLIT_MAX_SLOW_OPS_LOG,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    MONITOR_INTERVAL_MS as SPLIT_MONITOR_INTERVAL_MS,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    SLOW_OP_THRESHOLD_MS as SPLIT_SLOW_OP_THRESHOLD_MS,
+)
+from wechat_summarizer.presentation.gui.utils.performance_constants import (
+    WARNING_MEMORY_MB as SPLIT_WARNING_MEMORY_MB,
+)
+from wechat_summarizer.presentation.gui.utils.performance_facade import (
+    get_monitor as split_get_monitor,
+)
+from wechat_summarizer.presentation.gui.utils.performance_facade import (
+    show_overlay as split_show_overlay,
+)
+from wechat_summarizer.presentation.gui.utils.performance_facade import (
+    start_monitoring as split_start_monitoring,
+)
+from wechat_summarizer.presentation.gui.utils.performance_facade import (
+    stop_monitoring as split_stop_monitoring,
+)
+from wechat_summarizer.presentation.gui.utils.performance_facade import timer as split_timer
+from wechat_summarizer.presentation.gui.utils.performance_models import (
+    PerformanceLevel as SplitPerformanceLevel,
+)
+from wechat_summarizer.presentation.gui.utils.performance_models import (
+    PerformanceMetrics as SplitPerformanceMetrics,
+)
+from wechat_summarizer.presentation.gui.utils.performance_models import (
+    SlowOperation as SplitSlowOperation,
+)
+from wechat_summarizer.presentation.gui.utils.performance_monitor import (
+    PerformanceMonitor as SplitPerformanceMonitor,
+)
+from wechat_summarizer.presentation.gui.utils.performance_overlay import (
+    PerformanceOverlay as SplitPerformanceOverlay,
+)
+from wechat_summarizer.presentation.gui.utils.performance_timer import (
+    PerformanceTimer as SplitPerformanceTimer,
 )
 
 
@@ -665,6 +734,57 @@ def test_autosave_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_dialog.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_performance_module_keeps_compatibility_exports() -> None:
+    assert performance_module.PerformanceLevel is SplitPerformanceLevel
+    assert performance_module.PerformanceMetrics is SplitPerformanceMetrics
+    assert performance_module.SlowOperation is SplitSlowOperation
+    assert performance_module.PerformanceMonitor is SplitPerformanceMonitor
+    assert performance_module.PerformanceOverlay is SplitPerformanceOverlay
+    assert performance_module.PerformanceTimer is SplitPerformanceTimer
+    assert performance_module.get_monitor is split_get_monitor
+    assert performance_module.start_monitoring is split_start_monitoring
+    assert performance_module.stop_monitoring is split_stop_monitoring
+    assert performance_module.timer is split_timer
+    assert performance_module.show_overlay is split_show_overlay
+    assert PerformanceLevel is SplitPerformanceLevel
+    assert PerformanceMetrics is SplitPerformanceMetrics
+    assert SlowOperation is SplitSlowOperation
+    assert PerformanceMonitor is SplitPerformanceMonitor
+    assert PerformanceOverlay is SplitPerformanceOverlay
+    assert PerformanceTimer is SplitPerformanceTimer
+    assert get_monitor is split_get_monitor
+    assert start_monitoring is split_start_monitoring
+    assert stop_monitoring is split_stop_monitoring
+    assert timer is split_timer
+    assert show_overlay is split_show_overlay
+    assert split_get_monitor() is SplitPerformanceMonitor()
+    assert SPLIT_MAX_HISTORY_SIZE == MAX_HISTORY_SIZE
+    assert SPLIT_MAX_SLOW_OPS_LOG == MAX_SLOW_OPS_LOG
+    assert SPLIT_SLOW_OP_THRESHOLD_MS == SLOW_OP_THRESHOLD_MS
+    assert SPLIT_WARNING_MEMORY_MB == WARNING_MEMORY_MB
+    assert SPLIT_CRITICAL_MEMORY_MB == CRITICAL_MEMORY_MB
+    assert SPLIT_MONITOR_INTERVAL_MS == MONITOR_INTERVAL_MS
+
+
+@pytest.mark.unit
+def test_performance_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_constants.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_timer.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_monitor.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_overlay.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_facade.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/performance_demo.py",
     ]
 
     for target in targets:
