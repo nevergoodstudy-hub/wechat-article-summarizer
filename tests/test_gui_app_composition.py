@@ -48,6 +48,7 @@ from wechat_summarizer.presentation.gui.assets.icons_paths import (
 )
 from wechat_summarizer.presentation.gui.components import border as border_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
+from wechat_summarizer.presentation.gui.components import sidebar as sidebar_module
 from wechat_summarizer.presentation.gui.components.border import (
     Divider,
     GlowIntensity,
@@ -170,6 +171,32 @@ from wechat_summarizer.presentation.gui.components.modal_factory import (
 from wechat_summarizer.presentation.gui.components.modal_models import (
     ModalSize as SplitModalSize,
 )
+from wechat_summarizer.presentation.gui.components.sidebar import (
+    CollapsibleSidebar,
+    NavItem,
+    Tooltip,
+    default_sidebar_state_file,
+    resolve_sidebar_state_file,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_animation import (
+    SidebarAnimationMixin,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_core import (
+    CollapsibleSidebar as SplitCollapsibleSidebar,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_items import SidebarItemsMixin
+from wechat_summarizer.presentation.gui.components.sidebar_models import NavItem as SplitNavItem
+from wechat_summarizer.presentation.gui.components.sidebar_models import clamp_badge
+from wechat_summarizer.presentation.gui.components.sidebar_state import (
+    SidebarStateMixin,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_state import (
+    default_sidebar_state_file as split_default_sidebar_state_file,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_state import (
+    resolve_sidebar_state_file as split_resolve_sidebar_state_file,
+)
+from wechat_summarizer.presentation.gui.components.sidebar_tooltip import Tooltip as SplitTooltip
 from wechat_summarizer.presentation.gui.components.tab_indicator import (
     TabIndicator as SplitTabIndicator,
 )
@@ -788,6 +815,66 @@ def test_modal_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/modal_confirm.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/modal_alert.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/modal_factory.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_sidebar_module_keeps_compatibility_exports_and_composition() -> None:
+    child = NavItem(id="recent", label="最近", icon="R", badge=10000)
+    item = NavItem(id="home", label="首页", icon="H", badge=-4, children=[child])
+
+    assert sidebar_module.CollapsibleSidebar is SplitCollapsibleSidebar
+    assert sidebar_module.NavItem is SplitNavItem
+    assert sidebar_module.Tooltip is SplitTooltip
+    assert sidebar_module.default_sidebar_state_file is split_default_sidebar_state_file
+    assert sidebar_module.resolve_sidebar_state_file is split_resolve_sidebar_state_file
+    assert CollapsibleSidebar is SplitCollapsibleSidebar
+    assert NavItem is SplitNavItem
+    assert Tooltip is SplitTooltip
+    assert default_sidebar_state_file is split_default_sidebar_state_file
+    assert resolve_sidebar_state_file is split_resolve_sidebar_state_file
+    assert SidebarAnimationMixin in CollapsibleSidebar.__mro__
+    assert SidebarItemsMixin in CollapsibleSidebar.__mro__
+    assert SidebarStateMixin in CollapsibleSidebar.__mro__
+    assert item.children == [child]
+    assert clamp_badge(item.badge) == 0
+    assert clamp_badge(child.badge) == CollapsibleSidebar.MAX_BADGE
+    assert CollapsibleSidebar.EXPANDED_WIDTH == 240
+    assert CollapsibleSidebar.COLLAPSED_WIDTH == 60
+
+
+@pytest.mark.unit
+def test_sidebar_state_path_validation_uses_safe_default(tmp_path: Path) -> None:
+    default_path = default_sidebar_state_file()
+    repo_root = Path(__file__).resolve().parents[1]
+    local_state_file = (
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_state.json"
+    )
+    unsafe_state_file = Path("/tmp/sidebar_state.json")
+
+    assert resolve_sidebar_state_file(None) == default_path
+    assert resolve_sidebar_state_file(str(unsafe_state_file)) == default_path
+    assert resolve_sidebar_state_file(str(local_state_file)) == str(local_state_file)
+    assert resolve_sidebar_state_file(str(tmp_path / "user-owned.json")) == str(
+        tmp_path / "user-owned.json"
+    )
+
+
+@pytest.mark.unit
+def test_sidebar_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_tooltip.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_state.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_items.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_animation.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_core.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_demo.py",
     ]
 
     for target in targets:
