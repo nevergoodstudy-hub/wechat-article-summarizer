@@ -195,10 +195,49 @@ from wechat_summarizer.presentation.gui.frames import (
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
+from wechat_summarizer.presentation.gui.utils import accessibility as accessibility_module
 from wechat_summarizer.presentation.gui.utils import animation as animation_module
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
+from wechat_summarizer.presentation.gui.utils.accessibility import (
+    AccessibilityHelper,
+    FocusableElement,
+    FocusDirection,
+    FocusManager,
+    FocusRingStyle,
+    FocusRingStyleDict,
+    KeyboardNavigable,
+    LiveRegion,
+    SkipLink,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_focus import (
+    FocusManager as SplitFocusManager,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_helper import (
+    AccessibilityHelper as SplitAccessibilityHelper,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_keyboard import (
+    KeyboardNavigable as SplitKeyboardNavigable,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_live import (
+    LiveRegion as SplitLiveRegion,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_models import (
+    FocusableElement as SplitFocusableElement,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_models import (
+    FocusDirection as SplitFocusDirection,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_models import (
+    FocusRingStyle as SplitFocusRingStyle,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_models import (
+    FocusRingStyleDict as SplitFocusRingStyleDict,
+)
+from wechat_summarizer.presentation.gui.utils.accessibility_skiplink import (
+    SkipLink as SplitSkipLink,
+)
 from wechat_summarizer.presentation.gui.utils.animation import (
     AnimationEngine,
     Easing,
@@ -767,6 +806,57 @@ def test_animation_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_engine.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_facade.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/animation_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_accessibility_module_keeps_compatibility_exports() -> None:
+    assert accessibility_module.AccessibilityHelper is SplitAccessibilityHelper
+    assert accessibility_module.FocusDirection is SplitFocusDirection
+    assert accessibility_module.FocusManager is SplitFocusManager
+    assert accessibility_module.FocusRingStyle is SplitFocusRingStyle
+    assert accessibility_module.FocusRingStyleDict is SplitFocusRingStyleDict
+    assert accessibility_module.FocusableElement is SplitFocusableElement
+    assert accessibility_module.KeyboardNavigable is SplitKeyboardNavigable
+    assert accessibility_module.LiveRegion is SplitLiveRegion
+    assert accessibility_module.SkipLink is SplitSkipLink
+    assert AccessibilityHelper is SplitAccessibilityHelper
+    assert FocusDirection is SplitFocusDirection
+    assert FocusManager is SplitFocusManager
+    assert FocusRingStyle is SplitFocusRingStyle
+    assert FocusRingStyleDict is SplitFocusRingStyleDict
+    assert FocusableElement is SplitFocusableElement
+    assert KeyboardNavigable is SplitKeyboardNavigable
+    assert LiveRegion is SplitLiveRegion
+    assert SkipLink is SplitSkipLink
+
+
+@pytest.mark.unit
+def test_accessibility_models_preserve_wcag_focused_defaults() -> None:
+    assert FocusDirection.NEXT.value == "next"
+    assert FocusDirection.PREVIOUS.value == "previous"
+    assert FocusRingStyle.DEFAULT["color"] == "#3b82f6"
+    assert FocusRingStyle.DEFAULT["width"] == 2
+    assert FocusRingStyle.HIGH_CONTRAST["width"] == 3
+    assert FocusRingStyle.DASHED["style"] == "dashed"
+    assert FocusableElement(widget=None, tab_index=2, label="Save").label == "Save"
+
+
+@pytest.mark.unit
+def test_accessibility_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_focus.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_skiplink.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_keyboard.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_live.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_helper.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/accessibility_demo.py",
     ]
 
     for target in targets:
