@@ -39,6 +39,8 @@
 
 > 最新证据：已将 `utils/gradient.py` 的渐变类型/缓动枚举、停止点/配置模型、颜色插值与渐变列表生成、动画状态机、便捷函数拆到 `gradient_models.py`、`gradient_manager.py`、`gradient_animator.py`、`gradient_facade.py`，兼容入口降至 19 行，拆分后相关文件分别为 57/112/168/22 行，并保留 `GradientAnimator`、`GradientManager`、`GradientConfig`、`create_gradient`、`interpolate` 等旧公开导出；`tests/test_gui_gradient_composition.py` 新增兼容导出、模型边界、颜色插值、动画限制、便捷函数和行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 7 个 Python 文件 >=400 行（最高 `components/glass.py` 429 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
+> 最新证据：已将 `components/glass.py` 的 CustomTkinter/Tk 兼容层、主题材质/边界模型、呼吸动画 mixin、液态玻璃 Frame、Card、Button、Modal 与工厂函数拆到 `glass_compat.py`、`glass_models.py`、`glass_animation.py`、`glass_frame.py`、`glass_card.py`、`glass_button.py`、`glass_modal.py`、`glass_factory.py`，兼容入口降至 41 行，拆分后相关文件分别为 15/65/74/79/74/61/44/32 行，并保留 `LiquidGlassFrame`、`GlassCard`、`GlassButton`、`GlassModal`、`create_glass_frame`、`create_glass_card` 等旧公开导出；`tests/test_gui_glass_composition.py` 新增兼容导出、材质边界、动画 helper 与行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 6 个 Python 文件 >=400 行（最高 `utils/windows_integration.py` 428 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
