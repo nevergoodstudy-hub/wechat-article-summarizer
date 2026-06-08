@@ -18,6 +18,46 @@ from wechat_summarizer.presentation.gui.components.border import (
     create_divider,
     create_gradient_border,
 )
+from wechat_summarizer.presentation.gui.components.button import (
+    ButtonGroup,
+    ButtonSize,
+    ButtonVariant,
+    IconButton,
+    ModernButton,
+    create_button,
+    create_icon_button,
+)
+from wechat_summarizer.presentation.gui.components.button import (
+    RippleEffect as ButtonRippleEffect,
+)
+from wechat_summarizer.presentation.gui.components.button_factories import (
+    create_button as split_create_button,
+)
+from wechat_summarizer.presentation.gui.components.button_factories import (
+    create_icon_button as split_create_icon_button,
+)
+from wechat_summarizer.presentation.gui.components.button_group import (
+    ButtonGroup as SplitButtonGroup,
+)
+from wechat_summarizer.presentation.gui.components.button_icon import (
+    IconButton as SplitIconButton,
+)
+from wechat_summarizer.presentation.gui.components.button_models import (
+    ButtonSize as SplitButtonSize,
+)
+from wechat_summarizer.presentation.gui.components.button_models import (
+    ButtonVariant as SplitButtonVariant,
+)
+from wechat_summarizer.presentation.gui.components.button_models import (
+    get_button_size_config,
+    get_icon_button_size,
+)
+from wechat_summarizer.presentation.gui.components.button_modern import (
+    ModernButton as SplitModernButton,
+)
+from wechat_summarizer.presentation.gui.components.button_ripple import (
+    RippleEffect as SplitButtonRippleEffect,
+)
 from wechat_summarizer.presentation.gui.components.datagrid import (
     Column,
     DataGrid,
@@ -297,6 +337,40 @@ def test_border_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/gradient_border_draw.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/divider.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_button_module_keeps_compatibility_exports() -> None:
+    assert ModernButton is SplitModernButton
+    assert IconButton is SplitIconButton
+    assert ButtonGroup is SplitButtonGroup
+    assert ButtonVariant is SplitButtonVariant
+    assert ButtonSize is SplitButtonSize
+    assert ButtonRippleEffect is SplitButtonRippleEffect
+    assert create_button is split_create_button
+    assert create_icon_button is split_create_icon_button
+    assert ButtonVariant.PRIMARY.value == "primary"
+    assert ButtonSize.MEDIUM.value == "medium"
+    assert get_button_size_config(ButtonSize.LARGE)["height"] == 44
+    assert get_icon_button_size(ButtonSize.SMALL) == 32
+
+
+@pytest.mark.unit
+def test_button_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_ripple.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_modern.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_icon.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_group.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/button_factories.py",
     ]
 
     for target in targets:
