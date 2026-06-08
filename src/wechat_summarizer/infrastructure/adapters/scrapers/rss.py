@@ -13,13 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
 from loguru import logger
 
 from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import CONFIG_DIR_NAME
 from ....shared.exceptions import ScraperError
+from ....shared.utils.ssrf_protection import safe_fetch_sync
 
 if TYPE_CHECKING:
     from .generic_httpx import GenericHttpxScraper
@@ -107,10 +107,9 @@ class RssScraper:
 
         try:
             # 获取 feed 内容
-            with httpx.Client(timeout=30, follow_redirects=True) as client:
-                response = client.get(feed_url)
-                response.raise_for_status()
-                content = response.text
+            response = safe_fetch_sync(feed_url, timeout=30)
+            response.raise_for_status()
+            content = response.text
         except Exception as e:
             raise ScraperError(f"获取 feed 失败: {e}") from e
 
@@ -208,11 +207,10 @@ class RssScraper:
         # 获取 feed 标题
         title = ""
         try:
-            with httpx.Client(timeout=30, follow_redirects=True) as client:
-                response = client.get(feed_url)
-                response.raise_for_status()
-                feed = feedparser.parse(response.text)
-                title = getattr(feed.feed, "title", "")
+            response = safe_fetch_sync(feed_url, timeout=30)
+            response.raise_for_status()
+            feed = feedparser.parse(response.text)
+            title = getattr(feed.feed, "title", "")
         except Exception as e:
             logger.warning(f"获取 feed 标题失败: {e}")
 

@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
-import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
 
 from ....domain.entities import Article
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import safe_fetch_sync
 from .base import BaseExporter
 
 if TYPE_CHECKING:
@@ -267,15 +267,15 @@ class WordExporter(BaseExporter):
 
             try:
                 # 下载图片
-                with httpx.Client(timeout=30, follow_redirects=True) as client:
-                    response = client.get(
-                        img_url,
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                            "Referer": base_url,
-                        },
-                    )
-                    response.raise_for_status()
+                response = safe_fetch_sync(
+                    img_url,
+                    timeout=30,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Referer": base_url,
+                    },
+                )
+                response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "image/png")
                 if not content_type.startswith("image/"):
@@ -520,15 +520,15 @@ class WordExporter(BaseExporter):
             img_url = urljoin(base_url, img_url)
 
         try:
-            with httpx.Client(timeout=30, follow_redirects=True) as client:
-                response = client.get(
-                    img_url,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                        "Referer": base_url,
-                    },
-                )
-                response.raise_for_status()
+            response = safe_fetch_sync(
+                img_url,
+                timeout=30,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": base_url,
+                },
+            )
+            response.raise_for_status()
 
             content_type = response.headers.get("content-type", "")
             if not content_type.startswith("image/"):

@@ -100,11 +100,11 @@
 - [x] 超长字段截断（如 >200 chars）
 
 ### P1-4 / P1-5 SSRF 补强
-- [ ] 重定向链每跳合法性校验
+- [x] 重定向链每跳合法性校验
 - [x] host、ip、cidr 黑白名单统一入口
 - [x] IP canonicalization 后再判断内网/保留地址
 
-> 证据：新增 `shared/utils/network_policy.py` 的 `NetworkAccessPolicy` 作为统一网络策略入口，将 host allowlist、blocked hostnames、blocked CIDR 与 IP canonicalization 收敛到同一对象；`mcp/security_config.py` 的 `is_host_allowed` 已通过 `get_network_access_policy()` 复用统一入口，`shared/utils/ssrf_protection.py` 的 DNS/IP 校验也改为通过 `NETWORK_POLICY` 执行。`NetworkAccessPolicy.canonicalize_ip()` 会先把 IPv6-mapped IPv4 规范化为 IPv4，再进入 `is_ip_blocked()`/`require_ip_allowed()` 判断；直接 IP 字面量、DNS 解析结果、替代 IP 表示法均经过该入口。`tests/test_network_policy.py` 覆盖 canonicalization、CIDR 阻断、替代 IP 表示法、精确/显式通配 host allowlist 与 blocked hostname 优先级；`tests/test_ssrf_protection.py` 与 `tests/test_security_config.py` 覆盖 SSRF 与 MCP 对统一入口的复用。相关测试 `tests/test_network_policy.py tests/test_ssrf_protection.py tests/test_security_config.py tests/test_dns_rebinding_integration.py` 共 80 个用例通过。由于导出/RSS 等普通 HTTP 调用面仍需继续收敛到 `safe_fetch*`，`重定向链每跳合法性校验` 暂不勾选。
+> 证据：新增 `shared/utils/network_policy.py` 的 `NetworkAccessPolicy` 作为统一网络策略入口，将 host allowlist、blocked hostnames、blocked CIDR 与 IP canonicalization 收敛到同一对象；`mcp/security_config.py` 的 `is_host_allowed` 已通过 `get_network_access_policy()` 复用统一入口，`shared/utils/ssrf_protection.py` 的 DNS/IP 校验也改为通过 `NETWORK_POLICY` 执行。`NetworkAccessPolicy.canonicalize_ip()` 会先把 IPv6-mapped IPv4 规范化为 IPv4，再进入 `is_ip_blocked()`/`require_ip_allowed()` 判断；直接 IP 字面量、DNS 解析结果、替代 IP 表示法均经过该入口。`safe_fetch`/`safe_fetch_sync` 默认禁用自动重定向，并在每次请求前、每个 `Location` 跳转解析为绝对 URL 后再次执行 `validate_url`；知乎、头条、RSS、Word 图片和 ZIP 图片等用户内容 URL 请求已从裸 `httpx.Client(... follow_redirects=True)` 收敛到 `safe_fetch*`。新增 `scripts/check_http_fetch_security.py` 并接入 `scripts/quality_gate.py --mode architecture`，阻断 scrapers/exporters 用户 URL 面重新使用裸 `httpx` 客户端；`tests/test_http_fetch_security.py` 覆盖当前调用面、违规 direct client、违规 top-level fetch 和合法 `safe_fetch_sync`。相关测试 `tests/test_http_fetch_security.py tests/test_ssrf_protection.py tests/test_dns_rebinding_integration.py tests/test_scrapers.py` 共 86 个用例通过。
 
 ### P1-6 安全存储审计
 - [x] 校验 PBKDF2 盐值：随机、独立、长度>=16 bytes
