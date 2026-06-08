@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 
 import pytest
@@ -26,6 +27,36 @@ class _AsyncScraper:
     async def scrape_async(self, url: ArticleURL) -> Article:
         if str(url) in self.failures:
             raise RuntimeError("boom")
+        return Article(
+            url=url,
+            title=f"Article {url.domain}",
+            content=ArticleContent.from_text("hello async batch"),
+        )
+
+
+class _ConcurrencyTrackingScraper:
+    """Async scraper double that records concurrent calls."""
+
+    name = "tracking-async-scraper"
+
+    def __init__(self) -> None:
+        self.running = 0
+        self.max_seen = 0
+        self._lock = asyncio.Lock()
+
+    def can_handle(self, url: ArticleURL) -> bool:
+        return True
+
+    async def scrape_async(self, url: ArticleURL) -> Article:
+        async with self._lock:
+            self.running += 1
+            self.max_seen = max(self.max_seen, self.running)
+
+        await asyncio.sleep(0.01)
+
+        async with self._lock:
+            self.running -= 1
+
         return Article(
             url=url,
             title=f"Article {url.domain}",
@@ -73,3 +104,21 @@ async def test_async_batch_progress_and_result_failures_match() -> None:
     )
 
     assert progress_errors[-1] == result.errors
+
+
+@pytest.mark.unit
+async def test_async_batch_respects_max_concurrent_limit() -> None:
+    """Batch processing should use the configured concurrency cap."""
+    scraper = _ConcurrencyTrackingScraper()
+    use_case = AsyncBatchProcessUseCase(
+        scrapers=[scraper],
+        max_concurrent=2,
+    )
+
+    result = await use_case.process_urls(
+        [f"https://example.com/{index}" for index in range(6)],
+        summarize=False,
+    )
+
+    assert result.success_count == 6
+    assert scraper.max_seen <= 2

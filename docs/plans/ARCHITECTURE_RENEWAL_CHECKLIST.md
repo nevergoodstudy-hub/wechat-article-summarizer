@@ -54,9 +54,11 @@
 - [x] 违规依赖改为 `Protocol` 端口抽象
 
 ### P1-2 并发模型升级
-- [ ] 批量并发由 `asyncio.gather` 迁移到 `TaskGroup`
-- [ ] 增加并发限流（Semaphore）
+- [x] 批量并发由 `asyncio.gather` 迁移到 `TaskGroup`
+- [x] 增加并发限流（Semaphore）
 - [ ] 引入 `except*` 处理 ExceptionGroup
+
+> 注：项目当前仍支持 Python 3.10，主代码暂不能直接使用 `except*` 语法；本轮已通过 `StructuredConcurrencyError` 对 Python 3.11+ 原生 `ExceptionGroup` 做兼容展开，待版本下限提升后再完成字面 `except*` 迁移。
 
 ### P1-3 MCP 审计日志脱敏
 - [x] 审计日志实现递归脱敏（dict/list/string）
