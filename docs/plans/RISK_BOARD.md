@@ -6,12 +6,13 @@
 
 | 风险 | 影响 | 当前处置 |
 | --- | --- | --- |
-| 线上 PR 检查仍在运行 | GitHub 合并状态暂为 `UNSTABLE` | 本地 lint/architecture/mypy/test/phase-a 均通过；等待 GitHub Actions 完成后复核 |
+| 无 | 当前没有阻塞项 | 本地全量质量门禁通过；GitHub PR #3 合并状态为 `CLEAN`，线上检查均为成功或预期跳过 |
 
 ## 已关闭风险
 
 | 风险 | 关闭证据 |
 | --- | --- |
+| 线上 PR 检查曾处于运行中 | 2026-06-09 复核 `gh pr view 3 --json mergeStateStatus,statusCheckRollup`：PR #3 合并状态为 `CLEAN`；Lint、Code Quality、Security Audit、Docs Build、Build Package、Python 3.11~3.14 测试矩阵均完成且成功；Build Windows Executable、Build Python Package、Publish to PyPI 为工作流条件下的预期跳过 |
 | GUI i18n 历史硬编码仍较多 | `scripts/check_gui_i18n_hardcoded.py` 已扩展并接入架构门禁，覆盖标题、Toast、状态、live-region announce、用户可见关键字和 f-string；当前硬编码基线由 174 分阶段收紧到 0，不可翻译 `tr(...)` 由 9 清零到 0；GUI/i18n 专项 101 个用例通过 |
 | DoD 中 GUI 运行态稳定性仍需人工/截图验收 | `scripts/quality_gate.py --mode phase-a` 已加入 GUI 稳定验收组，覆盖 `tests/test_gui_app_composition.py` 与 `tests/test_gui_i18n_hardcoded_guard.py`，当前 77 个用例通过，验证薄入口依赖注入、GUI 组合拆分、单文件 <400 行目标与 i18n 0/0 守卫 |
 | DoD 中核心功能回归与 MCP 安全基线需要明确验收命令 | `scripts/quality_gate.py --mode phase-a` 已加入核心回归组与 MCP 安全组，当前核心 37 个用例通过、MCP 安全 135 个用例通过，并已纳入默认 `quality_gate.py --mode all` |
