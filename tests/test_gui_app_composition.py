@@ -6,6 +6,7 @@ import pytest
 
 from wechat_summarizer.bootstrap import gui as gui_bootstrap
 from wechat_summarizer.presentation.gui import app as gui_app
+from wechat_summarizer.presentation.gui.app_layout import GUILayoutMixin
 
 
 @pytest.mark.unit
@@ -67,3 +68,13 @@ def test_bootstrap_run_gui_assembles_infrastructure_dependencies(
     gui_bootstrap.run_gui()
 
     assert calls == {"container": sentinel_container, "settings": sentinel_settings}
+
+
+@pytest.mark.unit
+def test_gui_shell_layout_is_extracted_from_bootstrap() -> None:
+    assert GUILayoutMixin in gui_app.WechatSummarizerGUI.__mro__
+    assert "_build_ui" in GUILayoutMixin.__dict__
+    assert "_build_sidebar" in GUILayoutMixin.__dict__
+    assert "_build_log_panel" in GUILayoutMixin.__dict__
+    assert "_build_ui" not in gui_app.GUIBootstrapMixin.__dict__
+    assert "_build_sidebar" not in gui_app.GUIBootstrapMixin.__dict__

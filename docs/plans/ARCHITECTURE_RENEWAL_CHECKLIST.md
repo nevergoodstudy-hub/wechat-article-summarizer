@@ -26,12 +26,14 @@
 > 证据：`tests/test_container.py` 覆盖构造/全局容器惰性加载与默认最小化测试容器；`scripts/check_test_executability.py` 统计默认 `not integration` 测试可执行率，当前 784/804 = 97.5%。
 
 ### P0-2 GUI 上帝对象彻底拆分
-- [ ] 保持 `presentation/gui/app.py` 仅为薄入口（< 150 行）
-- [ ] 抽离 `main_window` 协调器（页面装配+事件路由）
+- [x] 保持 `presentation/gui/app.py` 仅为薄入口（< 150 行）
+- [x] 抽离 `main_window` 协调器（页面装配+事件路由）
 - [ ] 抽离 `frames`（sidebar/article/summarization/export/settings）
 - [ ] 抽离 `dialogs`（导出确认/API配置/退出确认）
-- [ ] 抽离 `viewmodels`（状态与命令，不直接操作复杂UI细节）
+- [x] 抽离 `viewmodels`（状态与命令，不直接操作复杂UI细节）
 - [ ] 文件上限：单文件目标 < 400 行
+
+> 证据：`presentation/gui/app.py` 当前 110 行，仅组合 mixins、创建根窗口并委托 `MainWindow`；`main_window.py` 当前 36 行，封装 app_factory/build/run 协调入口；`viewmodels/` 已包含 `MainViewModel`、`SettingsViewModel`、`SingleProcessViewModel`、`BatchProcessViewModel` 与 ports；本轮新增 `app_layout.py` 将 shell 布局、页面装配、快捷键、响应式与日志面板从 bootstrap 流程中剥离，`app_bootstrap.py` 降至 167 行。
 
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 from ...shared.constants import GUI_MIN_SIZE, GUI_WINDOW_TITLE
 from .app_actions import GUIActionsMixin
 from .app_bootstrap import GUIBootstrapMixin
+from .app_layout import GUILayoutMixin
 from .app_navigation import GUINavigationMixin
 from .app_runtime import GUIRuntimeMixin
 from .ctk_compat import CTK_AVAILABLE, ctk
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
 class WechatSummarizerGUI(
     GUIBootstrapMixin,
+    GUILayoutMixin,
     GUINavigationMixin,
     GUIActionsMixin,
     GUIRuntimeMixin,
