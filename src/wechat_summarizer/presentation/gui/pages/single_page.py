@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import contextlib
 import re
-from typing import TYPE_CHECKING
 
+from ..frames.single_article import SingleArticleInputFrame, SingleArticleResultFrame
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 from ..utils.i18n import tr
@@ -24,9 +24,6 @@ try:
     import customtkinter as ctk
 except ImportError:
     _ctk_available = False
-
-if TYPE_CHECKING:
-    pass
 
 _WECHAT_URL_RE = re.compile(r"https?://mp\.weixin\.qq\.com/s[/?]")
 
@@ -189,180 +186,25 @@ class SinglePage(ctk.CTkFrame):
         content.grid_columnconfigure(1, weight=1)
         content.grid_rowconfigure(0, weight=1)
 
-        # 左侧卡片 - 输入区
-        left_card = ctk.CTkFrame(
+        self.input_frame = SingleArticleInputFrame(content, gui=self.gui)
+        self.input_frame.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
+        self.result_frame = SingleArticleResultFrame(
             content,
-            corner_radius=Spacing.RADIUS_LG,
-            fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
+            gui=self.gui,
+            copy_textbox=self._copy_textbox,
         )
-        left_card.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
+        self.result_frame.grid(row=0, column=1, padx=(10, 0), sticky="nsew")
 
-        ctk.CTkLabel(
-            left_card, text=tr("🔗 文章链接"), font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(anchor="w", padx=20, pady=(20, 8))
-
-        # 使用现代化输入框组件 (2026 UI)
-        self.url_entry = self.gui._create_modern_input(
-            left_card, placeholder=tr("请输入微信公众号文章链接..."), show_clear_button=True
-        )
-        self.url_entry.pack(fill="x", padx=20)
-
-        self.url_status_label = ctk.CTkLabel(
-            left_card, text="", font=ctk.CTkFont(size=11), anchor="w"
-        )
-        self.url_status_label.pack(fill="x", padx=20, pady=(2, 0))
-
-        self.url_entry.bind("<KeyRelease>", self.gui._on_url_input_change)
-        self.url_entry.bind("<FocusOut>", self.gui._on_url_input_change)
-
-        options_frame = ctk.CTkFrame(left_card, fg_color="transparent")
-        options_frame.pack(fill="x", padx=20, pady=15)
-
-        ctk.CTkLabel(options_frame, text=tr("摘要方法:"), font=ctk.CTkFont(size=13)).pack(
-            side="left"
-        )
-
-        available_methods = [
-            name for name, info in self.gui._summarizer_info.items() if info.available
-        ]
-        if not available_methods:
-            available_methods = ["simple"]
-
-        self.method_var = ctk.StringVar(value=available_methods[0])
-        self.method_menu = ctk.CTkOptionMenu(
-            options_frame,
-            values=available_methods,
-            variable=self.method_var,
-            width=130,
-            height=32,
-            corner_radius=Spacing.RADIUS_MD,
-            font=ctk.CTkFont(size=12),
-        )
-        self.method_menu.pack(side="left", padx=(10, 20))
-
-        self.summarize_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(
-            options_frame,
-            text=tr("生成摘要"),
-            variable=self.summarize_var,
-            font=ctk.CTkFont(size=13),
-            corner_radius=Spacing.RADIUS_SM,
-        ).pack(side="left")
-
-        btn_frame = ctk.CTkFrame(left_card, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20, pady=10)
-
-        # 使用现代化按钮组件 (2026 UI)
-        self.fetch_btn = self.gui._create_modern_button(
-            btn_frame,
-            text=tr("🚀 开始处理"),
-            command=self.gui._on_fetch,
-            variant="primary",
-            size="large",
-        )
-        self.fetch_btn.pack(side="left", expand=True, fill="x", padx=(0, 5))
-
-        self.export_btn = self.gui._create_modern_button(
-            btn_frame,
-            text=tr("📥 导出"),
-            command=self.gui._on_export,
-            variant="secondary",
-            size="large",
-        )
-        self.export_btn.pack(side="left", expand=True, fill="x", padx=(5, 0))
-        self.export_btn.configure(state="disabled")
-
-        ctk.CTkLabel(
-            left_card, text=tr("📄 内容预览"), font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(anchor="w", padx=20, pady=(15, 8))
-
-        self.preview_text = ctk.CTkTextbox(
-            left_card, corner_radius=Spacing.RADIUS_MD, font=ctk.CTkFont(size=12)
-        )
-        self.preview_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-
-        # 右侧卡片 - 结果区
-        right_card = ctk.CTkFrame(
-            content,
-            corner_radius=Spacing.RADIUS_LG,
-            fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
-        )
-        right_card.grid(row=0, column=1, padx=(10, 0), sticky="nsew")
-
-        ctk.CTkLabel(
-            right_card, text=tr("📰 文章信息"), font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(anchor="w", padx=20, pady=(20, 10))
-
-        info_frame = ctk.CTkFrame(
-            right_card,
-            corner_radius=Spacing.RADIUS_MD,
-            fg_color=(ModernColors.LIGHT_INSET, ModernColors.DARK_INSET),
-        )
-        info_frame.pack(fill="x", padx=20)
-
-        self.title_label = ctk.CTkLabel(
-            info_frame, text=f"{tr('标题')}: -", font=ctk.CTkFont(size=12), anchor="w"
-        )
-        self.title_label.pack(fill="x", padx=15, pady=(12, 4))
-
-        self.author_label = ctk.CTkLabel(
-            info_frame, text=f"{tr('公众号')}: -", font=ctk.CTkFont(size=12), anchor="w"
-        )
-        self.author_label.pack(fill="x", padx=15, pady=4)
-
-        self.word_count_label = ctk.CTkLabel(
-            info_frame, text=f"{tr('字数')}: -", font=ctk.CTkFont(size=12), anchor="w"
-        )
-        self.word_count_label.pack(fill="x", padx=15, pady=(4, 12))
-
-        # 摘要区 - 带复制按钮
-        summary_header = ctk.CTkFrame(right_card, fg_color="transparent")
-        summary_header.pack(fill="x", padx=20, pady=(20, 8))
-
-        ctk.CTkLabel(
-            summary_header, text=tr("📝 文章摘要"), font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(side="left")
-
-        ctk.CTkButton(
-            summary_header,
-            text="📋 复制",
-            width=60,
-            height=24,
-            corner_radius=Spacing.RADIUS_SM,
-            font=ctk.CTkFont(size=11),
-            fg_color="transparent",
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-            hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-            command=lambda: self._copy_textbox(self.summary_text, "摘要"),
-        ).pack(side="right")
-
-        self.summary_text = ctk.CTkTextbox(
-            right_card, height=150, corner_radius=Spacing.RADIUS_MD, font=ctk.CTkFont(size=12)
-        )
-        self.summary_text.pack(fill="x", padx=20)
-
-        # 关键要点区 - 带复制按钮
-        points_header = ctk.CTkFrame(right_card, fg_color="transparent")
-        points_header.pack(fill="x", padx=20, pady=(15, 8))
-
-        ctk.CTkLabel(
-            points_header, text=tr("📌 关键要点"), font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(side="left")
-
-        ctk.CTkButton(
-            points_header,
-            text="📋 复制",
-            width=60,
-            height=24,
-            corner_radius=Spacing.RADIUS_SM,
-            font=ctk.CTkFont(size=11),
-            fg_color="transparent",
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
-            hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
-            command=lambda: self._copy_textbox(self.points_text, "要点"),
-        ).pack(side="right")
-
-        self.points_text = ctk.CTkTextbox(
-            right_card, corner_radius=Spacing.RADIUS_MD, font=ctk.CTkFont(size=12)
-        )
-        self.points_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        self.url_entry = self.input_frame.url_entry
+        self.url_status_label = self.input_frame.url_status_label
+        self.method_var = self.input_frame.method_var
+        self.method_menu = self.input_frame.method_menu
+        self.summarize_var = self.input_frame.summarize_var
+        self.fetch_btn = self.input_frame.fetch_btn
+        self.export_btn = self.input_frame.export_btn
+        self.preview_text = self.input_frame.preview_text
+        self.title_label = self.result_frame.title_label
+        self.author_label = self.result_frame.author_label
+        self.word_count_label = self.result_frame.word_count_label
+        self.summary_text = self.result_frame.summary_text
+        self.points_text = self.result_frame.points_text

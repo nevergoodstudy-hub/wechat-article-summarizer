@@ -316,9 +316,12 @@ from wechat_summarizer.presentation.gui.frames import (
     SettingsQuickActionsFrame,
     SettingsSummarizerSection,
     SettingsSystemSection,
+    SingleArticleInputFrame,
+    SingleArticleResultFrame,
 )
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
+from wechat_summarizer.presentation.gui.pages.single_page import SinglePage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
 from wechat_summarizer.presentation.gui.styles.colors import ModernColors
 from wechat_summarizer.presentation.gui.utils import accessibility as accessibility_module
@@ -836,6 +839,28 @@ def test_settings_gui_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_service.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/settings_preferences.py",
         repo_root / "src/wechat_summarizer/presentation/gui/settings_api_actions.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_single_page_delegates_article_sections_to_frames() -> None:
+    assert "_build" in SingleArticleInputFrame.__dict__
+    assert "_build" in SingleArticleResultFrame.__dict__
+    assert "_build_textbox_section" in SingleArticleResultFrame.__dict__
+    assert "on_page_shown" in SinglePage.__dict__
+    assert "_show_clipboard_banner" in SinglePage.__dict__
+    assert "_copy_textbox" in SinglePage.__dict__
+
+
+@pytest.mark.unit
+def test_single_page_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/pages/single_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/single_article.py",
     ]
 
     for target in targets:

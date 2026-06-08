@@ -14,6 +14,7 @@ from .settings_preferences import (
     SettingsSystemSection,
 )
 from .settings_service import SettingsApiKeysSection, SettingsSummarizerSection
+from .single_article import SingleArticleInputFrame, SingleArticleResultFrame
 
 __all__ = [
     "HomeActionCardsFrame",
@@ -29,4 +30,6 @@ __all__ = [
     "SettingsQuickActionsFrame",
     "SettingsSummarizerSection",
     "SettingsSystemSection",
+    "SingleArticleInputFrame",
+    "SingleArticleResultFrame",
 ]
