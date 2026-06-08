@@ -1,5 +1,6 @@
 """Reusable GUI frame sections."""
 
+from .batch_processing import BatchInputFrame, BatchResultsFrame
 from .home_dashboard import (
     HomeActionCardsFrame,
     HomeTipBarFrame,
@@ -17,6 +18,8 @@ from .settings_service import SettingsApiKeysSection, SettingsSummarizerSection
 from .single_article import SingleArticleInputFrame, SingleArticleResultFrame
 
 __all__ = [
+    "BatchInputFrame",
+    "BatchResultsFrame",
     "HomeActionCardsFrame",
     "HomeInfoRowFrame",
     "HomeRecentRecordsFrame",

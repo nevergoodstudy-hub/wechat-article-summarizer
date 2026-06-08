@@ -305,6 +305,8 @@ from wechat_summarizer.presentation.gui.dialogs.word_preview_single import (
     show_word_preview as split_show_word_preview,
 )
 from wechat_summarizer.presentation.gui.frames import (
+    BatchInputFrame,
+    BatchResultsFrame,
     HomeActionCardsFrame,
     HomeInfoRowFrame,
     HomeTipBarFrame,
@@ -319,6 +321,7 @@ from wechat_summarizer.presentation.gui.frames import (
     SingleArticleInputFrame,
     SingleArticleResultFrame,
 )
+from wechat_summarizer.presentation.gui.pages.batch_page import BatchPage
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.pages.single_page import SinglePage
@@ -861,6 +864,32 @@ def test_single_page_files_stay_below_gui_file_target() -> None:
     targets = [
         repo_root / "src/wechat_summarizer/presentation/gui/pages/single_page.py",
         repo_root / "src/wechat_summarizer/presentation/gui/frames/single_article.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_batch_page_delegates_processing_sections_to_frames() -> None:
+    assert "_build" in BatchInputFrame.__dict__
+    assert "_build_url_actions" in BatchInputFrame.__dict__
+    assert "_build_options" in BatchInputFrame.__dict__
+    assert "_build_processing_actions" in BatchInputFrame.__dict__
+    assert "_build" in BatchResultsFrame.__dict__
+    assert "_build_progress_detail" in BatchResultsFrame.__dict__
+    assert "_build_export_buttons" in BatchResultsFrame.__dict__
+    assert "set_processing_state" in BatchPage.__dict__
+    assert "_build_progress_detail" not in BatchPage.__dict__
+    assert "_build_export_buttons" not in BatchPage.__dict__
+
+
+@pytest.mark.unit
+def test_batch_page_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/pages/batch_page.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/frames/batch_processing.py",
     ]
 
     for target in targets:
