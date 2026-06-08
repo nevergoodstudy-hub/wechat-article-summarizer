@@ -335,6 +335,7 @@ from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
 from wechat_summarizer.presentation.gui.utils import shortcuts as shortcuts_module
+from wechat_summarizer.presentation.gui.utils import theme_manager as theme_manager_module
 from wechat_summarizer.presentation.gui.utils import transition as transition_module
 from wechat_summarizer.presentation.gui.utils.accessibility import (
     AccessibilityHelper,
@@ -644,6 +645,33 @@ from wechat_summarizer.presentation.gui.utils.shortcuts_models import Shortcut a
 from wechat_summarizer.presentation.gui.utils.shortcuts_models import default_shortcuts
 from wechat_summarizer.presentation.gui.utils.shortcuts_panel import (
     ShortcutHelpPanel as SplitShortcutHelpPanel,
+)
+from wechat_summarizer.presentation.gui.utils.theme_manager import (
+    AccessibilitySettings,
+    AppearanceMode,
+    ContrastMode,
+    ThemeManager,
+    theme_manager,
+)
+from wechat_summarizer.presentation.gui.utils.theme_models import (
+    AccessibilitySettings as SplitThemeAccessibilitySettings,
+)
+from wechat_summarizer.presentation.gui.utils.theme_models import (
+    AppearanceMode as SplitAppearanceMode,
+)
+from wechat_summarizer.presentation.gui.utils.theme_models import (
+    ContrastMode as SplitContrastMode,
+)
+from wechat_summarizer.presentation.gui.utils.theme_palettes import (
+    BASE_FONT_SIZES as SPLIT_THEME_BASE_FONT_SIZES,
+)
+from wechat_summarizer.presentation.gui.utils.theme_palettes import (
+    HIGH_CONTRAST_THEMES as SPLIT_HIGH_CONTRAST_THEMES,
+)
+from wechat_summarizer.presentation.gui.utils.theme_palettes import THEMES as SPLIT_THEMES
+from wechat_summarizer.presentation.gui.utils.theme_storage import (
+    load_accessibility_settings,
+    save_accessibility_settings,
 )
 from wechat_summarizer.presentation.gui.utils.transition import (
     EasingFunction,
@@ -1649,6 +1677,81 @@ def test_shortcuts_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_panel.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/shortcuts_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_theme_manager_module_keeps_compatibility_exports(tmp_path: Path) -> None:
+    settings_path = tmp_path / "accessibility.json"
+    settings = AccessibilitySettings(
+        font_scale=3.0,
+        contrast_mode="high",
+        reduce_motion=True,
+        reduce_transparency=True,
+    )
+
+    save_accessibility_settings(str(settings_path), settings)
+    loaded = load_accessibility_settings(str(settings_path))
+
+    assert theme_manager_module.AccessibilitySettings is SplitThemeAccessibilitySettings
+    assert theme_manager_module.AppearanceMode is SplitAppearanceMode
+    assert theme_manager_module.ContrastMode is SplitContrastMode
+    assert AccessibilitySettings is SplitThemeAccessibilitySettings
+    assert AppearanceMode is SplitAppearanceMode
+    assert ContrastMode is SplitContrastMode
+    assert isinstance(theme_manager, ThemeManager)
+    assert ThemeManager.THEMES is SPLIT_THEMES
+    assert ThemeManager.HIGH_CONTRAST_THEMES is SPLIT_HIGH_CONTRAST_THEMES
+    assert ThemeManager.BASE_FONT_SIZES is SPLIT_THEME_BASE_FONT_SIZES
+    assert loaded.font_scale == AccessibilitySettings.MAX_FONT_SCALE
+    assert loaded.contrast_mode == "high"
+    assert loaded.reduce_motion is True
+    assert loaded.reduce_transparency is True
+
+
+@pytest.mark.unit
+def test_theme_manager_preserves_accessibility_and_palette_behavior(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manager = object.__new__(ThemeManager)
+    manager._initialized = True
+    manager._current_mode = AppearanceMode.LIGHT
+    manager._callbacks = []
+    manager._accessibility_callbacks = []
+    manager._config_file = str(tmp_path / "accessibility.json")
+    manager._accessibility = AccessibilitySettings()
+
+    saved: list[float] = []
+    manager.on_accessibility_changed(lambda settings: saved.append(settings.font_scale))
+
+    manager.set_font_scale(1.5)
+    assert manager.get_scaled_font_size("base") == 21
+    assert saved == [1.5]
+
+    manager.set_contrast_mode(ContrastMode.HIGH)
+    assert manager.is_high_contrast() is True
+    assert manager.get_colors(AppearanceMode.LIGHT)["text"] == "#000000"
+
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.utils.theme_manager.should_reduce_motion_for_system",
+        lambda: True,
+    )
+    assert manager.should_reduce_motion() is True
+
+
+@pytest.mark.unit
+def test_theme_manager_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/theme_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/theme_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/theme_palettes.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/theme_platform.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/theme_storage.py",
     ]
 
     for target in targets:
