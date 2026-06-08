@@ -260,6 +260,7 @@ from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiA
 from wechat_summarizer.presentation.gui.utils import accessibility as accessibility_module
 from wechat_summarizer.presentation.gui.utils import animation as animation_module
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
+from wechat_summarizer.presentation.gui.utils import lazy as lazy_module
 from wechat_summarizer.presentation.gui.utils import microinteractions as microinteractions_module
 from wechat_summarizer.presentation.gui.utils import performance as performance_module
 from wechat_summarizer.presentation.gui.utils.accessibility import (
@@ -368,6 +369,50 @@ from wechat_summarizer.presentation.gui.utils.autosave_models import (
 from wechat_summarizer.presentation.gui.utils.autosave_storage import (
     DraftStorage as SplitDraftStorage,
 )
+from wechat_summarizer.presentation.gui.utils.lazy import (
+    ALLOWED_MODULE_PREFIX,
+    LOAD_TIMEOUT_SECONDS,
+    MAX_CACHED_COMPONENTS,
+    MAX_CONCURRENT_LOADS,
+    MAX_RETRY_COUNT,
+    LazyComponent,
+    LazyImage,
+    LazyLoader,
+    LazyWidget,
+    LoadResult,
+    LoadState,
+    preload_components,
+)
+from wechat_summarizer.presentation.gui.utils.lazy import (
+    lazy as lazy_decorator,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_facade import lazy as split_lazy
+from wechat_summarizer.presentation.gui.utils.lazy_facade import (
+    preload_components as split_preload_components,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_image import LazyImage as SplitLazyImage
+from wechat_summarizer.presentation.gui.utils.lazy_loader import LazyLoader as SplitLazyLoader
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    ALLOWED_MODULE_PREFIX as SPLIT_ALLOWED_MODULE_PREFIX,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    LOAD_TIMEOUT_SECONDS as SPLIT_LOAD_TIMEOUT_SECONDS,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    MAX_CACHED_COMPONENTS as SPLIT_MAX_CACHED_COMPONENTS,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    MAX_CONCURRENT_LOADS as SPLIT_MAX_CONCURRENT_LOADS,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    MAX_RETRY_COUNT as SPLIT_MAX_RETRY_COUNT,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import (
+    LazyComponent as SplitLazyComponent,
+)
+from wechat_summarizer.presentation.gui.utils.lazy_models import LoadResult as SplitLoadResult
+from wechat_summarizer.presentation.gui.utils.lazy_models import LoadState as SplitLoadState
+from wechat_summarizer.presentation.gui.utils.lazy_widget import LazyWidget as SplitLazyWidget
 from wechat_summarizer.presentation.gui.utils.microinteractions import (
     CollapseExpand,
     FocusRing,
@@ -850,6 +895,7 @@ def test_sidebar_module_keeps_compatibility_exports_and_composition() -> None:
 def test_sidebar_state_path_validation_uses_safe_default(tmp_path: Path) -> None:
     default_path = default_sidebar_state_file()
     repo_root = Path(__file__).resolve().parents[1]
+    user_state_file = Path.home() / ".wechat_summarizer" / "sidebar-user-owned.json"
     local_state_file = (
         repo_root / "src/wechat_summarizer/presentation/gui/components/sidebar_state.json"
     )
@@ -858,9 +904,7 @@ def test_sidebar_state_path_validation_uses_safe_default(tmp_path: Path) -> None
     assert resolve_sidebar_state_file(None) == default_path
     assert resolve_sidebar_state_file(str(unsafe_state_file)) == default_path
     assert resolve_sidebar_state_file(str(local_state_file)) == str(local_state_file)
-    assert resolve_sidebar_state_file(str(tmp_path / "user-owned.json")) == str(
-        tmp_path / "user-owned.json"
-    )
+    assert resolve_sidebar_state_file(str(user_state_file)) == str(user_state_file)
 
 
 @pytest.mark.unit
@@ -1132,6 +1176,50 @@ def test_autosave_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_manager.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_dialog.py",
         repo_root / "src/wechat_summarizer/presentation/gui/utils/autosave_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_lazy_module_keeps_compatibility_exports() -> None:
+    assert lazy_module.LazyLoader is SplitLazyLoader
+    assert lazy_module.LazyWidget is SplitLazyWidget
+    assert lazy_module.LazyImage is SplitLazyImage
+    assert lazy_module.LazyComponent is SplitLazyComponent
+    assert lazy_module.LoadResult is SplitLoadResult
+    assert lazy_module.LoadState is SplitLoadState
+    assert lazy_module.lazy is split_lazy
+    assert lazy_module.preload_components is split_preload_components
+    assert LazyLoader is SplitLazyLoader
+    assert LazyWidget is SplitLazyWidget
+    assert LazyImage is SplitLazyImage
+    assert LazyComponent is SplitLazyComponent
+    assert LoadResult is SplitLoadResult
+    assert LoadState is SplitLoadState
+    assert lazy_decorator is split_lazy
+    assert preload_components is split_preload_components
+    assert MAX_CONCURRENT_LOADS == SPLIT_MAX_CONCURRENT_LOADS
+    assert MAX_CACHED_COMPONENTS == SPLIT_MAX_CACHED_COMPONENTS
+    assert MAX_RETRY_COUNT == SPLIT_MAX_RETRY_COUNT
+    assert LOAD_TIMEOUT_SECONDS == SPLIT_LOAD_TIMEOUT_SECONDS
+    assert ALLOWED_MODULE_PREFIX == SPLIT_ALLOWED_MODULE_PREFIX
+    assert LoadState.IDLE.value == "idle"
+    assert LoadResult(state=LoadState.SUCCESS, component=str).component is str
+
+
+@pytest.mark.unit
+def test_lazy_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_loader.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_widget.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_image.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_facade.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/utils/lazy_demo.py",
     ]
 
     for target in targets:
