@@ -51,6 +51,7 @@ from wechat_summarizer.presentation.gui.components import card as card_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
 from wechat_summarizer.presentation.gui.components import select as select_module
 from wechat_summarizer.presentation.gui.components import sidebar as sidebar_module
+from wechat_summarizer.presentation.gui.components import virtuallist as virtuallist_module
 from wechat_summarizer.presentation.gui.components.border import (
     Divider,
     GlowIntensity,
@@ -285,6 +286,41 @@ from wechat_summarizer.presentation.gui.components.tabs_modern import (
     ModernTabs as SplitModernTabs,
 )
 from wechat_summarizer.presentation.gui.components.tabs_selection import TabsSelectionMixin
+from wechat_summarizer.presentation.gui.components.virtuallist import (
+    MAX_ITEM_HEIGHT as VIRTUAL_LIST_MAX_ITEM_HEIGHT,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist import (
+    MAX_ITEMS as VIRTUAL_LIST_MAX_ITEMS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist import (
+    MIN_ITEM_HEIGHT as VIRTUAL_LIST_MIN_ITEM_HEIGHT,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist import (
+    RENDER_TIMEOUT_MS as VIRTUAL_LIST_RENDER_TIMEOUT_MS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist import (
+    SCROLL_THROTTLE_MS as VIRTUAL_LIST_SCROLL_THROTTLE_MS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist import VirtualItem, VirtualList
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    MAX_ITEM_HEIGHT as SPLIT_VIRTUAL_LIST_MAX_ITEM_HEIGHT,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    MAX_ITEMS as SPLIT_VIRTUAL_LIST_MAX_ITEMS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    MIN_ITEM_HEIGHT as SPLIT_VIRTUAL_LIST_MIN_ITEM_HEIGHT,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    RENDER_TIMEOUT_MS as SPLIT_VIRTUAL_LIST_RENDER_TIMEOUT_MS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    SCROLL_THROTTLE_MS as SPLIT_VIRTUAL_LIST_SCROLL_THROTTLE_MS,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_models import (
+    VirtualItem as SplitVirtualItem,
+)
+from wechat_summarizer.presentation.gui.components.virtuallist_render import VirtualListRenderMixin
 from wechat_summarizer.presentation.gui.dialogs import word_preview as word_preview_module
 from wechat_summarizer.presentation.gui.dialogs.word_preview import (
     build_content_preview_with_images,
@@ -1136,6 +1172,38 @@ def test_datagrid_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_toolbar.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_data.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_virtuallist_module_keeps_compatibility_exports_and_composition() -> None:
+    item = VirtualItem(index=2, data={"title": "demo"}, height=48, y_offset=96)
+
+    assert virtuallist_module.VirtualItem is SplitVirtualItem
+    assert VirtualItem is SplitVirtualItem
+    assert VirtualListRenderMixin in VirtualList.__mro__
+    assert VIRTUAL_LIST_MAX_ITEMS == SPLIT_VIRTUAL_LIST_MAX_ITEMS == 100000
+    assert VIRTUAL_LIST_MAX_ITEM_HEIGHT == SPLIT_VIRTUAL_LIST_MAX_ITEM_HEIGHT == 500
+    assert VIRTUAL_LIST_MIN_ITEM_HEIGHT == SPLIT_VIRTUAL_LIST_MIN_ITEM_HEIGHT == 20
+    assert VIRTUAL_LIST_RENDER_TIMEOUT_MS == SPLIT_VIRTUAL_LIST_RENDER_TIMEOUT_MS == 100
+    assert VIRTUAL_LIST_SCROLL_THROTTLE_MS == SPLIT_VIRTUAL_LIST_SCROLL_THROTTLE_MS == 16
+    assert item.index == 2
+    assert item.data == {"title": "demo"}
+    assert item.height == 48
+    assert item.y_offset == 96
+
+
+@pytest.mark.unit
+def test_virtuallist_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/virtuallist.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/virtuallist_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/virtuallist_render.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/virtuallist_demo.py",
     ]
 
     for target in targets:
