@@ -9,6 +9,7 @@ import customtkinter as ctk
 from loguru import logger
 
 from ..styles.colors import ModernColors
+from ..utils.i18n import tr
 from .word_preview_render import render_article_document
 from .word_preview_window import add_preview_toolbar, create_document_scroll, create_preview_window
 
@@ -23,7 +24,10 @@ def show_word_preview(gui: WechatSummarizerGUI) -> None:
 
     article = gui.current_article
     logger.info(f"打开Word预览: {article.title}")
-    preview_window = create_preview_window(gui.root, f"Word文档预览 - {article.title[:30]}...")
+    preview_window = create_preview_window(
+        gui.root,
+        tr("Word文档预览 - {title}...").format(title=article.title[:30]),
+    )
     add_preview_toolbar(preview_window)
     doc_scroll = create_document_scroll(preview_window)
     render_article_document(doc_scroll, article)
@@ -37,7 +41,7 @@ def show_word_preview(gui: WechatSummarizerGUI) -> None:
 
     ctk.CTkButton(
         btn_frame,
-        text="🔗 查看原文",
+        text=tr("🔗 查看原文"),
         width=100,
         height=38,
         corner_radius=8,
@@ -46,7 +50,7 @@ def show_word_preview(gui: WechatSummarizerGUI) -> None:
     ).pack(side="left")
     ctk.CTkButton(
         btn_frame,
-        text="取消",
+        text=tr("取消"),
         width=80,
         height=38,
         corner_radius=8,
@@ -55,7 +59,7 @@ def show_word_preview(gui: WechatSummarizerGUI) -> None:
     ).pack(side="right", padx=(5, 0))
     ctk.CTkButton(
         btn_frame,
-        text="✓ 确认导出Word",
+        text=tr("✓ 确认导出Word"),
         width=150,
         height=38,
         corner_radius=8,

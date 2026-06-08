@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 from .tooltip import create_tooltip
 
 _ctk_available = True
@@ -85,7 +86,7 @@ class Sidebar(ctk.CTkFrame):
 
         title_label = ctk.CTkLabel(
             logo_frame,
-            text="📰 文章助手",
+            text=tr("📰 文章助手"),
             font=self._get_font(22, "bold"),
             text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
         )
@@ -93,7 +94,7 @@ class Sidebar(ctk.CTkFrame):
 
         subtitle_label = ctk.CTkLabel(
             logo_frame,
-            text="WeChat Article Summarizer",
+            text=tr("WeChat Article Summarizer"),
             font=self._get_font(11),
             text_color=(
                 ModernColors.LIGHT_TEXT_SECONDARY,
@@ -125,7 +126,7 @@ class Sidebar(ctk.CTkFrame):
 
         theme_label = ctk.CTkLabel(
             settings_frame,
-            text="🎨 外观主题",
+            text=tr("🎨 外观主题"),
             font=self._get_font(12),
             text_color=(
                 ModernColors.LIGHT_TEXT_SECONDARY,
@@ -149,7 +150,7 @@ class Sidebar(ctk.CTkFrame):
         # 就绪状态指示器
         self.status_label = ctk.CTkLabel(
             settings_frame,
-            text="● 就绪",
+            text=tr("● 就绪"),
             font=self._get_font(11),
             text_color=ModernColors.SUCCESS,
         )
@@ -194,7 +195,10 @@ class Sidebar(ctk.CTkFrame):
         summarizer_btn.pack(side="left", padx=(0, 4))
         create_tooltip(
             summarizer_btn,
-            f"摘要器: {summarizer_count}/{summarizer_total} 可用\n点击查看详情",
+            tr("摘要器: {available}/{total} 可用\n点击查看详情").format(
+                available=summarizer_count,
+                total=summarizer_total,
+            ),
             self._get_font,
         )
 
@@ -216,7 +220,10 @@ class Sidebar(ctk.CTkFrame):
         exporter_btn.pack(side="left", padx=(0, 4))
         create_tooltip(
             exporter_btn,
-            f"导出器: {exporter_count}/{exporter_total} 可用\n点击查看详情",
+            tr("导出器: {available}/{total} 可用\n点击查看详情").format(
+                available=exporter_count,
+                total=exporter_total,
+            ),
             self._get_font,
         )
 
@@ -249,6 +256,6 @@ class Sidebar(ctk.CTkFrame):
         cache_btn.pack(side="left")
         create_tooltip(
             cache_btn,
-            f"缓存: {cache_count} 条记录\n点击查看历史记录",
+            tr("缓存: {count} 条记录\n点击查看历史记录").format(count=cache_count),
             self._get_font,
         )

@@ -36,8 +36,8 @@ EXCLUDED_PARTS: Final[frozenset[str]] = frozenset({"translations"})
 
 # These budgets are the current legacy baseline. Lower them as strings are
 # migrated to tr(...); the guard prevents new net hardcoding from landing.
-MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 153
-MAX_UNTRANSLATABLE_TR_CALLS: Final[int] = 9
+MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 101
+MAX_UNTRANSLATABLE_TR_CALLS: Final[int] = 0
 
 
 @dataclass(frozen=True)

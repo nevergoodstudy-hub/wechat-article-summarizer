@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import customtkinter as ctk
 
+from ..utils.i18n import tr
 from .word_preview_content import build_content_preview_with_images, extract_images_from_article
 
 if TYPE_CHECKING:
@@ -46,12 +47,14 @@ def _render_title(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> None:
 def _render_meta(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> None:
     meta_items = []
     if article.account_name:
-        meta_items.append(f"公众号: {article.account_name}")
+        meta_items.append(tr("公众号: {account}").format(account=article.account_name))
     if article.author:
-        meta_items.append(f"作者: {article.author}")
+        meta_items.append(tr("作者: {author}").format(author=article.author))
     if article.publish_time:
-        meta_items.append(f"发布时间: {article.publish_time_str}")
-    meta_items.append(f"字数: {article.word_count}")
+        meta_items.append(
+            tr("发布时间: {publish_time}").format(publish_time=article.publish_time_str)
+        )
+    meta_items.append(tr("字数: {word_count}").format(word_count=article.word_count))
     ctk.CTkLabel(
         doc_scroll,
         text=" | ".join(meta_items),
@@ -63,7 +66,7 @@ def _render_meta(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> None:
 def _render_link(doc_scroll: ctk.CTkScrollableFrame, article: Article, *, bind_link: bool) -> None:
     link_label = ctk.CTkLabel(
         doc_scroll,
-        text=f"原文链接: {article.url!s}",
+        text=tr("原文链接: {url}").format(url=article.url),
         font=ctk.CTkFont(size=9),
         text_color=ACCENT_COLOR,
         cursor="hand2",
@@ -79,7 +82,7 @@ def _render_summary(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> Non
 
     ctk.CTkLabel(
         doc_scroll,
-        text="📝 文章摘要",
+        text=tr("📝 文章摘要"),
         font=ctk.CTkFont(size=14, weight="bold"),
         text_color=ACCENT_COLOR,
     ).pack(anchor="w", padx=20, pady=(15, 8))
@@ -107,7 +110,7 @@ def _render_key_points(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> 
 
     ctk.CTkLabel(
         doc_scroll,
-        text="📌 关键要点",
+        text=tr("📌 关键要点"),
         font=ctk.CTkFont(size=12, weight="bold"),
     ).pack(anchor="w", padx=20, pady=(15, 5))
     for point in article.summary.key_points:
@@ -124,7 +127,7 @@ def _render_key_points(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> 
 def _render_body(doc_scroll: ctk.CTkScrollableFrame, article: Article) -> None:
     ctk.CTkLabel(
         doc_scroll,
-        text="📄 正文内容",
+        text=tr("📄 正文内容"),
         font=ctk.CTkFont(size=14, weight="bold"),
         text_color=ACCENT_COLOR,
     ).pack(anchor="w", padx=20, pady=(10, 8))
@@ -152,7 +155,7 @@ def _render_image_notice(doc_scroll: ctk.CTkScrollableFrame, article: Article) -
     img_info_frame.pack(fill="x", padx=20, pady=15)
     ctk.CTkLabel(
         img_info_frame,
-        text=f"🖼️ 文档将包含 {len(images)} 张图片",
+        text=tr("🖼️ 文档将包含 {count} 张图片").format(count=len(images)),
         font=ctk.CTkFont(size=11),
     ).pack(pady=8)
 
@@ -165,12 +168,15 @@ def _render_footer(
 ) -> None:
     _render_separator(doc_scroll, pady=(20, 5))
     text = footer_text or (
-        f"文章ID: {article.id} | 抓取时间: {article.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        tr("文章ID: {article_id} | 抓取时间: {fetched_at}").format(
+            article_id=article.id,
+            fetched_at=article.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        )
     )
     ctk.CTkLabel(doc_scroll, text=text, font=ctk.CTkFont(size=8), text_color="gray").pack()
     ctk.CTkLabel(
         doc_scroll,
-        text="由 WeChat Article Summarizer 生成",
+        text=tr("由 WeChat Article Summarizer 生成"),
         font=ctk.CTkFont(size=8),
         text_color="gray",
     ).pack(pady=(0, 20))

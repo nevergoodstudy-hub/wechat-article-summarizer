@@ -10,6 +10,7 @@ from typing import Any
 
 from loguru import logger
 
+from .utils.i18n import tr
 from .widgets.helpers import LOW_MEMORY_THRESHOLD_GB, get_available_memory_gb
 from .widgets.toast_notification import ToastNotification
 
@@ -39,12 +40,12 @@ def show_low_memory_warning(gui: Any, available_gb: float) -> None:
         apply_low_memory_optimizations(gui)
         logger.info("✅ 已启用低内存模式")
         if hasattr(gui, "_toast_manager") and gui._toast_manager:
-            gui._toast_manager.success("已启用低内存模式，应用将减少内存占用")
+            gui._toast_manager.success(tr("已启用低内存模式，应用将减少内存占用"))
         else:
             ToastNotification(
                 gui.root,
-                "低内存模式",
-                "已启用低内存模式，应用将减少内存占用",
+                tr("低内存模式"),
+                tr("已启用低内存模式，应用将减少内存占用"),
                 toast_type="success",
                 duration_ms=3000,
             )
@@ -55,8 +56,11 @@ def show_low_memory_warning(gui: Any, available_gb: float) -> None:
 
     ToastNotification(
         gui.root,
-        "⚠️ 内存不足",
-        f"检测到系统可用内存仅 {available_gb:.1f} GB（低于 {LOW_MEMORY_THRESHOLD_GB:.0f} GB）\n\n建议启用「低内存模式」以获得更好的体验。",
+        tr("⚠️ 内存不足"),
+        tr(
+            "检测到系统可用内存仅 {available_gb:.1f} GB（低于 {threshold_gb:.0f} GB）\n\n"
+            "建议启用「低内存模式」以获得更好的体验。"
+        ).format(available_gb=available_gb, threshold_gb=LOW_MEMORY_THRESHOLD_GB),
         toast_type="warning",
         duration_ms=0,
         show_buttons=True,

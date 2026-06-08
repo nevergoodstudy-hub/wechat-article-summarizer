@@ -103,7 +103,7 @@ class HistoryListFrame(ctk.CTkFrame):
         """Render a history loading error."""
         ctk.CTkLabel(
             self.history_frame,
-            text=tr(f"加载失败: {error}"),
+            text=tr("加载失败: {error}").format(error=error),
             text_color=ModernColors.ERROR,
         ).pack(pady=30)
 

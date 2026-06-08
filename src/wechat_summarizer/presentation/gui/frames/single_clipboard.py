@@ -50,7 +50,7 @@ class SingleClipboardBannerFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             inner,
-            text=tr(f"📋 检测到剪贴板链接: {self.format_url(self.url)}"),
+            text=tr("📋 检测到剪贴板链接: {url}").format(url=self.format_url(self.url)),
             font=ctk.CTkFont(size=12),
             text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
             anchor="w",

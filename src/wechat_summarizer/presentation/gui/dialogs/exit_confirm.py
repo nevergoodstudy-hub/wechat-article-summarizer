@@ -12,6 +12,7 @@ import customtkinter as ctk
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 
 
 class ExitConfirmDialog:
@@ -98,7 +99,7 @@ class ExitConfirmDialog:
 
             task_label = ctk.CTkLabel(
                 task_frame,
-                text=f"📝 当前任务: {task_info}",
+                text=tr("📝 当前任务: {task_info}").format(task_info=task_info),
                 font=ctk.CTkFont(size=12),
                 text_color=(ModernColors.WARNING, "#ffc107"),
                 anchor="w",
@@ -109,7 +110,7 @@ class ExitConfirmDialog:
         # 警告提示
         warning_label = ctk.CTkLabel(
             container,
-            text="强制退出可能导致数据丢失或文件损坏",
+            text=tr("强制退出可能导致数据丢失或文件损坏"),
             font=ctk.CTkFont(size=11),
             text_color=ModernColors.ERROR,
         )
@@ -122,7 +123,7 @@ class ExitConfirmDialog:
         # 取消按钮（继续任务）
         cancel_btn = ctk.CTkButton(
             btn_frame,
-            text="继续任务",
+            text=tr("继续任务"),
             width=120,
             height=40,
             corner_radius=Spacing.RADIUS_MD,
@@ -136,7 +137,7 @@ class ExitConfirmDialog:
         # 强制退出按钮
         exit_btn = ctk.CTkButton(
             btn_frame,
-            text="强制退出",
+            text=tr("强制退出"),
             width=120,
             height=40,
             corner_radius=Spacing.RADIUS_MD,
@@ -150,7 +151,7 @@ class ExitConfirmDialog:
         # 等待到后台按钮
         wait_btn = ctk.CTkButton(
             btn_frame,
-            text="后台运行",
+            text=tr("后台运行"),
             width=100,
             height=40,
             corner_radius=Spacing.RADIUS_MD,

@@ -12,6 +12,7 @@ from .ctk_compat import ctk
 from .pages import BatchPage, HistoryPage, HomePage, SettingsPage, SinglePage
 from .styles.colors import ModernColors
 from .styles.spacing import Spacing
+from .utils.i18n import tr
 from .utils.performance import PerformanceMonitor
 from .utils.responsive import Breakpoint, BreakpointManager, ResponsiveLayout
 from .utils.shortcuts import KeyboardShortcutManager, Shortcut
@@ -55,7 +56,9 @@ class GUILayoutMixin:
         if memory_mb > 800:
             logger.warning(f"⚠️ 内存使用过高: {memory_mb:.1f} MB")
             if hasattr(self, "_toast_manager") and self._toast_manager:
-                self._toast_manager.warning(f"内存使用过高: {memory_mb:.0f}MB")
+                self._toast_manager.warning(
+                    tr("内存使用过高: {memory_mb:.0f}MB").format(memory_mb=memory_mb)
+                )
 
     def _on_breakpoint_change(
         self: Any,
@@ -80,48 +83,48 @@ class GUILayoutMixin:
                 name="跳转首页",
                 keys="Ctrl+1",
                 callback=lambda: self._show_page(self.PAGE_HOME),
-                group="导航",
-                description="跳转到首页",
+                group=tr("导航"),
+                description=tr("跳转到首页"),
             ),
             Shortcut(
                 id="goto_single",
                 name="跳转单篇处理",
                 keys="Ctrl+2",
                 callback=lambda: self._show_page(self.PAGE_SINGLE),
-                group="导航",
-                description="跳转到单篇处理页面",
+                group=tr("导航"),
+                description=tr("跳转到单篇处理页面"),
             ),
             Shortcut(
                 id="goto_batch",
                 name="跳转批量处理",
                 keys="Ctrl+3",
                 callback=lambda: self._show_page(self.PAGE_BATCH),
-                group="导航",
-                description="跳转到批量处理页面",
+                group=tr("导航"),
+                description=tr("跳转到批量处理页面"),
             ),
             Shortcut(
                 id="goto_history",
                 name="跳转历史记录",
                 keys="Ctrl+4",
                 callback=lambda: self._show_page(self.PAGE_HISTORY),
-                group="导航",
-                description="跳转到历史记录页面",
+                group=tr("导航"),
+                description=tr("跳转到历史记录页面"),
             ),
             Shortcut(
                 id="goto_settings",
                 name="跳转设置",
                 keys="Ctrl+,",
                 callback=lambda: self._show_page(self.PAGE_SETTINGS),
-                group="导航",
-                description="跳转到设置",
+                group=tr("导航"),
+                description=tr("跳转到设置"),
             ),
             Shortcut(
                 id="toggle_theme",
                 name="切换主题",
                 keys="Ctrl+D",
                 callback=self._toggle_theme,
-                group="视图",
-                description="切换深色/浅色主题",
+                group=tr("视图"),
+                description=tr("切换深色/浅色主题"),
             ),
         ]
 

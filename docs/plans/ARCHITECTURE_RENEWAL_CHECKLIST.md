@@ -167,7 +167,7 @@
 
 > 证据：新增 `docs/adr/` 与 5 份 ADR：Clean Architecture 边界、SSRF 网络访问策略、TaskGroup 结构化并发、统一质量门禁、性能采样与缓存治理；新增 `scripts/check_adr_docs.py` 并接入 `scripts/quality_gate.py --mode architecture`，`tests/test_adr_docs.py` 覆盖当前 ADR 索引、必需章节与索引缺失场景。ADR 模板遵循本地 `architecture` skill 的上下文/决策/理由/取舍/后果结构，并参考 MADR 风格的轻量决策记录。
 
-> i18n 当前状态：已新增 `scripts/check_gui_i18n_hardcoded.py` 并接入 `scripts/quality_gate.py --mode architecture`，对 GUI 用户可见硬编码与不可翻译 `tr(...)` 调用建立当前基线，禁止新增净硬编码；本轮进一步将守卫扩展到 `_set_status`、`_on_status_change`、`ToastNotification` 位置参数，并抽离 `app_actions.py`、`app_navigation.py`、`runtime_export.py`、`pages/settings_page.py`、`widgets/log_panel.py` 的运行态状态/Toast/按钮文案，补齐 `translations/en.json`，硬编码基线由 174 收紧到 153，`tests/test_gui_i18n_hardcoded_guard.py` 锁定已迁移运行态文件不得再出现原始用户可见 literal。由于 `presentation/gui` 仍有历史硬编码残留与 9 个不可翻译 `tr(...)` 调用，`i18n 文案抽离完整化` 暂不勾选。
+> i18n 当前状态：已新增 `scripts/check_gui_i18n_hardcoded.py` 并接入 `scripts/quality_gate.py --mode architecture`，对 GUI 用户可见硬编码与不可翻译 `tr(...)` 调用建立当前基线，禁止新增净硬编码；本轮进一步将守卫扩展到 `_set_status`、`_on_status_change`、`ToastNotification` 位置参数，并新增 `en.json` 重复键检查。已抽离运行态状态/Toast/日志面板、首页 dashboard/状态卡、快捷键描述、API 密钥状态、低内存提示、sidebar/splash、退出确认、批量压缩导出与 Word 预览相关文案，统一采用 `tr("完整模板").format(...)` 的命名占位符形式，补齐 `translations/en.json`。硬编码基线已从 174 分阶段收紧到 101，不可翻译 `tr(...)` 从 9 清零到 0；`tests/test_gui_i18n_hardcoded_guard.py` 锁定已迁移产品文件不得再出现原始用户可见 literal。`scripts/quality_gate.py --mode lint`、`--mode architecture`、`--mode mypy`、`--mode test` 均通过；GUI/i18n 专项 `tests/test_gui_i18n_hardcoded_guard.py tests/test_gui_i18n_composition.py tests/test_gui_app_composition.py tests/test_gui_export_dialogs.py tests/test_gui_remaining_dialogs.py` 共 95 个用例通过。由于 `presentation/gui` 仍有 101 个历史硬编码残留，且 demo/通用模型/部分对话框仍待逐批迁移，`i18n 文案抽离完整化` 暂不勾选。
 
 ---
 

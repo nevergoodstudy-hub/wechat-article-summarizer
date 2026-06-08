@@ -34,10 +34,22 @@ def test_runtime_status_surfaces_are_i18n_extracted() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     migrated_files = {
         "src/wechat_summarizer/presentation/gui/app_actions.py",
+        "src/wechat_summarizer/presentation/gui/app_layout.py",
         "src/wechat_summarizer/presentation/gui/app_navigation.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/batch_archive_export.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/exit_confirm.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/word_preview_batch.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/word_preview_render.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/word_preview_single.py",
+        "src/wechat_summarizer/presentation/gui/frames/home_dashboard.py",
+        "src/wechat_summarizer/presentation/gui/frames/home_info.py",
         "src/wechat_summarizer/presentation/gui/pages/settings_page.py",
         "src/wechat_summarizer/presentation/gui/runtime_export.py",
+        "src/wechat_summarizer/presentation/gui/runtime_optimizations.py",
+        "src/wechat_summarizer/presentation/gui/settings_api_actions.py",
         "src/wechat_summarizer/presentation/gui/widgets/log_panel.py",
+        "src/wechat_summarizer/presentation/gui/widgets/sidebar.py",
+        "src/wechat_summarizer/presentation/gui/widgets/splash_screen.py",
     }
 
     hardcoded, _ = gui_i18n_guard.scan_gui_i18n()

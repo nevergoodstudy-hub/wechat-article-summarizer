@@ -9,6 +9,7 @@ from typing import Any
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 from ..widgets.helpers import adjust_color_brightness
 
 _ctk_available = True
@@ -17,14 +18,16 @@ try:
 except ImportError:
     _ctk_available = False
 
-_TIPS = [
-    ("📋", "粘贴即用", "复制微信文章链接，直接粘贴到下方输入框即可开始处理"),
-    ("⌨️", "快捷键", "Ctrl+1~4 切换页面，Ctrl+D 切换主题，Ctrl+E 导出"),
-    ("🤖", "AI 摘要", "在设置中配置 API 密钥，即可使用 DeepSeek/OpenAI 智能摘要"),
-    ("📦", "批量打包", "批量处理后可一键导出为 ZIP 压缩包"),
-    ("🗃️", "智能缓存", "已处理文章自动缓存，重复链接秒速加载"),
-    ("📂", "文件导入", "在批量页面点击「从文件导入」支持 .txt 批量导入链接"),
-]
+
+def _dashboard_tips() -> list[tuple[str, str, str]]:
+    return [
+        ("📋", tr("粘贴即用"), tr("复制微信文章链接，直接粘贴到下方输入框即可开始处理")),
+        ("⌨️", tr("快捷键"), tr("Ctrl+1~4 切换页面，Ctrl+D 切换主题，Ctrl+E 导出")),
+        ("🤖", tr("AI 摘要"), tr("在设置中配置 API 密钥，即可使用 DeepSeek/OpenAI 智能摘要")),
+        ("📦", tr("批量打包"), tr("批量处理后可一键导出为 ZIP 压缩包")),
+        ("🗃️", tr("智能缓存"), tr("已处理文章自动缓存，重复链接秒速加载")),
+        ("📂", tr("文件导入"), tr("在批量页面点击「从文件导入」支持 .txt 批量导入链接")),
+    ]
 
 
 class HomeWelcomeFrame(ctk.CTkFrame):
@@ -39,14 +42,14 @@ class HomeWelcomeFrame(ctk.CTkFrame):
     def _build(self) -> None:
         ctk.CTkLabel(
             self,
-            text="👋 欢迎使用文章助手",
+            text=tr("👋 欢迎使用文章助手"),
             font=self.gui._get_font(28, "bold"),
             text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             self,
-            text="快速抓取、总结和导出微信公众号文章",
+            text=tr("快速抓取、总结和导出微信公众号文章"),
             font=self.gui._get_font(14),
             text_color=(
                 ModernColors.LIGHT_TEXT_SECONDARY,
@@ -68,7 +71,7 @@ class HomeWelcomeFrame(ctk.CTkFrame):
 
         self.quick_entry = ctk.CTkEntry(
             inner,
-            placeholder_text="粘贴微信文章链接，按 Enter 开始处理…",
+            placeholder_text=tr("粘贴微信文章链接，按 Enter 开始处理…"),
             font=self.gui._get_font(13),
             height=40,
             corner_radius=Spacing.RADIUS_MD,
@@ -80,7 +83,7 @@ class HomeWelcomeFrame(ctk.CTkFrame):
 
         go_btn = ctk.CTkButton(
             inner,
-            text="开始 →",
+            text=tr("开始 →"),
             font=self.gui._get_font(13, "bold"),
             width=90,
             height=40,
@@ -126,9 +129,21 @@ class HomeActionCardsFrame(ctk.CTkFrame):
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
         cards = [
-            ("📄", "单篇处理", "抓取并生成摘要", self.pages["single"], ModernColors.INFO),
-            ("📚", "批量处理", "多篇文章批量处理", self.pages["batch"], ModernColors.SUCCESS),
-            ("📜", "历史记录", "查看已处理文章", self.pages["history"], ModernColors.WARNING),
+            ("📄", tr("单篇处理"), tr("抓取并生成摘要"), self.pages["single"], ModernColors.INFO),
+            (
+                "📚",
+                tr("批量处理"),
+                tr("多篇文章批量处理"),
+                self.pages["batch"],
+                ModernColors.SUCCESS,
+            ),
+            (
+                "📜",
+                tr("历史记录"),
+                tr("查看已处理文章"),
+                self.pages["history"],
+                ModernColors.WARNING,
+            ),
         ]
         for i, (icon, title, desc, page, color) in enumerate(cards):
             card = self._create_animated_card(
@@ -184,7 +199,7 @@ class HomeActionCardsFrame(ctk.CTkFrame):
 
         btn = ctk.CTkButton(
             card,
-            text="开始使用 →",
+            text=tr("开始使用 →"),
             font=self.gui._get_font(13),
             corner_radius=Spacing.RADIUS_MD,
             height=36,
@@ -231,7 +246,7 @@ class HomeTipBarFrame(ctk.CTkFrame):
         self._build()
 
     def _build(self) -> None:
-        tip = random.choice(_TIPS)
+        tip = random.choice(_dashboard_tips())
         inner = ctk.CTkFrame(self, fg_color="transparent")
         inner.pack(fill="x", padx=14, pady=10)
 

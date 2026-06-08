@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 import customtkinter as ctk
 
 from ..styles.colors import ModernColors
+from ..utils.i18n import tr
 from .word_preview_render import render_article_document
 from .word_preview_window import add_preview_toolbar, create_document_scroll, create_preview_window
 
@@ -24,7 +25,7 @@ def show_batch_word_preview(gui: WechatSummarizerGUI) -> None:
 
     preview_window = create_preview_window(
         gui.root,
-        f"Word 导出预览 - 共 {len(gui.batch_results)} 篇文章",
+        tr("Word 导出预览 - 共 {count} 篇文章").format(count=len(gui.batch_results)),
         center_on_parent=True,
     )
     add_preview_toolbar(preview_window)
@@ -38,7 +39,12 @@ def show_batch_word_preview(gui: WechatSummarizerGUI) -> None:
         for widget in doc_scroll.winfo_children():
             widget.destroy()
         article = gui.batch_results[current_page[0]]
-        nav["page_label"].configure(text=f"第 {current_page[0] + 1} 篇 / 共 {total_pages} 篇")
+        nav["page_label"].configure(
+            text=tr("第 {current} 篇 / 共 {total} 篇").format(
+                current=current_page[0] + 1,
+                total=total_pages,
+            )
+        )
         nav["prev_btn"].configure(state="normal" if current_page[0] > 0 else "disabled")
         nav["next_btn"].configure(
             state="normal" if current_page[0] < total_pages - 1 else "disabled"
@@ -76,7 +82,7 @@ def _create_navigation_bar(
     nav_bar.pack(fill="x", padx=15, pady=(0, 5))
     prev_btn = ctk.CTkButton(
         nav_bar,
-        text="◀ 上一篇",
+        text=tr("◀ 上一篇"),
         width=90,
         height=32,
         corner_radius=8,
@@ -87,13 +93,16 @@ def _create_navigation_bar(
     page_frame.pack(side="left", expand=True)
     page_label = ctk.CTkLabel(
         page_frame,
-        text=f"第 {current_page[0] + 1} 篇 / 共 {total_pages} 篇",
+        text=tr("第 {current} 篇 / 共 {total} 篇").format(
+            current=current_page[0] + 1,
+            total=total_pages,
+        ),
         font=ctk.CTkFont(size=13),
     )
     page_label.pack()
     next_btn = ctk.CTkButton(
         nav_bar,
-        text="下一篇 ▶",
+        text=tr("下一篇 ▶"),
         width=90,
         height=32,
         corner_radius=8,
@@ -117,14 +126,14 @@ def _create_batch_buttons(
         webbrowser.open(str(article.url))
 
     def do_export() -> None:
-        dir_path = filedialog.askdirectory(title="选择输出目录")
+        dir_path = filedialog.askdirectory(title=tr("选择输出目录"))
         if dir_path:
             preview_window.destroy()
             gui._do_batch_export("word", dir_path)
 
     ctk.CTkButton(
         btn_frame,
-        text="🔗 查看当前原文",
+        text=tr("🔗 查看当前原文"),
         width=120,
         height=38,
         corner_radius=8,
@@ -133,7 +142,7 @@ def _create_batch_buttons(
     ).pack(side="left")
     ctk.CTkButton(
         btn_frame,
-        text="取消",
+        text=tr("取消"),
         width=80,
         height=38,
         corner_radius=8,
@@ -142,7 +151,7 @@ def _create_batch_buttons(
     ).pack(side="right", padx=(5, 0))
     ctk.CTkButton(
         btn_frame,
-        text=f"✓ 导出全部 {total_pages} 篇为 Word",
+        text=tr("✓ 导出全部 {count} 篇为 Word").format(count=total_pages),
         width=200,
         height=38,
         corner_radius=8,
@@ -168,9 +177,11 @@ def _bind_navigation_keys(
 
 
 def _build_batch_footer(article: Article, page_index: int, total_pages: int) -> str:
-    return (
-        f"文章 {page_index + 1}/{total_pages} | ID: {article.id} | "
-        f"抓取时间: {article.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+    return tr("文章 {current}/{total} | ID: {article_id} | 抓取时间: {fetched_at}").format(
+        current=page_index + 1,
+        total=total_pages,
+        article_id=article.id,
+        fetched_at=article.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
 

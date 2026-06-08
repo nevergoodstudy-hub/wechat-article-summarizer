@@ -7,6 +7,7 @@ from typing import Any
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 
 _ctk_available = True
 try:
@@ -82,7 +83,7 @@ class HomeStatusOverviewFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             inner,
-            text="📊 系统状态",
+            text=tr("📊 系统状态"),
             font=self.gui._get_font(14, "bold"),
             text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
         ).pack(anchor="w", pady=(0, 10))
@@ -91,24 +92,39 @@ class HomeStatusOverviewFrame(ctk.CTkFrame):
         avail = sum(1 for v in info.values() if v.available)
         total = len(info)
         s_color = ModernColors.SUCCESS if avail > 0 else ModernColors.ERROR
-        self._stat_row(inner, "🤖 摘要器", f"{avail}/{total} 可用", s_color)
+        self._stat_row(
+            inner,
+            tr("🤖 摘要器"),
+            tr("{available}/{total} 可用").format(available=avail, total=total),
+            s_color,
+        )
 
         exp = getattr(self.gui, "_exporter_info", {})
         e_avail = sum(1 for v in exp.values() if v.available)
         e_total = len(exp)
         e_color = ModernColors.SUCCESS if e_avail > 0 else ModernColors.ERROR
-        self._stat_row(inner, "📤 导出器", f"{e_avail}/{e_total} 可用", e_color)
+        self._stat_row(
+            inner,
+            tr("📤 导出器"),
+            tr("{available}/{total} 可用").format(available=e_avail, total=e_total),
+            e_color,
+        )
 
         cache_count = 0
         with contextlib.suppress(Exception):
             storage = self.gui.container.storage
             if storage:
                 cache_count = storage.get_stats().total_entries
-        self._stat_row(inner, "🗃️ 缓存", f"{cache_count} 条记录", ModernColors.INFO)
+        self._stat_row(
+            inner,
+            tr("🗃️ 缓存"),
+            tr("{count} 条记录").format(count=cache_count),
+            ModernColors.INFO,
+        )
 
         settings_btn = ctk.CTkButton(
             inner,
-            text="⚙️ 查看设置",
+            text=tr("⚙️ 查看设置"),
             font=self.gui._get_font(11),
             height=28,
             corner_radius=Spacing.RADIUS_SM,
@@ -180,14 +196,14 @@ class HomeRecentRecordsFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header,
-            text="🕐 最近记录",
+            text=tr("🕐 最近记录"),
             font=self.gui._get_font(14, "bold"),
             text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
         ).pack(side="left")
 
         ctk.CTkButton(
             header,
-            text="查看全部 →",
+            text=tr("查看全部 →"),
             font=self.gui._get_font(11),
             height=24,
             width=80,
@@ -219,7 +235,7 @@ class HomeRecentRecordsFrame(ctk.CTkFrame):
         if not articles:
             empty = ctk.CTkLabel(
                 self._recent_container,
-                text="暂无记录，处理文章后将在此显示",
+                text=tr("暂无记录，处理文章后将在此显示"),
                 font=self.gui._get_font(12),
                 text_color=(
                     ModernColors.LIGHT_TEXT_MUTED,
@@ -235,7 +251,7 @@ class HomeRecentRecordsFrame(ctk.CTkFrame):
             row.pack(fill="x", pady=2)
             self._recent_labels.append(row)
 
-            title = getattr(art, "title", "无标题") or "无标题"
+            title = getattr(art, "title", tr("无标题")) or tr("无标题")
             if len(title) > 40:
                 title = title[:38] + "…"
             ctk.CTkLabel(

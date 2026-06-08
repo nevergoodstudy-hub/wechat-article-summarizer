@@ -19,6 +19,7 @@ from loguru import logger
 from ....shared.constants import VERSION
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 from .animation_helper import AnimationHelper
 
 
@@ -98,7 +99,7 @@ class SplashScreen:
         # Logo/标题
         self.title_label = ctk.CTkLabel(
             content,
-            text="📰 文章助手",
+            text=tr("📰 文章助手"),
             font=ctk.CTkFont(size=32, weight="bold"),
             text_color=ModernColors.DARK_ACCENT,
         )
@@ -107,7 +108,7 @@ class SplashScreen:
         # 副标题
         self.subtitle_label = ctk.CTkLabel(
             content,
-            text="WeChat Article Summarizer",
+            text=tr("WeChat Article Summarizer"),
             font=ctk.CTkFont(size=14),
             text_color=ModernColors.DARK_TEXT_SECONDARY,
         )
@@ -141,7 +142,7 @@ class SplashScreen:
         # 状态文字
         self.status_label = ctk.CTkLabel(
             content,
-            text="正在准备启动...",
+            text=tr("正在准备启动..."),
             font=ctk.CTkFont(size=13),
             text_color=ModernColors.DARK_TEXT_SECONDARY,
         )
