@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 from .animation_helper import AnimationHelper
 
 _ctk_available = True
@@ -72,7 +73,7 @@ class LogPanel(ctk.CTkFrame):
 
         self.log_toggle_btn = ctk.CTkButton(
             header,
-            text="📋 日志 ▼",
+            text=tr("📋 日志 ▼"),
             font=self._get_font(12),
             width=80,
             height=25,
@@ -100,7 +101,7 @@ class LogPanel(ctk.CTkFrame):
         self._search_entry = ctk.CTkEntry(
             header,
             textvariable=self._search_var,
-            placeholder_text="🔍 搜索日志…",
+            placeholder_text=tr("🔍 搜索日志…"),
             width=140,
             height=25,
             font=self._get_font(10),
@@ -111,7 +112,7 @@ class LogPanel(ctk.CTkFrame):
 
         ctk.CTkButton(
             header,
-            text="清空",
+            text=tr("清空"),
             font=self._get_font(11),
             width=50,
             height=25,
@@ -122,7 +123,7 @@ class LogPanel(ctk.CTkFrame):
 
         ctk.CTkButton(
             header,
-            text="复制",
+            text=tr("复制"),
             font=self._get_font(11),
             width=50,
             height=25,
@@ -148,11 +149,11 @@ class LogPanel(ctk.CTkFrame):
         """切换日志面板（无动画）"""
         if self._is_expanded:
             self.log_text.pack_forget()
-            self.log_toggle_btn.configure(text="📋 日志 ▶")
+            self.log_toggle_btn.configure(text=tr("📋 日志 ▶"))
             self._is_expanded = False
         else:
             self.log_text.pack(fill="x", padx=15, pady=(0, 10))
-            self.log_toggle_btn.configure(text="📋 日志 ▼")
+            self.log_toggle_btn.configure(text=tr("📋 日志 ▼"))
             self._is_expanded = True
 
     def toggle_animated(self):
@@ -166,7 +167,7 @@ class LogPanel(ctk.CTkFrame):
         """日志面板展开动画"""
         self.log_text.configure(height=1)
         self.log_text.pack(fill="x", padx=15, pady=(0, 10))
-        self.log_toggle_btn.configure(text="📋 日志 ▼")
+        self.log_toggle_btn.configure(text=tr("📋 日志 ▼"))
         self._is_expanded = True
 
         def update_height(h):
@@ -195,7 +196,7 @@ class LogPanel(ctk.CTkFrame):
 
         def on_complete():
             self.log_text.pack_forget()
-            self.log_toggle_btn.configure(text="📋 日志 ▶")
+            self.log_toggle_btn.configure(text=tr("📋 日志 ▶"))
             self._is_expanded = False
 
         AnimationHelper.animate_value(
@@ -285,4 +286,4 @@ class LogPanel(ctk.CTkFrame):
             self.clipboard_clear()
             self.clipboard_append(content)
             if self._on_status_change:
-                self._on_status_change("已复制到剪贴板", ModernColors.SUCCESS)
+                self._on_status_change(tr("已复制到剪贴板"), ModernColors.SUCCESS)

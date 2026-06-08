@@ -25,6 +25,29 @@ def test_current_gui_i18n_baseline_does_not_regress() -> None:
     gui_i18n_guard = _load_gui_i18n_guard_module()
 
     assert gui_i18n_guard.check_gui_i18n() == []
+    assert gui_i18n_guard.find_duplicate_translation_keys() == []
+
+
+def test_runtime_status_surfaces_are_i18n_extracted() -> None:
+    """Recently migrated runtime UI surfaces should stay free of raw literals."""
+    gui_i18n_guard = _load_gui_i18n_guard_module()
+    repo_root = Path(__file__).resolve().parents[1]
+    migrated_files = {
+        "src/wechat_summarizer/presentation/gui/app_actions.py",
+        "src/wechat_summarizer/presentation/gui/app_navigation.py",
+        "src/wechat_summarizer/presentation/gui/pages/settings_page.py",
+        "src/wechat_summarizer/presentation/gui/runtime_export.py",
+        "src/wechat_summarizer/presentation/gui/widgets/log_panel.py",
+    }
+
+    hardcoded, _ = gui_i18n_guard.scan_gui_i18n()
+    leftovers = [
+        violation.format()
+        for violation in hardcoded
+        if violation.path.relative_to(repo_root).as_posix() in migrated_files
+    ]
+
+    assert leftovers == []
 
 
 def test_gui_i18n_guard_detects_user_visible_literal(tmp_path: Path) -> None:

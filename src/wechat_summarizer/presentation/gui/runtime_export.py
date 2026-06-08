@@ -22,6 +22,7 @@ from .dialogs import (
     show_export_success,
 )
 from .styles.colors import ModernColors
+from .utils.i18n import tr
 
 
 def on_export(gui: Any) -> None:
@@ -83,7 +84,7 @@ def do_export(gui: Any, target: str) -> None:
             logger.info(f"已记住导出目录: {export_dir}")
 
     gui.export_btn.configure(state="disabled")
-    gui._set_status("正在导出...", ModernColors.INFO)
+    gui._set_status(tr("正在导出..."), ModernColors.INFO)
 
     def do_export_thread() -> None:
         try:
@@ -105,10 +106,10 @@ def export_complete(gui: Any, success: bool, message: str) -> None:
     """单篇导出完成。"""
     gui.export_btn.configure(state="normal")
     if success:
-        gui._set_status("导出完成", ModernColors.SUCCESS)
+        gui._set_status(tr("导出完成"), ModernColors.SUCCESS)
         show_export_success(message)
     else:
-        gui._set_status("导出失败", ModernColors.ERROR)
+        gui._set_status(tr("导出失败"), ModernColors.ERROR)
         show_export_error(message)
 
 
@@ -150,7 +151,7 @@ def do_archive_export(gui: Any, articles: list, archive_format: str, path: str) 
     gui.batch_status_label.configure(text=f"正在打包 0/{len(articles)} 篇为 {format_name}...")
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     gui._batch_export_active = True
@@ -204,7 +205,7 @@ def archive_export_error(gui: Any, error: str) -> None:
     gui._batch_export_active = False
 
     enable_export_buttons(gui)
-    gui.batch_status_label.configure(text="压缩导出失败")
+    gui.batch_status_label.configure(text=tr("压缩导出失败"))
     show_export_error(error)
 
 
@@ -238,7 +239,7 @@ def do_batch_export(gui: Any, target: str, dir_path: str) -> None:
     gui.batch_status_label.configure(text=f"正在导出 0/{len(gui.batch_results)} 篇...")
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     gui._batch_export_active = True
@@ -313,7 +314,7 @@ def batch_export_error(gui: Any, error: str) -> None:
     gui._batch_export_active = False
 
     enable_export_buttons(gui)
-    gui.batch_status_label.configure(text="导出失败")
+    gui.batch_status_label.configure(text=tr("导出失败"))
     show_export_error(error)
 
 

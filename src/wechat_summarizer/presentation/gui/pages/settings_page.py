@@ -256,7 +256,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
                 )
                 if result.returncode == 0:
                     self.settings_status_label.configure(
-                        text="✓ 已启用开机自启动", text_color=ModernColors.SUCCESS
+                        text=f"✓ {tr('已启用开机自启动')}", text_color=ModernColors.SUCCESS
                     )
                     logger.success("已启用开机自启动")
                 else:
@@ -272,7 +272,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
                 if shortcut_path.exists():
                     shortcut_path.unlink()
                 self.settings_status_label.configure(
-                    text="✓ 已禁用开机自启动", text_color=ModernColors.SUCCESS
+                    text=f"✓ {tr('已禁用开机自启动')}", text_color=ModernColors.SUCCESS
                 )
                 logger.info("已禁用开机自启动")
             except Exception as e:
@@ -287,12 +287,12 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         self.gui.user_prefs.minimize_to_tray = enabled
         if enabled:
             self.settings_status_label.configure(
-                text="✓ 已启用最小化到托盘", text_color=ModernColors.SUCCESS
+                text=f"✓ {tr('已启用最小化到托盘')}", text_color=ModernColors.SUCCESS
             )
             logger.info("已启用最小化到系统托盘")
         else:
             self.settings_status_label.configure(
-                text="✓ 已禁用最小化到托盘", text_color=ModernColors.SUCCESS
+                text=f"✓ {tr('已禁用最小化到托盘')}", text_color=ModernColors.SUCCESS
             )
             logger.info("已禁用最小化到系统托盘")
 
@@ -304,12 +304,12 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         if enabled:
             self.gui._apply_low_memory_optimizations()
             self.settings_status_label.configure(
-                text="✓ 已启用低内存模式", text_color=ModernColors.SUCCESS
+                text=f"✓ {tr('已启用低内存模式')}", text_color=ModernColors.SUCCESS
             )
             logger.info("已启用低内存模式")
         else:
             self.settings_status_label.configure(
-                text="✓ 已禁用低内存模式", text_color=ModernColors.SUCCESS
+                text=f"✓ {tr('已禁用低内存模式')}", text_color=ModernColors.SUCCESS
             )
             logger.info("已禁用低内存模式，重启后完全生效")
 
@@ -327,7 +327,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         else:
             ToastNotification(
                 self.gui.root,
-                "🌐 语言已切换",
+                tr("🌐 语言已切换"),
                 f"语言已设置为 {display_value}\n重启应用后完全生效",
                 toast_type="info",
                 duration_ms=3000,
@@ -360,7 +360,9 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         self.gui.user_prefs.export_dir = ""
         self.gui.user_prefs.remember_export_dir = True
         self.gui.user_prefs.default_export_format = "word"
-        self.settings_status_label.configure(text="✓ 设置已重置", text_color=ModernColors.SUCCESS)
+        self.settings_status_label.configure(
+            text=f"✓ {tr('设置已重置')}", text_color=ModernColors.SUCCESS
+        )
         logger.info("导出设置已重置")
 
     def _save_settings(self):
@@ -379,8 +381,10 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         self.gui.user_prefs.export_dir = export_dir
         self.gui.user_prefs.remember_export_dir = self.remember_dir_var.get()
         self.gui.user_prefs.default_export_format = self.default_format_var.get()
-        self.settings_status_label.configure(text="✓ 设置已保存", text_color=ModernColors.SUCCESS)
-        self.gui._set_status("设置已保存", ModernColors.SUCCESS)
+        self.settings_status_label.configure(
+            text=f"✓ {tr('设置已保存')}", text_color=ModernColors.SUCCESS
+        )
+        self.gui._set_status(tr("设置已保存"), ModernColors.SUCCESS)
         logger.success("设置已保存")
 
     def update_summarizer_status_display(self):

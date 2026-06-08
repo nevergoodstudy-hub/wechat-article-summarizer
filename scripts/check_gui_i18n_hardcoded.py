@@ -27,11 +27,16 @@ USER_VISIBLE_KEYWORDS: Final[frozenset[str]] = frozenset(
         "button_text",
     }
 )
+USER_VISIBLE_POSITIONAL_ARGS: Final[dict[str, tuple[int, ...]]] = {
+    "ToastNotification": (1, 2),
+    "_on_status_change": (0,),
+    "_set_status": (0,),
+}
 EXCLUDED_PARTS: Final[frozenset[str]] = frozenset({"translations"})
 
 # These budgets are the current legacy baseline. Lower them as strings are
 # migrated to tr(...); the guard prevents new net hardcoding from landing.
-MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 174
+MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 153
 MAX_UNTRANSLATABLE_TR_CALLS: Final[int] = 9
 
 
@@ -79,6 +84,25 @@ def _iter_python_files(gui_src: Path) -> list[Path]:
     )
 
 
+def find_duplicate_translation_keys(en_translations: Path = EN_TRANSLATIONS) -> list[str]:
+    """Return duplicate JSON keys from the translation catalog."""
+
+    duplicate_keys: list[str] = []
+    seen: set[str] = set()
+
+    def collect_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in seen and key not in duplicate_keys:
+                duplicate_keys.append(key)
+            seen.add(key)
+            result[key] = value
+        return result
+
+    json.loads(en_translations.read_text(encoding="utf-8"), object_pairs_hook=collect_pairs)
+    return duplicate_keys
+
+
 def scan_gui_i18n(
     *,
     gui_src: Path = GUI_SRC,
@@ -111,6 +135,21 @@ def scan_gui_i18n(
                         I18nViolation(path, getattr(arg, "lineno", node.lineno), "dynamic tr(...) key")
                     )
 
+            for arg_index in USER_VISIBLE_POSITIONAL_ARGS.get(call_name or "", ()):
+                if arg_index >= len(node.args):
+                    continue
+                arg = node.args[arg_index]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    text = arg.value
+                    if _is_user_visible_literal(text):
+                        hardcoded.append(
+                            I18nViolation(
+                                path,
+                                arg.lineno,
+                                f"hardcoded positional {call_name}[{arg_index}] literal: {text[:80]!r}",
+                            )
+                        )
+
             for keyword in node.keywords:
                 if keyword.arg not in USER_VISIBLE_KEYWORDS:
                     continue
@@ -132,6 +171,9 @@ def scan_gui_i18n(
 def check_gui_i18n() -> list[str]:
     hardcoded, untranslatable = scan_gui_i18n()
     failures: list[str] = []
+    duplicate_keys = find_duplicate_translation_keys()
+    if duplicate_keys:
+        failures.append(f"duplicate translation keys in en.json: {', '.join(duplicate_keys)}")
     if len(hardcoded) > MAX_HARDCODED_VISIBLE_STRINGS:
         failures.append(
             "hardcoded GUI string budget exceeded: "

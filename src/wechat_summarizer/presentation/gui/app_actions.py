@@ -15,6 +15,7 @@ from .dialogs import (
     show_single_fetch_error,
 )
 from .styles.colors import ModernColors
+from .utils.i18n import tr
 from .widgets.helpers import ExporterInfo, SummarizerInfo
 
 if TYPE_CHECKING:
@@ -110,12 +111,12 @@ class GUIActionsMixin:
 
         if self._is_valid_wechat_url(url):
             self.url_status_label.configure(
-                text="✓ 有效的微信公众号链接",
+                text=f"✓ {tr('有效的微信公众号链接')}",
                 text_color=ModernColors.SUCCESS,
             )
         else:
             self.url_status_label.configure(
-                text="✗ 请输入有效的微信公众号文章链接",
+                text=f"✗ {tr('请输入有效的微信公众号文章链接')}",
                 text_color=ModernColors.ERROR,
             )
 
@@ -172,7 +173,7 @@ class GUIActionsMixin:
             )
         else:
             self.batch_url_status_label.configure(
-                text="✗ 未找到有效的微信公众号链接",
+                text=f"✗ {tr('未找到有效的微信公众号链接')}",
                 text_color=ModernColors.ERROR,
             )
 
@@ -187,7 +188,7 @@ class GUIActionsMixin:
 
         self._single_processing_active = True
         self.single_page.fetch_btn.configure(state="disabled")
-        self._set_status("正在抓取...", ModernColors.INFO, pulse=True)
+        self._set_status(tr("正在抓取..."), ModernColors.INFO, pulse=True)
         logger.info(f"开始抓取: {url}")
         threading.Thread(target=self._fetch_article, args=(url,), daemon=True).start()
 
@@ -239,12 +240,12 @@ class GUIActionsMixin:
 
         single_page.export_btn.configure(state="normal")
         single_page.fetch_btn.configure(state="normal")
-        self._set_status("处理完成", ModernColors.SUCCESS, pulse=False)
+        self._set_status(tr("处理完成"), ModernColors.SUCCESS, pulse=False)
 
     def _show_error(self: Any, message: str) -> None:
         self._single_processing_active = False
         self.single_page.fetch_btn.configure(state="normal")
-        self._set_status("处理失败", ModernColors.ERROR, pulse=False)
+        self._set_status(tr("处理失败"), ModernColors.ERROR, pulse=False)
         show_single_fetch_error(message)
 
     def _check_export_dir_configured(self: Any) -> bool:
