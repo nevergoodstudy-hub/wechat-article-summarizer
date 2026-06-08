@@ -48,6 +48,7 @@ from wechat_summarizer.presentation.gui.assets.icons_paths import (
 )
 from wechat_summarizer.presentation.gui.components import border as border_module
 from wechat_summarizer.presentation.gui.components import card as card_module
+from wechat_summarizer.presentation.gui.components import contextmenu as contextmenu_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
 from wechat_summarizer.presentation.gui.components import select as select_module
 from wechat_summarizer.presentation.gui.components import sidebar as sidebar_module
@@ -142,6 +143,32 @@ from wechat_summarizer.presentation.gui.components.card_models import (
     ShadowDepth as SplitShadowDepth,
 )
 from wechat_summarizer.presentation.gui.components.card_stat import StatCard as SplitStatCard
+from wechat_summarizer.presentation.gui.components.contextmenu import (
+    ContextMenu,
+    ContextMenuManager,
+    MenuItem,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_core import (
+    ContextMenu as SplitContextMenu,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_manager import (
+    ContextMenuManager as SplitContextMenuManager,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_models import (
+    DEFAULT_CONTEXT_MENU_COLORS as SPLIT_DEFAULT_CONTEXT_MENU_COLORS,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_models import (
+    MAX_CONTEXT_MENU_ITEMS as SPLIT_MAX_CONTEXT_MENU_ITEMS,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_models import (
+    MAX_CONTEXT_MENU_LABEL_LENGTH as SPLIT_MAX_CONTEXT_MENU_LABEL_LENGTH,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_models import (
+    MenuItem as SplitMenuItem,
+)
+from wechat_summarizer.presentation.gui.components.contextmenu_render import (
+    ContextMenuRenderMixin,
+)
 from wechat_summarizer.presentation.gui.components.datagrid import (
     Column,
     DataGrid,
@@ -1140,6 +1167,52 @@ def test_card_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/card_action.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/card_stat.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/card_factory.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_contextmenu_module_keeps_compatibility_exports_and_composition() -> None:
+    child = MenuItem(id="copy_as", label="复制为")
+    item = MenuItem(
+        id="copy",
+        label="复制",
+        icon="C",
+        shortcut="Ctrl+C",
+        disabled=True,
+        children=[child],
+    )
+
+    assert contextmenu_module.ContextMenu is SplitContextMenu
+    assert contextmenu_module.ContextMenuManager is SplitContextMenuManager
+    assert contextmenu_module.MenuItem is SplitMenuItem
+    assert contextmenu_module.ContextMenuRenderMixin is ContextMenuRenderMixin
+    assert contextmenu_module.MAX_CONTEXT_MENU_ITEMS is SPLIT_MAX_CONTEXT_MENU_ITEMS
+    assert contextmenu_module.MAX_CONTEXT_MENU_LABEL_LENGTH is SPLIT_MAX_CONTEXT_MENU_LABEL_LENGTH
+    assert contextmenu_module.DEFAULT_CONTEXT_MENU_COLORS is SPLIT_DEFAULT_CONTEXT_MENU_COLORS
+    assert ContextMenu is SplitContextMenu
+    assert ContextMenuManager is SplitContextMenuManager
+    assert MenuItem is SplitMenuItem
+    assert ContextMenuRenderMixin in ContextMenu.__mro__
+    assert ContextMenu.MAX_ITEMS == 50
+    assert ContextMenu.MAX_LABEL_LENGTH == 100
+    assert item.children == [child]
+    assert item.shortcut == "Ctrl+C"
+    assert item.disabled is True
+
+
+@pytest.mark.unit
+def test_contextmenu_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu_render.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu_core.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu_manager.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/contextmenu_demo.py",
     ]
 
     for target in targets:
