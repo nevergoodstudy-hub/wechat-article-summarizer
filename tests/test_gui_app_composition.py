@@ -30,6 +30,40 @@ from wechat_summarizer.presentation.gui.components.datagrid_toolbar import DataG
 from wechat_summarizer.presentation.gui.components.datagrid_virtual import (
     VirtualScrollContainer as SplitVirtualScrollContainer,
 )
+from wechat_summarizer.presentation.gui.components.input import (
+    ClearButton,
+    FloatingLabel,
+    ModernInput,
+    ModernTextArea,
+    PasswordInput,
+    ValidationState,
+    create_input,
+    create_textarea,
+)
+from wechat_summarizer.presentation.gui.components.input_adornments import (
+    ClearButton as SplitClearButton,
+)
+from wechat_summarizer.presentation.gui.components.input_adornments import (
+    FloatingLabel as SplitFloatingLabel,
+)
+from wechat_summarizer.presentation.gui.components.input_factories import (
+    create_input as split_create_input,
+)
+from wechat_summarizer.presentation.gui.components.input_factories import (
+    create_textarea as split_create_textarea,
+)
+from wechat_summarizer.presentation.gui.components.input_modern import (
+    ModernInput as SplitModernInput,
+)
+from wechat_summarizer.presentation.gui.components.input_password import (
+    PasswordInput as SplitPasswordInput,
+)
+from wechat_summarizer.presentation.gui.components.input_state import (
+    ValidationState as SplitValidationState,
+)
+from wechat_summarizer.presentation.gui.components.input_textarea import (
+    ModernTextArea as SplitModernTextArea,
+)
 from wechat_summarizer.presentation.gui.frames import (
     HomeActionCardsFrame,
     HomeInfoRowFrame,
@@ -231,6 +265,37 @@ def test_datagrid_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_toolbar.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_data.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/datagrid_demo.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_input_module_keeps_compatibility_exports() -> None:
+    assert ModernInput is SplitModernInput
+    assert ModernTextArea is SplitModernTextArea
+    assert PasswordInput is SplitPasswordInput
+    assert ValidationState is SplitValidationState
+    assert FloatingLabel is SplitFloatingLabel
+    assert ClearButton is SplitClearButton
+    assert create_input is split_create_input
+    assert create_textarea is split_create_textarea
+    assert ValidationState.ERROR.value == "error"
+
+
+@pytest.mark.unit
+def test_input_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_state.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_adornments.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_modern.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_textarea.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_password.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/input_factories.py",
     ]
 
     for target in targets:
