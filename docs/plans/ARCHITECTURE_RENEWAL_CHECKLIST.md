@@ -41,6 +41,8 @@
 
 > 最新证据：已将 `components/glass.py` 的 CustomTkinter/Tk 兼容层、主题材质/边界模型、呼吸动画 mixin、液态玻璃 Frame、Card、Button、Modal 与工厂函数拆到 `glass_compat.py`、`glass_models.py`、`glass_animation.py`、`glass_frame.py`、`glass_card.py`、`glass_button.py`、`glass_modal.py`、`glass_factory.py`，兼容入口降至 41 行，拆分后相关文件分别为 15/65/74/79/74/61/44/32 行，并保留 `LiquidGlassFrame`、`GlassCard`、`GlassButton`、`GlassModal`、`create_glass_frame`、`create_glass_card` 等旧公开导出；`tests/test_gui_glass_composition.py` 新增兼容导出、材质边界、动画 helper 与行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 6 个 Python 文件 >=400 行（最高 `utils/windows_integration.py` 428 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
 
+> 最新证据：已将 `utils/windows_integration.py` 的任务栏进度、系统通知、资源管理器/默认程序打开、快捷方式创建、特殊目录和 Windows 11 标题栏样式拆到 `windows_taskbar.py`、`windows_notifications.py`、`windows_shell.py`、`windows_paths.py`、`windows_platform.py`、`windows_style.py`，兼容入口降至 109 行，拆分后相关文件分别为 55/81/133/36/53/85 行，并保留 `WindowsIntegration`、`Windows11StyleHelper`、`windows` 旧公开导出；`tests/test_gui_windows_integration_composition.py` 新增兼容导出、门面委托、PowerShell 单引号转义、非 Windows 任务栏 no-op 与行数目标测试。最新复核发现当前 `presentation/gui` 下仍有 5 个 Python 文件 >=400 行（最高 `viewmodels/single_process_viewmodel.py` 424 行），因此 `文件上限：单文件目标 < 400 行` 保持未勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
