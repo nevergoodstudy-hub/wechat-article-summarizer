@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import threading
-from tkinter import filedialog, messagebox
 from typing import Any
 
 import customtkinter as ctk
@@ -14,12 +13,19 @@ from loguru import logger
 
 from ...domain.entities import Article
 from ...shared.progress import BatchProgressTracker, ProgressInfo
+from .dialogs import (
+    choose_url_text_file,
+    show_clipboard_empty_warning,
+    show_empty_batch_url_warning,
+    show_no_valid_url_warning,
+    show_url_file_read_error,
+)
 from .styles import ModernColors
 
 
 def on_import_urls(gui: Any) -> None:
     """导入 URL 文本文件到批量输入框。"""
-    path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    path = choose_url_text_file()
     if not path:
         return
 
@@ -30,7 +36,7 @@ def on_import_urls(gui: Any) -> None:
         gui.batch_url_text.insert("1.0", content)
         logger.info(f"已导入URL文件: {path}")
     except Exception as e:
-        messagebox.showerror("错误", f"读取失败: {e}")
+        show_url_file_read_error(e)
 
 
 def on_paste_urls(gui: Any) -> None:
@@ -39,19 +45,19 @@ def on_paste_urls(gui: Any) -> None:
         content = gui.root.clipboard_get()
         gui.batch_url_text.insert("end", content)
     except Exception:
-        messagebox.showwarning("提示", "剪贴板为空")
+        show_clipboard_empty_warning()
 
 
 def on_batch_process(gui: Any) -> None:
     """校验并启动批量处理。"""
     content = gui.batch_url_text.get("1.0", "end").strip()
     if not content:
-        messagebox.showwarning("提示", "请输入URL")
+        show_empty_batch_url_warning()
         return
 
     urls = [line.strip() for line in content.split("\n") if line.strip()]
     if not urls:
-        messagebox.showwarning("提示", "未找到有效URL")
+        show_no_valid_url_warning()
         return
 
     start_batch_processing(gui, urls)

@@ -6,11 +6,17 @@
 
 from __future__ import annotations
 
-from tkinter import messagebox
 from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from ..dialogs import (
+    confirm_clear_cache,
+    confirm_delete_history_article,
+    show_clear_cache_error,
+    show_clear_cache_success,
+    show_delete_history_error,
+)
 from ..styles.colors import ModernColors
 from ..utils.i18n import tr
 
@@ -179,7 +185,7 @@ class HistoryPage(ctk.CTkFrame):
 
     def _delete_history_article(self, article: Article):
         """删除历史文章"""
-        if not messagebox.askyesno("确认", f'删除 "{article.title[:25]}..." ?'):
+        if not confirm_delete_history_article(article.title):
             return None
         try:
             storage = self.gui.container.storage
@@ -188,11 +194,11 @@ class HistoryPage(ctk.CTkFrame):
                 self._refresh_history()
                 logger.info(f"已删除: {article.title}")
         except Exception as e:
-            messagebox.showerror("错误", f"删除失败: {e}")
+            show_delete_history_error(e)
 
     def _on_clear_cache(self):
         """清空所有缓存"""
-        if not messagebox.askyesno("确认", "确定清空所有缓存？此操作不可撤销。"):
+        if not confirm_clear_cache():
             return None
         try:
             storage = self.gui.container.storage
@@ -200,6 +206,6 @@ class HistoryPage(ctk.CTkFrame):
                 count = storage.clear_all()
                 self._refresh_history()
                 logger.info(f"已清空 {count} 条缓存")
-                messagebox.showinfo("成功", f"已清空 {count} 条缓存")
+                show_clear_cache_success(count)
         except Exception as e:
-            messagebox.showerror("错误", f"清空失败: {e}")
+            show_clear_cache_error(e)
