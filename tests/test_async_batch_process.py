@@ -84,6 +84,13 @@ async def test_async_batch_result_includes_per_url_failures() -> None:
     assert result.success_count == 1
     assert result.failed_count == 1
     assert result.total == 2
+    assert result.performance_sample is not None
+    assert result.performance_sample.name == "async_batch_process_urls"
+    assert result.performance_sample.duration_ms >= 0
+    assert result.performance_sample.peak_memory_kb >= 0
+    assert result.performance_sample.metadata["url_count"] == 2
+    assert result.performance_sample.metadata["success_count"] == 1
+    assert result.performance_sample.metadata["failed_count"] == 1
     assert result.errors == [(failing_url, "没有可用的抓取器能处理URL: https://example.com/fail")]
 
 

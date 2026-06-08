@@ -54,7 +54,28 @@ class SlowOperation:
         }
 
 
+@dataclass
+class OperationSample:
+    """Measured operation sample."""
+
+    name: str
+    duration_ms: float
+    memory_mb: float
+    cpu_percent: float
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name[:50],
+            "duration_ms": round(self.duration_ms, 2),
+            "memory_mb": round(self.memory_mb, 1),
+            "cpu_percent": round(self.cpu_percent, 1),
+            "timestamp": self.timestamp,
+        }
+
+
 __all__ = [
+    "OperationSample",
     "PerformanceLevel",
     "PerformanceMetrics",
     "SlowOperation",

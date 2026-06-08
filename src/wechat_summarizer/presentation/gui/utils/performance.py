@@ -11,7 +11,12 @@ from .performance_constants import (
     WARNING_MEMORY_MB,
 )
 from .performance_facade import get_monitor, show_overlay, start_monitoring, stop_monitoring, timer
-from .performance_models import PerformanceLevel, PerformanceMetrics, SlowOperation
+from .performance_models import (
+    OperationSample,
+    PerformanceLevel,
+    PerformanceMetrics,
+    SlowOperation,
+)
 from .performance_monitor import PerformanceMonitor
 from .performance_overlay import PerformanceOverlay
 from .performance_timer import PerformanceTimer
@@ -23,6 +28,7 @@ __all__ = [
     "MONITOR_INTERVAL_MS",
     "SLOW_OP_THRESHOLD_MS",
     "WARNING_MEMORY_MB",
+    "OperationSample",
     "PerformanceLevel",
     "PerformanceMetrics",
     "PerformanceMonitor",

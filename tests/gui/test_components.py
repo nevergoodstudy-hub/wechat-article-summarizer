@@ -158,6 +158,28 @@ class TestPerformanceMonitor:
         assert isinstance(data["fps"], float)
         assert isinstance(data["memory_mb"], float)
 
+    def test_operation_sample_to_dict_no_sensitive_data(self):
+        """测试操作采样转换不含敏感数据"""
+        from wechat_summarizer.presentation.gui.utils.performance import OperationSample
+
+        sample = OperationSample(
+            name="a" * 100,
+            duration_ms=123.456,
+            memory_mb=150.25,
+            cpu_percent=12.34,
+        )
+        data = sample.to_dict()
+
+        assert set(data.keys()) == {
+            "name",
+            "duration_ms",
+            "memory_mb",
+            "cpu_percent",
+            "timestamp",
+        }
+        assert len(data["name"]) <= 50
+        assert data["duration_ms"] == 123.46
+
     def test_slow_operation_name_truncation(self):
         """测试慢操作名称截断"""
         from wechat_summarizer.presentation.gui.utils.performance import SlowOperation
@@ -191,12 +213,29 @@ class TestPerformanceMonitor:
         from wechat_summarizer.presentation.gui.utils.performance import PerformanceMonitor
 
         monitor = PerformanceMonitor()
+        monitor.clear_history()
 
         with monitor.timer("test_operation"):
             time.sleep(0.01)  # 10ms
 
         # 不应触发慢操作警告(阈值100ms)
         # 这里只测试不抛异常
+        samples = monitor.get_operation_samples()
+        assert samples[-1].name == "test_operation"
+        assert samples[-1].duration_ms >= 0
+
+    def test_report_can_use_operation_samples_without_history(self):
+        """测试无后台监控历史时仍可基于操作采样生成报告"""
+        from wechat_summarizer.presentation.gui.utils.performance import PerformanceMonitor
+
+        monitor = PerformanceMonitor()
+        monitor.clear_history()
+        monitor.record_operation_sample("ui_build", duration_ms=42.0)
+
+        report = monitor.generate_report()
+
+        assert report["operation_samples_count"] == 1
+        assert report["operation_duration_ms"]["max"] == 42.0
 
 
 # ============== 可访问性工具测试 ==============

@@ -84,7 +84,7 @@ class MemoryCache(Generic[K, V]):
             default_ttl: 默认过期时间（秒），None 表示永不过期
             cleanup_interval: 自动清理间隔（秒）
         """
-        self._max_size = max_size
+        self._max_size = max(1, max_size)
         self._default_ttl = default_ttl
         self._cleanup_interval = cleanup_interval
 

@@ -25,6 +25,7 @@ class PerformanceTimer:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
         duration = (time.perf_counter() - self.start_time) * 1000
+        self.monitor.record_operation_sample(self.name, duration)
         if duration > SLOW_OP_THRESHOLD_MS:
             self.monitor._record_slow_operation(self.name, duration)
         return False

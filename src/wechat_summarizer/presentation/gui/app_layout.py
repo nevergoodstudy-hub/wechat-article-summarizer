@@ -25,30 +25,31 @@ class GUILayoutMixin:
     """Assemble the root shell, page frames, shortcuts, and responsive behavior."""
 
     def _build_ui(self: Any) -> None:
-        self.root.grid_columnconfigure(1, weight=1)
-        self.root.grid_rowconfigure(0, weight=1)
-        self._build_sidebar()
-        self._build_main_content()
-
-        self._toast_manager = init_toast_manager(
-            self.root,
-            position="top-right",
-            theme=self._appearance_mode,
-        )
-
         self._perf_monitor = PerformanceMonitor()
-        if not self._is_low_memory_mode():
-            self._perf_monitor.start_monitoring(on_memory_warning=self._on_memory_warning)
-            logger.debug("性能监控已启动")
+        with self._perf_monitor.timer("gui_build_ui"):
+            self.root.grid_columnconfigure(1, weight=1)
+            self.root.grid_rowconfigure(0, weight=1)
+            self._build_sidebar()
+            self._build_main_content()
 
-        self._shortcut_manager = KeyboardShortcutManager(self.root)
-        self._register_app_shortcuts()
-        logger.debug("快捷键系统已初始化")
+            self._toast_manager = init_toast_manager(
+                self.root,
+                position="top-right",
+                theme=self._appearance_mode,
+            )
 
-        self._breakpoint_manager = BreakpointManager(self.root)
-        self._responsive_layout = ResponsiveLayout(self._breakpoint_manager)
-        self._breakpoint_manager.on_breakpoint_change(self._on_breakpoint_change)
-        logger.debug("响应式布局系统已初始化")
+            if not self._is_low_memory_mode():
+                self._perf_monitor.start_monitoring(on_memory_warning=self._on_memory_warning)
+                logger.debug("性能监控已启动")
+
+            self._shortcut_manager = KeyboardShortcutManager(self.root)
+            self._register_app_shortcuts()
+            logger.debug("快捷键系统已初始化")
+
+            self._breakpoint_manager = BreakpointManager(self.root)
+            self._responsive_layout = ResponsiveLayout(self._breakpoint_manager)
+            self._breakpoint_manager.on_breakpoint_change(self._on_breakpoint_change)
+            logger.debug("响应式布局系统已初始化")
 
     def _on_memory_warning(self: Any, memory_mb: float) -> None:
         if memory_mb > 800:

@@ -5,6 +5,7 @@ from .async_fetch_article import AsyncFetchArticleUseCase
 from .batch_process import BatchProcessUseCase
 from .export_article import ExportArticleUseCase
 from .fetch_article import FetchArticleUseCase
+from .performance_sampling import PerformanceSample, PerformanceSampler
 from .summarize_article import SummarizeArticleUseCase
 
 __all__ = [
@@ -14,5 +15,7 @@ __all__ = [
     "BatchProcessUseCase",
     "ExportArticleUseCase",
     "FetchArticleUseCase",
+    "PerformanceSample",
+    "PerformanceSampler",
     "SummarizeArticleUseCase",
 ]

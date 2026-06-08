@@ -14,6 +14,7 @@ from loguru import logger
 from ...domain.entities import Article
 from ...shared.utils.structured_concurrency import run_limited_tasks
 from ..ports.inbound import BatchProgress
+from .performance_sampling import PerformanceSample, PerformanceSampler
 
 if TYPE_CHECKING:
     from ...domain.value_objects import ArticleURL
@@ -27,6 +28,7 @@ class AsyncBatchResult:
 
     articles: list[Article] = field(default_factory=list)
     errors: list[tuple[str, str]] = field(default_factory=list)  # (url, error_message)
+    performance_sample: PerformanceSample | None = None
 
     @property
     def success_count(self) -> int:
@@ -93,8 +95,8 @@ class AsyncBatchProcessUseCase:
         """
         from ...domain.value_objects import ArticleURL
 
-        progress = BatchProgress(total=len(urls))
         result = AsyncBatchResult()
+        progress = BatchProgress(total=len(urls))
 
         async def process_one(url: str) -> Article | None:
             """处理单个 URL。"""
@@ -146,7 +148,11 @@ class AsyncBatchProcessUseCase:
                     on_progress(progress)
                 return None
 
-        task_results = await run_limited_tasks(urls, self._max_concurrent, process_one)
+        with PerformanceSampler(
+            "async_batch_process_urls",
+            metadata={"url_count": len(urls), "max_concurrent": self._max_concurrent},
+        ) as sampler:
+            task_results = await run_limited_tasks(urls, self._max_concurrent, process_one)
 
         # 收集结果
         for res in task_results:
@@ -154,9 +160,21 @@ class AsyncBatchProcessUseCase:
                 result.articles.append(res)
 
         result.errors.extend(progress.errors)
+        result.performance_sample = PerformanceSample(
+            name=sampler.sample.name,
+            duration_ms=sampler.sample.duration_ms,
+            peak_memory_kb=sampler.sample.peak_memory_kb,
+            metadata={
+                **sampler.sample.metadata,
+                "success_count": result.success_count,
+                "failed_count": result.failed_count,
+            },
+        )
 
         logger.info(
-            f"异步批量处理完成: 成功 {result.success_count}/{len(urls)}, 失败 {result.failed_count}"
+            f"异步批量处理完成: 成功 {result.success_count}/{len(urls)}, "
+            f"失败 {result.failed_count}, 用时 {result.performance_sample.duration_ms:.1f}ms, "
+            f"峰值内存 {result.performance_sample.peak_memory_kb:.1f}KB"
         )
 
         return result

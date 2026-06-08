@@ -129,18 +129,26 @@
 ## 3. P2 工程质量与平台化（预计 1~2 周）
 
 ### 代码质量与类型系统
-- [ ] `ruff check --fix` + 手工收敛剩余关键告警
-- [ ] 修复现有类型问题（progress/secure_storage/structured_logging 等）
-- [ ] 引入 `mypy` 渐进严格策略（先核心模块）
+- [x] `ruff check --fix` + 手工收敛剩余关键告警
+- [x] 修复现有类型问题（progress/secure_storage/structured_logging 等）
+- [x] 引入 `mypy` 渐进严格策略（先核心模块）
+
+> 证据：已运行 `python -m ruff check --fix src tests`，当前无可自动修复或剩余关键告警；`scripts/quality_gate.py --mode lint` 输出 `ruff check` 与 `ruff format --check` 均 PASS。历史审计点名的 `src/wechat_summarizer/shared/progress.py`、`src/wechat_summarizer/shared/secure_storage.py`、`src/wechat_summarizer/shared/utils/structured_logging.py` 已通过专项 mypy 校验，且 `scripts/quality_gate.py --mode mypy` 当前对 `src/wechat_summarizer` 全包输出 `Success: no issues found in 445 source files`。`pyproject.toml` 中已对 `wechat_summarizer.domain.*` 与 `wechat_summarizer.application.*` 启用 `disallow_untyped_defs`、`check_untyped_defs`、`warn_return_any`、`strict_equality`；新增 `scripts/check_mypy_core_strictness.py` 并接入 `scripts/quality_gate.py --mode architecture`，`tests/test_mypy_core_strictness.py` 覆盖当前配置、缺失核心 override 与弱化严格标志场景。
 
 ### CI/CD 与供应链安全
 - [x] CI 拆分阶段：lint/type/test/security/build
 - [x] 引入 `pip-audit` 依赖漏洞扫描
-- [ ] 加入测试矩阵（Python 3.12~3.14）
+- [x] 加入测试矩阵（Python 3.12~3.14）
+
+> 证据：`.github/workflows/ci.yml` 与 `.github/workflows/build.yml` 的 PR 测试矩阵均覆盖 `3.12`、`3.13`、`3.14`，并保留 `3.11` 作为项目声明的最低运行版本回归；新增 `scripts/check_ci_python_matrix.py` 并接入 `scripts/quality_gate.py --mode architecture`，防止后续工作流移除 3.12~3.14 覆盖；`tests/test_ci_python_matrix.py` 覆盖当前工作流、inline/multiline matrix 解析与缺失版本失败场景。`scripts/quality_gate.py --mode architecture` 当前输出 `[ci-python-matrix] PASS`。官方 GitHub Actions `actions/setup-python` 支持 `python-version` 矩阵配置；Python 3.14 已纳入当前项目 `requires-python = ">=3.11,<3.15"` 与 classifiers。
 
 ### 性能与资源治理
-- [ ] 内存缓存增加上限（LRU/TTL/容量阈值）
-- [ ] GUI 与批处理路径加性能指标采样（耗时/内存）
+- [x] 内存缓存增加上限（LRU/TTL/容量阈值）
+- [x] GUI 与批处理路径加性能指标采样（耗时/内存）
+
+> 证据：`MemoryCache` 已将 `max_size` 归一化为至少 1，保持 LRU + TTL 组合策略；`ArticleListCache` 的内存层从普通 dict 改为 `OrderedDict`，命中与写入均 `move_to_end`，并在直接写入和文件回填时统一执行 `max_memory_entries` 容量淘汰；`TwoLevelCache` 的 L2 磁盘缓存写入后按 `disk_max_entries` 清理最旧条目；`LocalJsonStorage` 写入文章缓存后按 `CacheConfig.max_entries` 清理最旧缓存文件并同步修正 URL 索引。新增/更新测试覆盖 `MemoryCache(max_size=0)` 仍有边界、公众号文章列表 LRU 淘汰、文件回填仍遵守内存容量、两级缓存磁盘容量阈值、本地 JSON 缓存容量与索引一致性；相关测试 `tests/test_memory_cache.py tests/test_two_level_cache.py tests/test_storage_local_json.py tests/test_batch_infrastructure.py` 共 73 个用例通过，相关 mypy 专项检查通过。
+
+> 证据：新增 `application/use_cases/performance_sampling.py`，提供 `PerformanceSampler` 与 `PerformanceSample`，在同步 `BatchProcessUseCase.process_urls()`、`BatchProcessUseCase.export_batch()` 和异步 `AsyncBatchProcessUseCase.process_urls()` 中采样耗时与 Python 分配峰值内存，并在批处理结果/用例属性中保留采样数据；GUI 侧 `PerformanceMonitor` 新增 `OperationSample`、`record_operation_sample()`、`get_operation_samples()` 与报告聚合，`PerformanceTimer` 会记录操作样本，`app_layout.py` 对 `gui_build_ui` 采样，`runtime_batch.py` 对 `gui_batch_process_worker` 采样。`tests/test_performance_sampling.py`、`tests/test_async_batch_process.py`、`tests/gui/test_components.py`、`tests/test_gui_app_composition.py` 覆盖采样数据、报告字段、GUI 批处理采样计时器与兼容导出；相关 117 个性能/GUI/批处理测试通过。
 
 ---
 
@@ -167,7 +175,7 @@
 
 ### Phase C（P2 完成）
 - [x] CI 全链路稳定
-- [ ] 类型检查覆盖核心模块
+- [x] 类型检查覆盖核心模块
 - [x] 依赖安全扫描常态化
 
 ---
@@ -182,7 +190,7 @@
 6. [x] P1-3 审计脱敏
 7. [x] P1-2 TaskGroup 迁移
 8. [x] P1-8 测试隔离
-9. [ ] P2 质量与 CI 平台化
+9. [x] P2 质量与 CI 平台化
 10. [ ] P3 持续优化
 
 ---

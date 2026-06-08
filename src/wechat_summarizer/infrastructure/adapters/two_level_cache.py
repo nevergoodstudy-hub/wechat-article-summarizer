@@ -170,6 +170,7 @@ class TwoLevelCache:
         # 写入 L2
         with self._lock:
             self._disk_set(key, value)
+            self._disk_enforce_capacity_limit()
 
     def delete(self, key: str) -> bool:
         """
@@ -365,6 +366,33 @@ class TwoLevelCache:
 
         if cleaned > 0:
             logger.info(f"已清理 {cleaned} 条过期磁盘缓存")
+
+        return cleaned
+
+    def _disk_enforce_capacity_limit(self) -> int:
+        """Trim disk cache to the configured entry limit."""
+        files: list[tuple[float, Path]] = []
+        for cache_file in self._disk_dir.glob("*.json"):
+            try:
+                files.append((cache_file.stat().st_mtime, cache_file))
+            except Exception:
+                continue
+
+        max_entries = max(0, self._config.disk_max_entries)
+        overflow = len(files) - max_entries
+        if overflow <= 0:
+            return 0
+
+        cleaned = 0
+        for _, cache_file in sorted(files, key=lambda item: (item[0], item[1].name))[:overflow]:
+            try:
+                cache_file.unlink()
+                cleaned += 1
+            except Exception as e:
+                logger.warning(f"磁盘缓存容量清理失败 {cache_file}: {e}")
+
+        if cleaned > 0:
+            logger.debug(f"磁盘缓存容量清理：移除 {cleaned} 条超限缓存")
 
         return cleaned
 

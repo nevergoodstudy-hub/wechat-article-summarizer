@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import threading
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 
 import customtkinter as ctk
 from loguru import logger
@@ -117,35 +118,56 @@ def update_batch_progress_ui(gui: Any, info: ProgressInfo) -> None:
 
 def batch_process_worker(gui: Any) -> None:
     """批量处理工作线程。"""
-    method = gui.batch_method_var.get()
-    len(gui.batch_urls)
-    tracker = gui._batch_progress_tracker
+    monitor = getattr(gui, "_perf_monitor", None)
+    timer_context = (
+        monitor.timer("gui_batch_process_worker") if monitor is not None else _NoopContextManager()
+    )
 
-    for _i, url in enumerate(gui.batch_urls):
-        # 检查取消标志
-        if getattr(gui, "_batch_cancel_requested", False):
-            logger.info("ℹ️ 用户取消了批量处理")
-            break
+    with timer_context:
+        method = gui.batch_method_var.get()
+        len(gui.batch_urls)
+        tracker = gui._batch_progress_tracker
 
-        short_url = url[:50] + "..." if len(url) > 50 else url
-        try:
-            article = gui.container.fetch_use_case.execute(url)
+        for _i, url in enumerate(gui.batch_urls):
+            # 检查取消标志
+            if getattr(gui, "_batch_cancel_requested", False):
+                logger.info("ℹ️ 用户取消了批量处理")
+                break
+
+            short_url = url[:50] + "..." if len(url) > 50 else url
             try:
-                summary = gui.container.summarize_use_case.execute(article, method=method)
-                article.attach_summary(summary)
-            except Exception as e:
-                logger.warning(f"摘要失败: {e}")
+                article = gui.container.fetch_use_case.execute(url)
+                try:
+                    summary = gui.container.summarize_use_case.execute(article, method=method)
+                    article.attach_summary(summary)
+                except Exception as e:
+                    logger.warning(f"摘要失败: {e}")
 
-            gui.batch_results.append(article)
-            tracker.update_success(current_item=article.title[:30])
-            gui.root.after(0, lambda a=article: gui._add_batch_result_item(a, True))
-        except Exception as e:
-            logger.error(f"处理失败 {short_url}: {e}")
-            tracker.update_failure(current_item=short_url, error=str(e))
-            gui.root.after(0, lambda u=url, err=str(e): gui._add_batch_result_item_error(u, err))
+                gui.batch_results.append(article)
+                tracker.update_success(current_item=article.title[:30])
+                gui.root.after(0, lambda a=article: gui._add_batch_result_item(a, True))
+            except Exception as e:
+                logger.error(f"处理失败 {short_url}: {e}")
+                tracker.update_failure(current_item=short_url, error=str(e))
+                gui.root.after(
+                    0, lambda u=url, err=str(e): gui._add_batch_result_item_error(u, err)
+                )
 
     tracker.finish()
     gui.root.after(0, gui._batch_process_complete)
+
+
+class _NoopContextManager:
+    def __enter__(self) -> _NoopContextManager:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
+        return False
 
 
 def update_batch_progress(gui: Any, value: float, status: str) -> None:

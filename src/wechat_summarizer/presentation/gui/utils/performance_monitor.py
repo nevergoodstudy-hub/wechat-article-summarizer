@@ -19,7 +19,12 @@ from .performance_constants import (
     MONITOR_INTERVAL_MS,
     WARNING_MEMORY_MB,
 )
-from .performance_models import PerformanceLevel, PerformanceMetrics, SlowOperation
+from .performance_models import (
+    OperationSample,
+    PerformanceLevel,
+    PerformanceMetrics,
+    SlowOperation,
+)
 from .performance_timer import PerformanceTimer
 
 logger = logging.getLogger(__name__)
@@ -47,6 +52,7 @@ class PerformanceMonitor:
         self._metrics_history: deque[PerformanceMetrics] = deque(maxlen=MAX_HISTORY_SIZE)
         self._current_metrics = PerformanceMetrics()
         self._slow_operations: deque[SlowOperation] = deque(maxlen=MAX_SLOW_OPS_LOG)
+        self._operation_samples: deque[OperationSample] = deque(maxlen=MAX_SLOW_OPS_LOG)
         self._frame_times: deque[float] = deque(maxlen=60)
         self._last_frame_time = time.perf_counter()
         self._process = psutil.Process(os.getpid())
@@ -151,6 +157,30 @@ class PerformanceMonitor:
             except Exception as exc:
                 logger.error("慢操作回调失败: %s", exc)
 
+    def record_operation_sample(self, name: str, duration_ms: float) -> OperationSample:
+        """Record a measured GUI operation with current process metrics."""
+        memory_mb, cpu_percent = self._collect_process_metrics()
+        sample = OperationSample(
+            name=name,
+            duration_ms=duration_ms,
+            memory_mb=memory_mb,
+            cpu_percent=cpu_percent,
+        )
+
+        with self._lock:
+            self._operation_samples.append(sample)
+
+        if duration_ms > 0:
+            logger.debug(
+                "性能采样: %s (%.1fms, %.1fMB, %.1f%% CPU)",
+                name,
+                duration_ms,
+                memory_mb,
+                cpu_percent,
+            )
+
+        return sample
+
     def record_frame(self) -> None:
         """记录帧(用于手动FPS计算)"""
         current_time = time.perf_counter()
@@ -177,6 +207,11 @@ class PerformanceMonitor:
         with self._lock:
             return list(self._slow_operations)
 
+    def get_operation_samples(self) -> list[OperationSample]:
+        """获取关键操作采样记录"""
+        with self._lock:
+            return list(self._operation_samples)
+
     def get_performance_level(self) -> PerformanceLevel:
         """获取性能等级"""
         metrics = self._current_metrics
@@ -194,14 +229,18 @@ class PerformanceMonitor:
         with self._lock:
             history = list(self._metrics_history)
             slow_ops = list(self._slow_operations)
+            operation_samples = list(self._operation_samples)
 
-        if not history:
+        if not history and not operation_samples:
             return {"error": "无数据"}
 
-        fps_values = [metric.fps for metric in history]
-        memory_values = [metric.memory_mb for metric in history]
+        fps_values = [metric.fps for metric in history] or [0.0]
+        memory_values = [metric.memory_mb for metric in history] or [
+            sample.memory_mb for sample in operation_samples
+        ]
+        duration_values = [sample.duration_ms for sample in operation_samples]
 
-        return {
+        report: dict[str, Any] = {
             "generated_at": datetime.now().isoformat(),
             "duration_seconds": len(history) * MONITOR_INTERVAL_MS / 1000,
             "fps": {
@@ -215,14 +254,23 @@ class PerformanceMonitor:
                 "max": round(max(memory_values), 1),
             },
             "slow_operations_count": len(slow_ops),
+            "operation_samples_count": len(operation_samples),
             "performance_level": self.get_performance_level().value,
         }
+        if duration_values:
+            report["operation_duration_ms"] = {
+                "avg": round(sum(duration_values) / len(duration_values), 1),
+                "min": round(min(duration_values), 1),
+                "max": round(max(duration_values), 1),
+            }
+        return report
 
     def clear_history(self) -> None:
         """清空历史记录"""
         with self._lock:
             self._metrics_history.clear()
             self._slow_operations.clear()
+            self._operation_samples.clear()
 
 
 __all__ = ["PerformanceMonitor"]

@@ -75,6 +75,7 @@ class LocalJsonStorage:
 
             self._index[url] = str(article.id)
             self._persist_index()
+            self._enforce_capacity_limit()
         except Exception as e:
             raise StorageError(f"保存失败: {e}") from e
 
@@ -261,6 +262,62 @@ class LocalJsonStorage:
         import os
 
         os.replace(tmp_path, self._index_path)
+
+    def _iter_article_cache_files(self) -> list[Path]:
+        """Return article cache files, excluding index and temp files."""
+        return [
+            cache_file
+            for cache_file in self._dir.glob("*.json")
+            if cache_file.name != self._index_path.name and not cache_file.name.startswith(".")
+        ]
+
+    def _enforce_capacity_limit(self) -> int:
+        """Trim stored article cache files to the configured capacity."""
+        files: list[tuple[float, Path]] = []
+        for cache_file in self._iter_article_cache_files():
+            try:
+                files.append((self._cache_file_sort_time(cache_file), cache_file))
+            except Exception:
+                continue
+
+        max_entries = max(0, self._config.max_entries)
+        overflow = len(files) - max_entries
+        if overflow <= 0:
+            return 0
+
+        cleaned = 0
+        removed_ids: set[str] = set()
+        for _, cache_file in sorted(files, key=lambda item: (item[0], item[1].name))[:overflow]:
+            try:
+                removed_ids.add(cache_file.stem)
+                cache_file.unlink()
+                cleaned += 1
+            except Exception as e:
+                logger.warning(f"缓存容量清理失败 {cache_file}: {e}")
+
+        if removed_ids:
+            self._index = {
+                url: article_id
+                for url, article_id in self._index.items()
+                if article_id not in removed_ids
+            }
+            self._persist_index()
+
+        if cleaned > 0:
+            logger.info(f"已清理 {cleaned} 条超限缓存")
+
+        return cleaned
+
+    def _cache_file_sort_time(self, cache_file: Path) -> float:
+        """Return stable cache age for capacity trimming."""
+        try:
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            created_at = data.get("created_at")
+            if isinstance(created_at, str) and created_at:
+                return datetime.fromisoformat(created_at).timestamp()
+        except Exception:
+            pass
+        return cache_file.stat().st_mtime
 
     @staticmethod
     def _article_to_dict(article: Article) -> dict[str, Any]:

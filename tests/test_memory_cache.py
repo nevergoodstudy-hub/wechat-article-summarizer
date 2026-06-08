@@ -144,6 +144,20 @@ class TestMemoryCache:
             cache.set(f"k{i}", i)
         assert cache.size <= 3
 
+    @pytest.mark.unit
+    def test_max_size_is_clamped_to_one(self) -> None:
+        """Invalid max_size values should still keep a bounded cache."""
+        cache: MemoryCache[str, int] = MemoryCache(
+            max_size=0, default_ttl=None, cleanup_interval=9999
+        )
+
+        cache.set("a", 1)
+        cache.set("b", 2)
+
+        assert cache.max_size == 1
+        assert cache.size == 1
+        assert cache.contains("b") is True
+
     # ---- TTL expiry ----
 
     @pytest.mark.unit

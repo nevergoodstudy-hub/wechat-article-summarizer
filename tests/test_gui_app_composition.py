@@ -645,6 +645,7 @@ from wechat_summarizer.presentation.gui.utils.performance import (
     MONITOR_INTERVAL_MS,
     SLOW_OP_THRESHOLD_MS,
     WARNING_MEMORY_MB,
+    OperationSample,
     PerformanceLevel,
     PerformanceMetrics,
     PerformanceMonitor,
@@ -688,6 +689,9 @@ from wechat_summarizer.presentation.gui.utils.performance_facade import (
     stop_monitoring as split_stop_monitoring,
 )
 from wechat_summarizer.presentation.gui.utils.performance_facade import timer as split_timer
+from wechat_summarizer.presentation.gui.utils.performance_models import (
+    OperationSample as SplitOperationSample,
+)
 from wechat_summarizer.presentation.gui.utils.performance_models import (
     PerformanceLevel as SplitPerformanceLevel,
 )
@@ -2120,6 +2124,7 @@ def test_transition_files_stay_below_gui_file_target() -> None:
 
 @pytest.mark.unit
 def test_performance_module_keeps_compatibility_exports() -> None:
+    assert performance_module.OperationSample is SplitOperationSample
     assert performance_module.PerformanceLevel is SplitPerformanceLevel
     assert performance_module.PerformanceMetrics is SplitPerformanceMetrics
     assert performance_module.SlowOperation is SplitSlowOperation
@@ -2137,6 +2142,7 @@ def test_performance_module_keeps_compatibility_exports() -> None:
     assert PerformanceMonitor is SplitPerformanceMonitor
     assert PerformanceOverlay is SplitPerformanceOverlay
     assert PerformanceTimer is SplitPerformanceTimer
+    assert OperationSample is SplitOperationSample
     assert get_monitor is split_get_monitor
     assert start_monitoring is split_start_monitoring
     assert stop_monitoring is split_stop_monitoring

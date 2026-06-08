@@ -319,6 +319,37 @@ class TestArticleListCache:
         # 检查内存缓存
         assert "test" in cache._memory_cache
 
+    def test_memory_cache_lru_capacity_limit(self, temp_cache_dir):
+        """内存缓存应按 LRU 顺序维持容量上限"""
+        cache = ArticleListCache(cache_dir=temp_cache_dir, max_memory_entries=2)
+
+        for fakeid in ("a", "b"):
+            cache.set(fakeid, ArticleList(fakeid=fakeid, account_name=fakeid))
+
+        assert cache.get("a") is not None
+        cache.set("c", ArticleList(fakeid="c", account_name="c"))
+
+        assert "a" in cache._memory_cache
+        assert "b" not in cache._memory_cache
+        assert "c" in cache._memory_cache
+        assert cache.get_stats()["memory_cache_max_entries"] == 2
+
+    def test_file_promotion_respects_memory_cache_capacity(self, temp_cache_dir):
+        """从文件回填内存缓存时也必须执行容量上限"""
+        writer = ArticleListCache(cache_dir=temp_cache_dir, max_memory_entries=10)
+        for fakeid in ("a", "b", "c"):
+            writer.set(fakeid, ArticleList(fakeid=fakeid, account_name=fakeid))
+
+        cache = ArticleListCache(cache_dir=temp_cache_dir, max_memory_entries=2)
+        assert cache.get("a") is not None
+        assert cache.get("b") is not None
+        assert cache.get("c") is not None
+
+        assert len(cache._memory_cache) == 2
+        assert "a" not in cache._memory_cache
+        assert "b" in cache._memory_cache
+        assert "c" in cache._memory_cache
+
     def test_file_persistence(self, temp_cache_dir):
         """测试文件持久化"""
         # 第一个缓存实例
