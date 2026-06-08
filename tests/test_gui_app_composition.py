@@ -47,6 +47,7 @@ from wechat_summarizer.presentation.gui.assets.icons_paths import (
     ICON_PATHS as SPLIT_ICON_PATHS,
 )
 from wechat_summarizer.presentation.gui.components import border as border_module
+from wechat_summarizer.presentation.gui.components import card as card_module
 from wechat_summarizer.presentation.gui.components import modal as modal_module
 from wechat_summarizer.presentation.gui.components import select as select_module
 from wechat_summarizer.presentation.gui.components import sidebar as sidebar_module
@@ -98,6 +99,48 @@ from wechat_summarizer.presentation.gui.components.button_modern import (
 from wechat_summarizer.presentation.gui.components.button_ripple import (
     RippleEffect as SplitButtonRippleEffect,
 )
+from wechat_summarizer.presentation.gui.components.card import (
+    _CTK_AVAILABLE as CARD_CTK_AVAILABLE,
+)
+from wechat_summarizer.presentation.gui.components.card import (
+    ActionCard,
+    CardStyle,
+    ContentCard,
+    CornerRadius,
+    ModernCard,
+    ShadowDepth,
+    StatCard,
+    create_card,
+    create_content_card,
+)
+from wechat_summarizer.presentation.gui.components.card import ctk as card_ctk
+from wechat_summarizer.presentation.gui.components.card_action import (
+    ActionCard as SplitActionCard,
+)
+from wechat_summarizer.presentation.gui.components.card_base import ModernCard as SplitModernCard
+from wechat_summarizer.presentation.gui.components.card_compat import (
+    CTK_AVAILABLE as SPLIT_CARD_CTK_AVAILABLE,
+)
+from wechat_summarizer.presentation.gui.components.card_compat import ctk as split_card_ctk
+from wechat_summarizer.presentation.gui.components.card_content import (
+    ContentCard as SplitContentCard,
+)
+from wechat_summarizer.presentation.gui.components.card_factory import (
+    create_card as split_create_card,
+)
+from wechat_summarizer.presentation.gui.components.card_factory import (
+    create_content_card as split_create_content_card,
+)
+from wechat_summarizer.presentation.gui.components.card_models import (
+    CardStyle as SplitCardStyle,
+)
+from wechat_summarizer.presentation.gui.components.card_models import (
+    CornerRadius as SplitCornerRadius,
+)
+from wechat_summarizer.presentation.gui.components.card_models import (
+    ShadowDepth as SplitShadowDepth,
+)
+from wechat_summarizer.presentation.gui.components.card_stat import StatCard as SplitStatCard
 from wechat_summarizer.presentation.gui.components.datagrid import (
     Column,
     DataGrid,
@@ -277,6 +320,7 @@ from wechat_summarizer.presentation.gui.frames import (
 from wechat_summarizer.presentation.gui.pages.home_page import HomePage
 from wechat_summarizer.presentation.gui.pages.settings_page import SettingsPage
 from wechat_summarizer.presentation.gui.settings_api_actions import SettingsApiActionsMixin
+from wechat_summarizer.presentation.gui.styles.colors import ModernColors
 from wechat_summarizer.presentation.gui.utils import accessibility as accessibility_module
 from wechat_summarizer.presentation.gui.utils import animation as animation_module
 from wechat_summarizer.presentation.gui.utils import autosave as autosave_module
@@ -834,6 +878,126 @@ def test_button_component_files_stay_below_gui_file_target() -> None:
         repo_root / "src/wechat_summarizer/presentation/gui/components/button_icon.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/button_group.py",
         repo_root / "src/wechat_summarizer/presentation/gui/components/button_factories.py",
+    ]
+
+    for target in targets:
+        assert len(target.read_text(encoding="utf-8").splitlines()) < 400, target
+
+
+@pytest.mark.unit
+def test_card_module_keeps_compatibility_exports() -> None:
+    assert card_module._CTK_AVAILABLE is SPLIT_CARD_CTK_AVAILABLE
+    assert card_module.ctk is split_card_ctk
+    assert card_module.ModernCard is SplitModernCard
+    assert card_module.ContentCard is SplitContentCard
+    assert card_module.ActionCard is SplitActionCard
+    assert card_module.StatCard is SplitStatCard
+    assert card_module.CardStyle is SplitCardStyle
+    assert card_module.CornerRadius is SplitCornerRadius
+    assert card_module.ShadowDepth is SplitShadowDepth
+    assert card_module.create_card is split_create_card
+    assert card_module.create_content_card is split_create_content_card
+    assert CARD_CTK_AVAILABLE is SPLIT_CARD_CTK_AVAILABLE
+    assert card_ctk is split_card_ctk
+    assert ModernCard is SplitModernCard
+    assert ContentCard is SplitContentCard
+    assert ActionCard is SplitActionCard
+    assert StatCard is SplitStatCard
+    assert CardStyle is SplitCardStyle
+    assert CornerRadius is SplitCornerRadius
+    assert ShadowDepth is SplitShadowDepth
+    assert create_card is split_create_card
+    assert create_content_card is split_create_content_card
+
+
+@pytest.mark.unit
+def test_card_models_preserve_values() -> None:
+    assert ShadowDepth.NONE.value == 0
+    assert ShadowDepth.SHALLOW.value == 1
+    assert ShadowDepth.MEDIUM.value == 2
+    assert ShadowDepth.DEEP.value == 3
+    assert ShadowDepth.ELEVATED.value == 4
+    assert CornerRadius.SMALL.value == 8
+    assert CornerRadius.MEDIUM.value == 16
+    assert CornerRadius.LARGE.value == 24
+    assert CornerRadius.XLARGE.value == 32
+    assert CardStyle.SOLID.value == "solid"
+    assert CardStyle.OUTLINED.value == "outlined"
+    assert CardStyle.ELEVATED.value == "elevated"
+    assert CardStyle.GLASS.value == "glass"
+
+
+@pytest.mark.unit
+def test_card_factory_preserves_return_types(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: dict[str, object] = {}
+
+    class DummyModernCard:
+        def __init__(self, master, **kwargs):  # type: ignore[no-untyped-def]
+            calls["modern"] = {"master": master, **kwargs}
+
+    class DummyContentCard:
+        def __init__(self, master, **kwargs):  # type: ignore[no-untyped-def]
+            calls["content"] = {"master": master, **kwargs}
+
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.components.card_factory.ModernCard",
+        DummyModernCard,
+    )
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.components.card_factory.ContentCard",
+        DummyContentCard,
+    )
+
+    master = object()
+    modern = create_card(master, width=123, height=45, theme="light", style=CardStyle.GLASS)
+    content = create_content_card(master, title="标题", subtitle="副标题", theme="dark", width=456)
+
+    assert isinstance(modern, DummyModernCard)
+    assert isinstance(content, DummyContentCard)
+    assert calls["modern"] == {
+        "master": master,
+        "width": 123,
+        "height": 45,
+        "theme": "light",
+        "style": CardStyle.GLASS,
+    }
+    assert calls["content"] == {
+        "master": master,
+        "title": "标题",
+        "subtitle": "副标题",
+        "theme": "dark",
+        "width": 456,
+    }
+
+
+@pytest.mark.unit
+def test_card_base_preserves_color_and_state_logic() -> None:
+    card = ModernCard.__new__(ModernCard)
+
+    assert card._get_dark_bg_color(CardStyle.GLASS) == ModernColors.DARK_GLASS_SOLID
+    assert card._get_dark_bg_color(CardStyle.OUTLINED) == "transparent"
+    assert card._get_dark_bg_color(CardStyle.ELEVATED) == ModernColors.DARK_CARD
+    assert card._get_light_bg_color(CardStyle.GLASS) == ModernColors.LIGHT_GLASS_SOLID
+    assert card._get_light_bg_color(CardStyle.OUTLINED) == "transparent"
+    assert card._get_light_bg_color(CardStyle.ELEVATED) == ModernColors.LIGHT_CARD
+
+    card.set_shadow_depth(ShadowDepth.DEEP)
+
+    assert card._shadow_depth is ShadowDepth.DEEP
+
+
+@pytest.mark.unit
+def test_card_component_files_stay_below_gui_file_target() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    targets = [
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_compat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_models.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_base.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_content.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_action.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_stat.py",
+        repo_root / "src/wechat_summarizer/presentation/gui/components/card_factory.py",
     ]
 
     for target in targets:
