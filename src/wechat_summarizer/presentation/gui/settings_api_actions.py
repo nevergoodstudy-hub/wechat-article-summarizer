@@ -6,12 +6,8 @@ from typing import Any
 
 from loguru import logger
 
+from .dialogs import confirm_clear_api_keys
 from .styles.colors import ModernColors
-
-try:
-    from tkinter import messagebox
-except ImportError:  # pragma: no cover - tkinter should be present for GUI runtime
-    messagebox = None  # type: ignore[assignment]
 
 
 class SettingsApiActionsMixin:
@@ -48,7 +44,7 @@ class SettingsApiActionsMixin:
         self.gui._set_status("API密钥已更新", ModernColors.SUCCESS)
 
     def _clear_api_keys(self: Any) -> None:
-        if messagebox and not messagebox.askyesno("确认", "确定要清除所有API密钥吗？"):
+        if not confirm_clear_api_keys():
             return
         for provider, entry in self._api_key_entries.items():
             entry.delete(0, "end")

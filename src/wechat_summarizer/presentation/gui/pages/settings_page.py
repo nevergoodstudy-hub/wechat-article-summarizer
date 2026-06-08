@@ -7,10 +7,18 @@
 from __future__ import annotations
 
 from pathlib import Path
-from tkinter import filedialog, messagebox
 
 from loguru import logger
 
+from ..dialogs import (
+    choose_export_directory,
+    confirm_create_missing_directory,
+    confirm_reset_export_settings,
+    show_create_directory_error,
+    show_export_directory_not_configured,
+    show_missing_export_directory,
+    show_startup_error,
+)
 from ..frames import (
     SettingsApiKeysSection,
     SettingsExportSection,
@@ -205,10 +213,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
     def _browse_export_dir(self):
         """浏览选择导出目录"""
         current_dir = self.export_dir_entry.get().strip()
-        initial_dir = (
-            current_dir if current_dir and Path(current_dir).exists() else str(Path.home())
-        )
-        dir_path = filedialog.askdirectory(title="选择默认导出目录", initialdir=initial_dir)
+        dir_path = choose_export_directory(current_dir)
         if dir_path:
             self.export_dir_entry.delete(0, "end")
             self.export_dir_entry.insert(0, dir_path)
@@ -259,7 +264,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
             except Exception as e:
                 self.autostart_var.set(False)
                 self.gui.user_prefs.auto_start_enabled = False
-                messagebox.showerror("错误", f"创建开机启动项失败: {e}")
+                show_startup_error(f"创建开机启动项失败: {e}")
                 logger.error(f"创建开机启动项失败: {e}")
                 return None
         else:
@@ -273,7 +278,7 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
             except Exception as e:
                 self.autostart_var.set(True)
                 self.gui.user_prefs.auto_start_enabled = True
-                messagebox.showerror("错误", f"删除开机启动项失败: {e}")
+                show_startup_error(f"删除开机启动项失败: {e}")
                 logger.error(f"删除开机启动项失败: {e}")
 
     def _on_minimize_tray_change(self):
@@ -341,13 +346,13 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
                 os.startfile(str(path))
                 logger.info(f"已打开目录: {path}")
             else:
-                messagebox.showwarning("提示", f"目录不存在: {export_dir}")
+                show_missing_export_directory(export_dir)
         else:
-            messagebox.showinfo("提示", "请先设置导出目录")
+            show_export_directory_not_configured()
 
     def _reset_export_settings(self):
         """重置导出设置"""
-        if not messagebox.askyesno("确认", "确定要重置所有导出设置吗？"):
+        if not confirm_reset_export_settings():
             return None
         self.export_dir_entry.delete(0, "end")
         self.remember_dir_var.set(True)
@@ -362,12 +367,12 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         """保存设置"""
         export_dir = self.export_dir_entry.get().strip()
         if export_dir and (not Path(export_dir).exists()):
-            if messagebox.askyesno("确认", f"目录不存在\n{export_dir}\n\n是否创建？"):
+            if confirm_create_missing_directory(export_dir):
                 try:
                     Path(export_dir).mkdir(parents=True, exist_ok=True)
                     logger.info(f"已创建目录: {export_dir}")
                 except Exception as e:
-                    messagebox.showerror("错误", f"创建目录失败: {e}")
+                    show_create_directory_error(f"创建目录失败: {e}")
                     return None
             else:
                 return None

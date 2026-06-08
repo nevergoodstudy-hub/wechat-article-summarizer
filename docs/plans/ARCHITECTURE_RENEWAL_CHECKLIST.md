@@ -51,6 +51,8 @@
 
 > 最新证据：已将 `components/progress.py` 的 CustomTkinter/Tk 兼容层、主题颜色、线性进度、圆形进度、步骤进度和工厂函数拆到 `progress_runtime.py`、`progress_colors.py`、`progress_linear.py`、`progress_circular.py`、`progress_step.py`、`progress_factory.py`，兼容入口降至 20 行，拆分后相关文件分别为 27/46/89/89/103/34 行；已将 `components/toast.py` 的运行时兼容层、通知类型/颜色/图标、单个 Toast、ToastManager 和全局门面拆到 `toast_runtime.py`、`toast_models.py`、`toast_item.py`、`toast_manager.py`、`toast_facade.py`，兼容入口降至 33 行，拆分后相关文件分别为 20/57/152/102/67 行，并保留 `LinearProgress`、`CircularProgress`、`StepProgress`、`create_linear_progress`、`create_circular_progress`、`Toast`、`ToastManager`、`ToastType`、`init_toast_manager`、`show_toast`、`show_success`、`show_error`、`show_warning`、`show_info` 旧公开导出；`tests/test_gui_progress_toast_composition.py` 新增兼容导出、主题颜色、Toast 类型/图标/颜色和行数目标测试。最新复核发现当前 `presentation/gui` 下 Python 文件 >=400 行为 0 个，因此 `文件上限：单文件目标 < 400 行` 已完成；由于 `frames` 与 `dialogs` 总项仍有未完成子要求，P0-2 GUI 解耦整体仍保持未完成。
 
+> 最新证据：已新增 `dialogs/settings_dialogs.py`，将设置页默认导出目录选择、API 密钥清空确认、导出设置重置确认、缺失目录创建确认、目录缺失提示、开机启动错误和目录创建错误从 `pages/settings_page.py` 与 `settings_api_actions.py` 抽离到 dialogs 层，并通过 `dialogs/__init__.py` 统一导出；`settings_page.py` 与 `settings_api_actions.py` 已无直接 `messagebox/filedialog/askdirectory/askyesno/showerror/showwarning/showinfo` 命中；`tests/test_gui_settings_dialogs.py` 新增 dialogs re-export、目录选择 initialdir、确认/提示文本、页面/mixin 委托和行数目标测试。由于 `app_actions.py`、`runtime_batch.py`、`runtime_export.py`、`pages/history_page.py` 仍有直接弹窗/文件选择逻辑，`dialogs` 总项暂不勾选。
+
 ### P0-3 SSRF DNS Rebinding 修复
 - [x] 实现“一次解析+固定IP连接”策略（transport 层）
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
