@@ -147,7 +147,7 @@
 1. [x] P0-4 MCP 输入安全
 2. [x] P0-3 SSRF Rebinding
 3. [x] P0-1 容器测试阻断
-4. [x] P0-2 GUI 解耦
+4. [ ] P0-2 GUI 解耦
 5. [x] P1-1 边界守卫
 6. [x] P1-3 审计脱敏
 7. [ ] P1-2 TaskGroup 迁移
