@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from .i18n import tr
 from .performance_models import PerformanceLevel
 from .performance_monitor import PerformanceMonitor
 
@@ -34,7 +35,7 @@ class PerformanceOverlay(tk.Toplevel):
         self._build_metrics()
         self._level_label = tk.Label(
             self._container,
-            text="● 优秀",
+            text=tr("● 优秀"),
             bg="#1a1a1a",
             fg="#10b981",
             font=("Segoe UI", 9),
@@ -49,7 +50,7 @@ class PerformanceOverlay(tk.Toplevel):
 
         tk.Label(
             title_frame,
-            text="📊 性能监控",
+            text=tr("📊 性能监控"),
             bg="#1a1a1a",
             fg="#3b82f6",
             font=("Segoe UI", 10, "bold"),
@@ -173,12 +174,12 @@ class PerformanceOverlay(tk.Toplevel):
 
     def _level_config(self, level: PerformanceLevel) -> tuple[str, str]:
         level_config = {
-            PerformanceLevel.EXCELLENT: ("● 优秀", "#10b981"),
-            PerformanceLevel.GOOD: ("● 良好", "#3b82f6"),
-            PerformanceLevel.FAIR: ("● 一般", "#f59e0b"),
-            PerformanceLevel.POOR: ("● 较差", "#ef4444"),
+            PerformanceLevel.EXCELLENT: (tr("● 优秀"), "#10b981"),
+            PerformanceLevel.GOOD: (tr("● 良好"), "#3b82f6"),
+            PerformanceLevel.FAIR: (tr("● 一般"), "#f59e0b"),
+            PerformanceLevel.POOR: (tr("● 较差"), "#ef4444"),
         }
-        return level_config.get(level, ("● 未知", "#808080"))
+        return level_config.get(level, (tr("● 未知"), "#808080"))
 
 
 __all__ = ["PerformanceOverlay"]

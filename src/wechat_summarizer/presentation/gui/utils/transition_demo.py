@@ -5,6 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 from functools import partial
 
+from .i18n import tr
 from .transition_models import EasingFunction, TransitionConfig, TransitionType
 from .transition_router import PageRouter
 
@@ -12,7 +13,7 @@ from .transition_router import PageRouter
 def run_demo() -> None:
     """Run a small transition demo window."""
     root = tk.Tk()
-    root.title("页面切换动画测试")
+    root.title(tr("页面切换动画测试"))
     root.geometry("800x600")
     root.configure(bg="#121212")
 
@@ -26,7 +27,7 @@ def run_demo() -> None:
         page = tk.Frame(container, bg=color)
         tk.Label(
             page,
-            text=f"页面 {index + 1}",
+            text=tr("页面 {number}").format(number=index + 1),
             bg=color,
             fg="#ffffff",
             font=("Segoe UI", 24, "bold"),

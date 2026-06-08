@@ -5,6 +5,8 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any
 
+from ..utils.i18n import tr
+
 
 class DataGridToolbarMixin:
     """Search toolbar and status label rendering."""
@@ -68,7 +70,7 @@ class DataGridToolbarMixin:
 
         self.status_label = tk.Label(
             self.status_bar,
-            text="共 0 条记录",
+            text=tr("共 0 条记录"),
             bg=self.colors["header_bg"],
             fg=self.colors["text_secondary"],
             font=("Segoe UI", 9),
@@ -79,6 +81,11 @@ class DataGridToolbarMixin:
         total = len(self._raw_data)
         filtered = len(self._filtered_data)
         if filtered == total:
-            self.status_label.config(text=f"共 {total} 条记录")
+            self.status_label.config(text=tr("共 {count} 条记录").format(count=total))
         else:
-            self.status_label.config(text=f"显示 {filtered} / {total} 条记录")
+            self.status_label.config(
+                text=tr("显示 {filtered} / {total} 条记录").format(
+                    filtered=filtered,
+                    total=total,
+                )
+            )

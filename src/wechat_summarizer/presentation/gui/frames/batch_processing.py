@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ..components.progress import LinearProgress
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
@@ -205,32 +207,48 @@ class BatchResultsFrame(ctk.CTkFrame):
         detail_inner.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
         self.batch_elapsed_label = self._add_metric(
-            detail_inner, column=0, title="⏱️ 已用时间", value="00:00", color=ModernColors.INFO
+            detail_inner,
+            column=0,
+            title_factory=lambda: tr("⏱️ 已用时间"),
+            value="00:00",
+            color=ModernColors.INFO,
         )
         self.batch_eta_label = self._add_metric(
-            detail_inner, column=1, title="⏳ 预计剩余", value="--:--", color=ModernColors.WARNING
+            detail_inner,
+            column=1,
+            title_factory=lambda: tr("⏳ 预计剩余"),
+            value="--:--",
+            color=ModernColors.WARNING,
         )
         self.batch_rate_label = self._add_metric(
             detail_inner,
             column=2,
-            title="🚀 处理速率",
+            title_factory=lambda: tr("🚀 处理速率"),
             value=tr("0.00 篇/秒"),
             color=ModernColors.SUCCESS,
         )
         self.batch_count_label = self._add_metric(
             detail_inner,
             column=3,
-            title="📊 成功/失败",
+            title_factory=lambda: tr("📊 成功/失败"),
             value="0 / 0",
             color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
         )
 
-    def _add_metric(self, parent, *, column: int, title: str, value: str, color):
+    def _add_metric(
+        self,
+        parent,
+        *,
+        column: int,
+        title_factory: Callable[[], str],
+        value: str,
+        color,
+    ):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.grid(row=0, column=column, sticky="nsew", padx=5)
         ctk.CTkLabel(
             frame,
-            text=tr(title),
+            text=title_factory(),
             font=ctk.CTkFont(size=10),
             text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
         ).pack()

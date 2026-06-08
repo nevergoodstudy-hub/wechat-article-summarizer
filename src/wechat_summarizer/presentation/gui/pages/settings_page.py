@@ -1,8 +1,4 @@
-"""设置页面
-
-从 WechatSummarizerGUI 提取的设置页面。
-采用 CustomTkinter CTkFrame 子类化 + controller 模式。
-"""
+"""设置页面。"""
 
 from __future__ import annotations
 
@@ -28,10 +24,10 @@ from ..frames import (
     SettingsSummarizerSection,
     SettingsSystemSection,
 )
+from ..frames.settings_language_actions import apply_language_change
 from ..settings_api_actions import SettingsApiActionsMixin
 from ..styles.colors import ModernColors
-from ..utils.i18n import set_language, tr
-from ..widgets.toast_notification import ToastNotification
+from ..utils.i18n import tr
 
 _ctk_available = True
 try:
@@ -41,18 +37,12 @@ except ImportError:
 
 
 class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
-    """设置页面
-
-    Args:
-        master: 父容器
-        gui: WechatSummarizerGUI 控制器引用
-    """
+    """设置页面。"""
 
     def __init__(self, master, gui, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.gui = gui
 
-        # 公开属性 - 供外部通过别名访问
         self.summarizer_status_frame = None
         self._api_key_entries = {}
         self._openai_show_var = None
@@ -91,31 +81,24 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
         settings_scroll.pack(fill="both", expand=True)
         settings_card = settings_scroll
 
-        # 摘要服务状态
         self._build_summarizer_section(settings_card)
         self._add_separator(settings_card)
 
-        # API 密钥配置
         self._build_api_section(settings_card)
         self._add_separator(settings_card)
 
-        # 导出设置
         self._build_export_section(settings_card)
         self._add_separator(settings_card)
 
-        # 系统设置
         self._build_system_section(settings_card)
         self._add_separator(settings_card)
 
-        # 性能设置
         self._build_perf_section(settings_card)
         self._add_separator(settings_card)
 
-        # 语言设置
         self._build_lang_section(settings_card)
         self._add_separator(settings_card)
 
-        # 快捷操作 + 保存
         self._build_quick_section(settings_card)
 
     def _add_separator(self, parent):
@@ -315,23 +298,12 @@ class SettingsPage(SettingsApiActionsMixin, ctk.CTkFrame):
 
     def _on_language_change(self, display_value: str, lang_code_map: dict):
         """界面语言设置变更"""
-        lang_code = lang_code_map.get(display_value, "auto")
-        self.gui.user_prefs.language = lang_code
-        set_language(lang_code)
-        self.settings_status_label.configure(
-            text=f"✓ 语言已设置为: {display_value}", text_color=ModernColors.SUCCESS
+        apply_language_change(
+            gui=self.gui,
+            status_label=self.settings_status_label,
+            display_value=display_value,
+            lang_code_map=lang_code_map,
         )
-        logger.info(f"界面语言已切换: {lang_code}")
-        if hasattr(self.gui, "_toast_manager") and self.gui._toast_manager:
-            self.gui._toast_manager.info(f"语言已设置为 {display_value}，重启应用后完全生效")
-        else:
-            ToastNotification(
-                self.gui.root,
-                tr("🌐 语言已切换"),
-                f"语言已设置为 {display_value}\n重启应用后完全生效",
-                toast_type="info",
-                duration_ms=3000,
-            )
 
     def _open_export_dir(self):
         """打开导出目录"""

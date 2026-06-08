@@ -36,20 +36,51 @@ def test_runtime_status_surfaces_are_i18n_extracted() -> None:
         "src/wechat_summarizer/presentation/gui/app_actions.py",
         "src/wechat_summarizer/presentation/gui/app_layout.py",
         "src/wechat_summarizer/presentation/gui/app_navigation.py",
+        "src/wechat_summarizer/presentation/gui/components/contextmenu_demo.py",
+        "src/wechat_summarizer/presentation/gui/components/datagrid_demo.py",
+        "src/wechat_summarizer/presentation/gui/components/datagrid_toolbar.py",
+        "src/wechat_summarizer/presentation/gui/components/graph_viewer.py",
+        "src/wechat_summarizer/presentation/gui/components/select_dropdown.py",
+        "src/wechat_summarizer/presentation/gui/components/sidebar_demo.py",
+        "src/wechat_summarizer/presentation/gui/components/virtuallist_demo.py",
         "src/wechat_summarizer/presentation/gui/dialogs/batch_archive_export.py",
         "src/wechat_summarizer/presentation/gui/dialogs/exit_confirm.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/export_dialogs.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/settings_dialogs.py",
         "src/wechat_summarizer/presentation/gui/dialogs/word_preview_batch.py",
         "src/wechat_summarizer/presentation/gui/dialogs/word_preview_render.py",
         "src/wechat_summarizer/presentation/gui/dialogs/word_preview_single.py",
+        "src/wechat_summarizer/presentation/gui/dialogs/word_preview_window.py",
+        "src/wechat_summarizer/presentation/gui/frames/batch_processing.py",
+        "src/wechat_summarizer/presentation/gui/frames/history.py",
         "src/wechat_summarizer/presentation/gui/frames/home_dashboard.py",
         "src/wechat_summarizer/presentation/gui/frames/home_info.py",
+        "src/wechat_summarizer/presentation/gui/frames/single_article.py",
         "src/wechat_summarizer/presentation/gui/pages/settings_page.py",
+        "src/wechat_summarizer/presentation/gui/runtime_batch.py",
         "src/wechat_summarizer/presentation/gui/runtime_export.py",
         "src/wechat_summarizer/presentation/gui/runtime_optimizations.py",
         "src/wechat_summarizer/presentation/gui/settings_api_actions.py",
+        "src/wechat_summarizer/presentation/gui/utils/accessibility_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/animation_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/autosave_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/autosave_dialog.py",
+        "src/wechat_summarizer/presentation/gui/utils/clipboard_auto.py",
+        "src/wechat_summarizer/presentation/gui/utils/lazy_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/microinteractions_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/performance_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/performance_overlay.py",
+        "src/wechat_summarizer/presentation/gui/utils/responsive_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/shortcuts_demo.py",
+        "src/wechat_summarizer/presentation/gui/utils/shortcuts_models.py",
+        "src/wechat_summarizer/presentation/gui/utils/shortcuts_panel.py",
+        "src/wechat_summarizer/presentation/gui/utils/transition_demo.py",
+        "src/wechat_summarizer/presentation/gui/viewmodels/batch_process_viewmodel.py",
+        "src/wechat_summarizer/presentation/gui/viewmodels/single_process_viewmodel.py",
         "src/wechat_summarizer/presentation/gui/widgets/log_panel.py",
         "src/wechat_summarizer/presentation/gui/widgets/sidebar.py",
         "src/wechat_summarizer/presentation/gui/widgets/splash_screen.py",
+        "src/wechat_summarizer/presentation/gui/widgets/toast_notification.py",
     }
 
     hardcoded, _ = gui_i18n_guard.scan_gui_i18n()
@@ -73,6 +104,10 @@ def test_gui_i18n_guard_detects_user_visible_literal(tmp_path: Path) -> None:
         "from .utils.i18n import tr\n"
         "def build(ctk):\n"
         "    ctk.CTkLabel(text='新增硬编码')\n"
+        "    ctk.CTkLabel(text=f'标题: {ctk}')\n"
+        "    ctk.title('窗口标题')\n"
+        "    live = type('Live', (), {'announce': lambda self, text: text})()\n"
+        "    live.announce('状态已更新')\n"
         "    ctk.CTkLabel(text=tr('已翻译'))\n",
         encoding="utf-8",
     )
@@ -82,8 +117,13 @@ def test_gui_i18n_guard_detects_user_visible_literal(tmp_path: Path) -> None:
         en_translations=translations / "en.json",
     )
 
-    assert len(hardcoded) == 1
-    assert "新增硬编码" in hardcoded[0].message
+    messages = {violation.message for violation in hardcoded}
+
+    assert len(hardcoded) == 4
+    assert any("新增硬编码" in message for message in messages)
+    assert any("hardcoded text= f-string" in message for message in messages)
+    assert any("hardcoded positional title[0] literal" in message for message in messages)
+    assert any("hardcoded positional announce[0] literal" in message for message in messages)
     assert untranslatable == []
 
 

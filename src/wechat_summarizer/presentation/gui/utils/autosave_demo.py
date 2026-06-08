@@ -7,21 +7,26 @@ import tkinter as tk
 from .autosave_dialog import check_and_restore
 from .autosave_manager import AutoSaveManager
 from .autosave_models import FormField
+from .i18n import tr
 
 
 def run_autosave_demo() -> None:
     """Run a local autosave demo for development."""
     root = tk.Tk()
-    root.title("自动保存测试")
+    root.title(tr("自动保存测试"))
     root.geometry("500x400")
     root.configure(bg="#121212")
 
     form_frame = tk.Frame(root, bg="#121212", padx=30, pady=30)
     form_frame.pack(fill=tk.BOTH, expand=True)
 
-    tk.Label(form_frame, text="标题:", bg="#121212", fg="#e5e5e5", font=("Segoe UI", 12)).pack(
-        anchor="w", pady=(0, 5)
-    )
+    tk.Label(
+        form_frame,
+        text=tr("标题:"),
+        bg="#121212",
+        fg="#e5e5e5",
+        font=("Segoe UI", 12),
+    ).pack(anchor="w", pady=(0, 5))
 
     title_entry = tk.Entry(
         form_frame,
@@ -33,9 +38,13 @@ def run_autosave_demo() -> None:
     )
     title_entry.pack(fill=tk.X, pady=(0, 15))
 
-    tk.Label(form_frame, text="内容:", bg="#121212", fg="#e5e5e5", font=("Segoe UI", 12)).pack(
-        anchor="w", pady=(0, 5)
-    )
+    tk.Label(
+        form_frame,
+        text=tr("内容:"),
+        bg="#121212",
+        fg="#e5e5e5",
+        font=("Segoe UI", 12),
+    ).pack(anchor="w", pady=(0, 5))
 
     content_text = tk.Text(
         form_frame,
@@ -60,7 +69,7 @@ def run_autosave_demo() -> None:
 
     status_label = tk.Label(
         form_frame,
-        text="输入内容后自动保存...",
+        text=tr("输入内容后自动保存..."),
         bg="#121212",
         fg="#808080",
         font=("Segoe UI", 10),

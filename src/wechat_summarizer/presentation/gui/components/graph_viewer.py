@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from ..styles.colors import ModernColors
+from ..utils.i18n import tr
 from .graph_viewer_data import (
     graph_data_from_dicts,
     graph_data_from_knowledge_graph,
@@ -60,7 +61,7 @@ class GraphViewerComponent:
         self.toolbar = self._ctk.CTkFrame(self.frame, height=40)
         self.toolbar.pack(fill="x", padx=5, pady=5)
 
-        self._ctk.CTkLabel(self.toolbar, text="缩放:").pack(side="left", padx=5)
+        self._ctk.CTkLabel(self.toolbar, text=tr("缩放:")).pack(side="left", padx=5)
         self.zoom_slider = self._ctk.CTkSlider(
             self.toolbar,
             from_=0.5,
@@ -73,13 +74,13 @@ class GraphViewerComponent:
 
         self.reset_btn = self._ctk.CTkButton(
             self.toolbar,
-            text="重置布局",
+            text=tr("重置布局"),
             width=80,
             command=self._reset_layout,
         )
         self.reset_btn.pack(side="right", padx=5)
 
-        self.stats_label = self._ctk.CTkLabel(self.toolbar, text="节点: 0 | 边: 0")
+        self.stats_label = self._ctk.CTkLabel(self.toolbar, text=tr("节点: 0 | 边: 0"))
         self.stats_label.pack(side="right", padx=20)
 
         bg_color = ModernColors.DARK_BG if self.theme == "dark" else ModernColors.LIGHT_BG
@@ -155,7 +156,12 @@ class GraphViewerComponent:
 
     def _update_stats(self) -> None:
         """Update the statistics label."""
-        self.stats_label.configure(text=f"节点: {len(self.nodes)} | 边: {len(self.edges)}")
+        self.stats_label.configure(
+            text=tr("节点: {nodes} | 边: {edges}").format(
+                nodes=len(self.nodes),
+                edges=len(self.edges),
+            )
+        )
 
     def _reset_layout(self) -> None:
         """Reset graph layout."""

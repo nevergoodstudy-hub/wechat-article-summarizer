@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
+from ..utils.i18n import tr
 from .base import BaseViewModel, Command, Observable
 
 if TYPE_CHECKING:
@@ -66,22 +67,22 @@ class BatchProcessViewModel(BaseViewModel):
         self.add_urls_command = Command(
             execute=lambda: None,  # 需要参数，由视图层处理
             can_execute=lambda: not self.is_busy,
-            description="添加URL",
+            description=tr("添加URL"),
         )
         self.clear_command = Command(
             execute=self.clear,
             can_execute=lambda: len(self._items.value) > 0 and not self.is_busy,
-            description="清空列表",
+            description=tr("清空列表"),
         )
         self.start_command = Command(
             execute=self._do_start,
             can_execute=lambda: len(self._items.value) > 0 and not self.is_busy,
-            description="开始处理",
+            description=tr("开始处理"),
         )
         self.cancel_command = Command(
             execute=self._do_cancel,
             can_execute=lambda: self.is_busy,
-            description="取消处理",
+            description=tr("取消处理"),
         )
 
     # region Properties
@@ -269,7 +270,7 @@ class BatchProcessViewModel(BaseViewModel):
             self.set_success()
 
         except Exception as e:
-            self.set_error(f"批量处理失败: {e}")
+            self.set_error(tr("批量处理失败: {error}").format(error=e))
 
     def _do_cancel(self) -> None:
         """取消批量处理"""

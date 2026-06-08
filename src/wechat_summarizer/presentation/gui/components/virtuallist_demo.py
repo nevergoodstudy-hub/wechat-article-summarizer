@@ -5,13 +5,14 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any
 
+from ..utils.i18n import tr
 from .virtuallist import VirtualList
 
 
 def run_demo() -> None:
     """Run the virtual list demo."""
     root = tk.Tk()
-    root.title("虚拟列表测试")
+    root.title(tr("虚拟列表测试"))
     root.geometry("600x500")
     root.configure(bg="#121212")
 
@@ -55,7 +56,7 @@ def run_demo() -> None:
 
     tk.Label(
         root,
-        text=f"共 {len(test_data)} 条数据 | 只渲染可见区域",
+        text=tr("共 {count} 条数据 | 只渲染可见区域").format(count=len(test_data)),
         bg="#121212",
         fg="#808080",
         font=("Segoe UI", 10),

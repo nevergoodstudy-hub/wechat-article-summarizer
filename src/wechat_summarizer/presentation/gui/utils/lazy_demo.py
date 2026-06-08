@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from .i18n import tr
 from .lazy_loader import LazyLoader
 from .lazy_widget import LazyWidget
 
@@ -11,14 +12,14 @@ from .lazy_widget import LazyWidget
 def run_demo() -> None:
     """Run a small local demo window."""
     root = tk.Tk()
-    root.title("懒加载测试")
+    root.title(tr("懒加载测试"))
     root.geometry("600x400")
     root.configure(bg="#121212")
 
     loader = LazyLoader()
     info_label = tk.Label(
         root,
-        text=(
+        text=tr(
             "懒加载系统已初始化\n\n支持:\n"
             "- 路由级代码分割\n- 按需加载重组件\n- 加载状态显示\n- 失败降级处理\n- 预加载支持"
         ),
@@ -34,7 +35,7 @@ def run_demo() -> None:
             super().__init__(parent, bg="#1a1a1a", **kwargs)
             tk.Label(
                 self,
-                text="组件已加载",
+                text=tr("组件已加载"),
                 bg="#1a1a1a",
                 fg="#10b981",
                 font=("Segoe UI", 16),

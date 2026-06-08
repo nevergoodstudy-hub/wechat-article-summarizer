@@ -8,6 +8,7 @@ from .clipboard_browser import BrowserDetector
 from .clipboard_manager import ClipboardManager
 from .clipboard_models import DetectionResult
 from .clipboard_wechat import WeChatLinkDetector
+from .i18n import tr
 
 
 class AutoLinkDetector:
@@ -24,11 +25,11 @@ class AutoLinkDetector:
             )
             if links:
                 logger.info(f"从剪贴板检测到 {len(links)} 个微信链接")
-                msg_parts = [f"从剪贴板检测到 {len(links)} 个微信公众号链接"]
+                msg_parts = [tr("从剪贴板检测到 {count} 个微信公众号链接").format(count=len(links))]
                 if dup_count > 0:
-                    msg_parts.append(f"(去除 {dup_count} 个重复)")
+                    msg_parts.append(tr("(去除 {count} 个重复)").format(count=dup_count))
                 if invalid_count > 0:
-                    msg_parts.append(f"(过滤 {invalid_count} 个无效)")
+                    msg_parts.append(tr("(过滤 {count} 个无效)").format(count=invalid_count))
 
                 return DetectionResult(
                     links=links,
@@ -43,7 +44,7 @@ class AutoLinkDetector:
             return DetectionResult(
                 links=[],
                 source="browser",
-                message="检测到您正在浏览微信公众号页面\n请复制链接后重试",
+                message=tr("检测到您正在浏览微信公众号页面\n请复制链接后重试"),
             )
 
         return DetectionResult(links=[], source="none", message="")
@@ -52,7 +53,7 @@ class AutoLinkDetector:
     def detect_from_text(text: str, smart_dedup: bool = True) -> DetectionResult:
         """从指定文本检测链接"""
         if not text:
-            return DetectionResult(links=[], source="text", message="输入文本为空")
+            return DetectionResult(links=[], source="text", message=tr("输入文本为空"))
 
         links, dup_count, invalid_count = WeChatLinkDetector.extract_links(
             text,
@@ -60,11 +61,11 @@ class AutoLinkDetector:
         )
 
         if links:
-            msg_parts = [f"检测到 {len(links)} 个微信公众号链接"]
+            msg_parts = [tr("检测到 {count} 个微信公众号链接").format(count=len(links))]
             if dup_count > 0:
-                msg_parts.append(f"(去除 {dup_count} 个重复)")
+                msg_parts.append(tr("(去除 {count} 个重复)").format(count=dup_count))
             if invalid_count > 0:
-                msg_parts.append(f"(过滤 {invalid_count} 个无效)")
+                msg_parts.append(tr("(过滤 {count} 个无效)").format(count=invalid_count))
 
             return DetectionResult(
                 links=links,
@@ -74,7 +75,7 @@ class AutoLinkDetector:
                 invalid_removed=invalid_count,
             )
 
-        return DetectionResult(links=[], source="text", message="未检测到有效的微信公众号链接")
+        return DetectionResult(links=[], source="text", message=tr("未检测到有效的微信公众号链接"))
 
     @staticmethod
     def batch_detect(texts: list[str]) -> DetectionResult:
@@ -94,9 +95,9 @@ class AutoLinkDetector:
         total_dups += final_dups
 
         if unique_links:
-            msg_parts = [f"批量检测到 {len(unique_links)} 个微信公众号链接"]
+            msg_parts = [tr("批量检测到 {count} 个微信公众号链接").format(count=len(unique_links))]
             if total_dups > 0:
-                msg_parts.append(f"(去除 {total_dups} 个重复)")
+                msg_parts.append(tr("(去除 {count} 个重复)").format(count=total_dups))
 
             return DetectionResult(
                 links=unique_links,
@@ -106,7 +107,7 @@ class AutoLinkDetector:
                 invalid_removed=total_invalid,
             )
 
-        return DetectionResult(links=[], source="batch", message="批量检测未发现有效链接")
+        return DetectionResult(links=[], source="batch", message=tr("批量检测未发现有效链接"))
 
 
 __all__ = ["AutoLinkDetector"]

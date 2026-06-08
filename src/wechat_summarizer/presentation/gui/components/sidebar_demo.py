@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from ..utils.i18n import tr
 from .sidebar_core import CollapsibleSidebar
 from .sidebar_models import NavItem
 
@@ -11,26 +12,26 @@ from .sidebar_models import NavItem
 def run_demo() -> None:
     """Run a small manual sidebar demo."""
     root = tk.Tk()
-    root.title("Sidebar 测试")
+    root.title(tr("Sidebar 测试"))
     root.geometry("1000x600")
     root.configure(bg="#121212")
 
     nav_items = [
-        NavItem(id="home", label="首页", icon="🏠"),
+        NavItem(id="home", label=tr("首页"), icon="🏠"),
         NavItem(
             id="chat",
-            label="聊天记录",
+            label=tr("聊天记录"),
             icon="💬",
             badge=5,
             children=[
-                NavItem(id="chat_recent", label="最近", icon="🕐"),
-                NavItem(id="chat_starred", label="已标记", icon="⭐"),
-                NavItem(id="chat_archived", label="已归档", icon="📦"),
+                NavItem(id="chat_recent", label=tr("最近"), icon="🕐"),
+                NavItem(id="chat_starred", label=tr("已标记"), icon="⭐"),
+                NavItem(id="chat_archived", label=tr("已归档"), icon="📦"),
             ],
         ),
-        NavItem(id="summary", label="摘要", icon="📝", badge=2),
-        NavItem(id="export", label="导出", icon="📤"),
-        NavItem(id="settings", label="设置", icon="⚙️"),
+        NavItem(id="summary", label=tr("摘要"), icon="📝", badge=2),
+        NavItem(id="export", label=tr("导出"), icon="📤"),
+        NavItem(id="settings", label=tr("设置"), icon="⚙️"),
     ]
 
     def on_select(item_id: str) -> None:
@@ -49,7 +50,7 @@ def run_demo() -> None:
 
     tk.Label(
         content,
-        text="内容区域",
+        text=tr("内容区域"),
         bg="#1e1e1e",
         fg="#e5e5e5",
         font=("Segoe UI", 16),

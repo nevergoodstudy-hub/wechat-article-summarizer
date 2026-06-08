@@ -161,14 +161,17 @@ class GUIActionsMixin:
 
         if total_count > 0 and invalid_count == 0:
             self.batch_url_status_label.configure(
-                text=f"✓ 共 {total_count} 个有效链接",
+                text=tr("✓ 共 {count} 个有效链接").format(count=total_count),
                 text_color=ModernColors.SUCCESS,
             )
             return None
 
         if total_count > 0 and invalid_count > 0:
             self.batch_url_status_label.configure(
-                text=f"✓ {total_count} 个有效 | ✗ {invalid_count} 个无效",
+                text=tr("✓ {valid} 个有效 | ✗ {invalid} 个无效").format(
+                    valid=total_count,
+                    invalid=invalid_count,
+                ),
                 text_color=ModernColors.WARNING,
             )
         else:
@@ -218,9 +221,13 @@ class GUIActionsMixin:
         self._single_processing_active = False
 
         single_page = self.single_page
-        single_page.title_label.configure(text=f"标题: {article.title}")
-        single_page.author_label.configure(text=f"公众号: {article.account_name or '未知'}")
-        single_page.word_count_label.configure(text=f"字数: {article.word_count}")
+        single_page.title_label.configure(text=tr("标题: {title}").format(title=article.title))
+        single_page.author_label.configure(
+            text=tr("公众号: {account}").format(account=article.account_name or tr("未知"))
+        )
+        single_page.word_count_label.configure(
+            text=tr("字数: {word_count}").format(word_count=article.word_count)
+        )
 
         single_page.preview_text.delete("1.0", "end")
         preview = (

@@ -9,6 +9,7 @@ from datetime import datetime
 
 from .autosave_manager import AutoSaveManager
 from .autosave_models import Draft
+from .i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class RestoreDialog(tk.Toplevel):
         self.on_discard = on_discard
         self.result = False
 
-        self.title("恢复草稿")
+        self.title(tr("恢复草稿"))
         self.geometry("400x200")
         self.configure(bg="#1a1a1a")
         self.resizable(False, False)
@@ -55,7 +56,7 @@ class RestoreDialog(tk.Toplevel):
 
         tk.Label(
             msg_frame,
-            text=f"发现未保存的草稿\n保存于: {time_str}",
+            text=tr("发现未保存的草稿\n保存于: {saved_at}").format(saved_at=time_str),
             bg="#1a1a1a",
             fg="#e5e5e5",
             font=("Segoe UI", 12),
@@ -69,7 +70,7 @@ class RestoreDialog(tk.Toplevel):
     def _build_actions(self, btn_frame: tk.Frame) -> None:
         restore_btn = tk.Button(
             btn_frame,
-            text="恢复草稿",
+            text=tr("恢复草稿"),
             bg="#3b82f6",
             fg="#ffffff",
             font=("Segoe UI", 11),
@@ -83,7 +84,7 @@ class RestoreDialog(tk.Toplevel):
 
         discard_btn = tk.Button(
             btn_frame,
-            text="放弃",
+            text=tr("放弃"),
             bg="#404040",
             fg="#e5e5e5",
             font=("Segoe UI", 11),

@@ -6,6 +6,7 @@ import re
 import tkinter as tk
 from typing import Any
 
+from ..utils.i18n import tr
 from .select_compat import CTK_AVAILABLE, ctk
 from .select_models import SelectOption
 
@@ -41,7 +42,7 @@ class SelectDropdownMixin:
         if CTK_AVAILABLE and ctk is not None:
             self._search_entry = ctk.CTkEntry(
                 self._dropdown,
-                placeholder_text="搜索...",
+                placeholder_text=tr("搜索..."),
                 fg_color=self._colors["bg"],
                 text_color=self._colors["text"],
                 border_width=1,

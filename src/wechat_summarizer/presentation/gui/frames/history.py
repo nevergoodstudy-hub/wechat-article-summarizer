@@ -65,7 +65,10 @@ class HistoryHeaderFrame(ctk.CTkFrame):
         """Render cache statistics in the header."""
         assert self.cache_stats_label is not None
         self.cache_stats_label.configure(
-            text=f"缓存: {total_entries} 条 | {total_size_bytes / 1024:.1f} KB"
+            text=tr("缓存: {count} 条 | {size_kb:.1f} KB").format(
+                count=total_entries,
+                size_kb=total_size_bytes / 1024,
+            )
         )
 
 

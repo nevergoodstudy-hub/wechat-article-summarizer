@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from .i18n import tr
 from .microinteractions_loading import SkeletonLoader, Spinner
 from .microinteractions_manager import MicroInteractions
 
@@ -11,13 +12,13 @@ from .microinteractions_manager import MicroInteractions
 def run_microinteractions_demo() -> None:
     """Run a local visual demo for development."""
     root = tk.Tk()
-    root.title("微交互动画测试")
+    root.title(tr("微交互动画测试"))
     root.geometry("800x600")
     root.configure(bg="#121212")
 
     tk.Label(
         root,
-        text="微交互动画演示",
+        text=tr("微交互动画演示"),
         bg="#121212",
         fg="#e5e5e5",
         font=("Segoe UI", 16, "bold"),
@@ -25,7 +26,7 @@ def run_microinteractions_demo() -> None:
 
     ripple_btn = tk.Label(
         root,
-        text="点击查看水波纹效果",
+        text=tr("点击查看水波纹效果"),
         bg="#3b82f6",
         fg="#ffffff",
         font=("Segoe UI", 12),
@@ -38,7 +39,7 @@ def run_microinteractions_demo() -> None:
 
     scale_btn = tk.Label(
         root,
-        text="点击查看缩放效果",
+        text=tr("点击查看缩放效果"),
         bg="#10b981",
         fg="#ffffff",
         font=("Segoe UI", 12),
@@ -53,7 +54,7 @@ def run_microinteractions_demo() -> None:
     hover_frame.pack(pady=10)
     tk.Label(
         hover_frame,
-        text="悬停查看上浮效果",
+        text=tr("悬停查看上浮效果"),
         bg="#2a2a2a",
         fg="#e5e5e5",
         font=("Segoe UI", 12),
@@ -62,7 +63,7 @@ def run_microinteractions_demo() -> None:
 
     tk.Label(
         root,
-        text="Skeleton 骨架屏:",
+        text=tr("Skeleton 骨架屏:"),
         bg="#121212",
         fg="#808080",
         font=("Segoe UI", 10),
@@ -73,7 +74,7 @@ def run_microinteractions_demo() -> None:
 
     tk.Label(
         root,
-        text="Spinner 加载指示器:",
+        text=tr("Spinner 加载指示器:"),
         bg="#121212",
         fg="#808080",
         font=("Segoe UI", 10),
@@ -84,7 +85,7 @@ def run_microinteractions_demo() -> None:
 
     pulse_label = tk.Label(
         root,
-        text="  脉冲效果  ",
+        text=tr("  脉冲效果  "),
         bg="#3b82f6",
         fg="#ffffff",
         font=("Segoe UI", 12),

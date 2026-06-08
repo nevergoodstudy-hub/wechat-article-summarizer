@@ -148,7 +148,12 @@ def do_archive_export(gui: Any, articles: list, archive_format: str, path: str) 
     format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
     format_name = format_names.get(archive_format, archive_format.upper())
 
-    gui.batch_status_label.configure(text=f"正在打包 0/{len(articles)} 篇为 {format_name}...")
+    gui.batch_status_label.configure(
+        text=tr("正在打包 0/{total} 篇为 {format}...").format(
+            total=len(articles),
+            format=format_name,
+        )
+    )
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
     gui.batch_rate_label.configure(text=tr("计算中..."))
@@ -195,7 +200,7 @@ def archive_export_complete(gui: Any, result: str, archive_format: str) -> None:
     format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
     format_name = format_names.get(archive_format, archive_format.upper())
 
-    gui.batch_status_label.configure(text=f"{format_name} 导出完成")
+    gui.batch_status_label.configure(text=tr("{format} 导出完成").format(format=format_name))
     logger.success(f"批量导出成功: {result}")
     show_export_success(result)
 
@@ -236,7 +241,9 @@ def do_batch_export(gui: Any, target: str, dir_path: str) -> None:
     )
     gui._export_progress_tracker.set_callback(gui._on_export_progress_update)
     gui.batch_progress.set(0)
-    gui.batch_status_label.configure(text=f"正在导出 0/{len(gui.batch_results)} 篇...")
+    gui.batch_status_label.configure(
+        text=tr("正在导出 0/{total} 篇...").format(total=len(gui.batch_results))
+    )
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
     gui.batch_rate_label.configure(text=tr("计算中..."))
@@ -257,7 +264,12 @@ def update_export_progress_ui(gui: Any, info: ProgressInfo) -> None:
     """更新导出进度 GUI 显示。"""
     progress_value = info.percentage / 100.0
     gui.batch_progress.set(progress_value)
-    gui.batch_status_label.configure(text=f"正在导出 {info.progress_text} ({info.percentage_text})")
+    gui.batch_status_label.configure(
+        text=tr("正在导出 {progress} ({percentage})").format(
+            progress=info.progress_text,
+            percentage=info.percentage_text,
+        )
+    )
     gui.batch_elapsed_label.configure(text=info.elapsed_formatted)
     gui.batch_eta_label.configure(text=info.eta_formatted)
     gui.batch_rate_label.configure(text=info.rate_formatted)
@@ -303,7 +315,12 @@ def batch_export_complete(gui: Any, success_count: int, failure_count: int, dir_
 
     enable_export_buttons(gui)
     gui.batch_progress.set(1.0)
-    gui.batch_status_label.configure(text=f"导出完成: {success_count} 成功, {failure_count} 失败")
+    gui.batch_status_label.configure(
+        text=tr("导出完成: {success} 成功, {failure} 失败").format(
+            success=success_count,
+            failure=failure_count,
+        )
+    )
     total = success_count + failure_count
     logger.success(f"批量导出完成: {success_count}/{total}")
     show_batch_export_success(success_count, total, dir_path)

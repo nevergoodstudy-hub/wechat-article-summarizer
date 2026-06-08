@@ -28,7 +28,9 @@ USER_VISIBLE_KEYWORDS: Final[frozenset[str]] = frozenset(
     }
 )
 USER_VISIBLE_POSITIONAL_ARGS: Final[dict[str, tuple[int, ...]]] = {
+    "announce": (0,),
     "ToastNotification": (1, 2),
+    "title": (0,),
     "_on_status_change": (0,),
     "_set_status": (0,),
 }
@@ -36,7 +38,7 @@ EXCLUDED_PARTS: Final[frozenset[str]] = frozenset({"translations"})
 
 # These budgets are the current legacy baseline. Lower them as strings are
 # migrated to tr(...); the guard prevents new net hardcoding from landing.
-MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 101
+MAX_HARDCODED_VISIBLE_STRINGS: Final[int] = 0
 MAX_UNTRANSLATABLE_TR_CALLS: Final[int] = 0
 
 
@@ -66,6 +68,14 @@ def _looks_like_visible_english(text: str) -> bool:
 def _is_user_visible_literal(text: str) -> bool:
     stripped = text.strip()
     return bool(stripped) and (_contains_cjk(stripped) or _looks_like_visible_english(stripped))
+
+
+def _joined_string_visible_text(node: ast.JoinedStr) -> str:
+    return "".join(
+        value.value
+        for value in node.values
+        if isinstance(value, ast.Constant) and isinstance(value.value, str)
+    )
 
 
 def _call_name(node: ast.AST) -> str | None:
@@ -132,7 +142,9 @@ def scan_gui_i18n(
                         )
                 elif isinstance(arg, (ast.JoinedStr, ast.BinOp)):
                     untranslatable.append(
-                        I18nViolation(path, getattr(arg, "lineno", node.lineno), "dynamic tr(...) key")
+                        I18nViolation(
+                            path, getattr(arg, "lineno", node.lineno), "dynamic tr(...) key"
+                        )
                     )
 
             for arg_index in USER_VISIBLE_POSITIONAL_ARGS.get(call_name or "", ()):
@@ -149,6 +161,16 @@ def scan_gui_i18n(
                                 f"hardcoded positional {call_name}[{arg_index}] literal: {text[:80]!r}",
                             )
                         )
+                elif isinstance(arg, ast.JoinedStr):
+                    text = _joined_string_visible_text(arg)
+                    if _is_user_visible_literal(text):
+                        hardcoded.append(
+                            I18nViolation(
+                                path,
+                                arg.lineno,
+                                f"hardcoded positional {call_name}[{arg_index}] f-string: {text[:80]!r}",
+                            )
+                        )
 
             for keyword in node.keywords:
                 if keyword.arg not in USER_VISIBLE_KEYWORDS:
@@ -162,6 +184,16 @@ def scan_gui_i18n(
                                 path,
                                 value.lineno,
                                 f"hardcoded {keyword.arg}= literal: {text[:80]!r}",
+                            )
+                        )
+                elif isinstance(value, ast.JoinedStr):
+                    text = _joined_string_visible_text(value)
+                    if _is_user_visible_literal(text):
+                        hardcoded.append(
+                            I18nViolation(
+                                path,
+                                value.lineno,
+                                f"hardcoded {keyword.arg}= f-string: {text[:80]!r}",
                             )
                         )
 

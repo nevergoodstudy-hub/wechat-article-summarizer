@@ -11,6 +11,7 @@ import customtkinter as ctk
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 from .animation_helper import AnimationHelper
 
 
@@ -88,7 +89,7 @@ class ToastNotification:
             btn_frame.pack(fill="x", pady=(15, 0))
             ctk.CTkButton(
                 btn_frame,
-                text="取消",
+                text=tr("取消"),
                 width=80,
                 height=32,
                 corner_radius=Spacing.RADIUS_MD,
@@ -97,7 +98,7 @@ class ToastNotification:
             ).pack(side="right", padx=(5, 0))
             ctk.CTkButton(
                 btn_frame,
-                text="确认填入",
+                text=tr("确认填入"),
                 width=100,
                 height=32,
                 corner_radius=Spacing.RADIUS_MD,

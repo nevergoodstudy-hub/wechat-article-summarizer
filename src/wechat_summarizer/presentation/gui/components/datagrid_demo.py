@@ -4,25 +4,26 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from ..utils.i18n import tr
 from .datagrid import DataGrid
 from .datagrid_models import Column
 
 
 def run_datagrid_demo() -> None:
     root = tk.Tk()
-    root.title("DataGrid 测试")
+    root.title(tr("DataGrid 测试"))
     root.geometry("1000x600")
     root.configure(bg="#1a1a1a")
 
     columns = [
         Column(key="id", label="ID", width=80, align="center"),
-        Column(key="name", label="姓名", width=150),
-        Column(key="email", label="邮箱", width=250),
-        Column(key="department", label="部门", width=150),
-        Column(key="status", label="状态", width=100, align="center"),
+        Column(key="name", label=tr("姓名"), width=150),
+        Column(key="email", label=tr("邮箱"), width=250),
+        Column(key="department", label=tr("部门"), width=150),
+        Column(key="status", label=tr("状态"), width=100, align="center"),
         Column(
             key="score",
-            label="评分",
+            label=tr("评分"),
             width=100,
             align="right",
             formatter=lambda x: f"{x:.1f}分" if isinstance(x, (int, float)) else str(x),

@@ -5,6 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any
 
+from .i18n import tr
 from .shortcuts_models import Shortcut
 
 
@@ -15,7 +16,7 @@ class ShortcutHelpPanel(tk.Toplevel):
         super().__init__(parent)
 
         self.manager = manager
-        self.title("快捷键帮助")
+        self.title(tr("快捷键帮助"))
         self.geometry("500x600")
         self.configure(bg="#1a1a1a")
 
@@ -45,7 +46,7 @@ class ShortcutHelpPanel(tk.Toplevel):
 
         tk.Label(
             header,
-            text="快捷键帮助",
+            text=tr("快捷键帮助"),
             bg=self.colors["bg"],
             fg=self.colors["text"],
             font=("Segoe UI", 16, "bold"),
@@ -53,7 +54,7 @@ class ShortcutHelpPanel(tk.Toplevel):
 
         tk.Label(
             header,
-            text="按 Esc 关闭",
+            text=tr("按 Esc 关闭"),
             bg=self.colors["bg"],
             fg=self.colors["text_secondary"],
             font=("Segoe UI", 10),

@@ -8,6 +8,7 @@ from typing import Any
 import customtkinter as ctk
 
 from ..styles.colors import ModernColors
+from ..utils.i18n import tr
 
 try:
     from tkinter import filedialog, messagebox
@@ -23,11 +24,13 @@ def show_export_options_dialog(
 ) -> None:
     """Show a single-article export format chooser."""
     export_window = ctk.CTkToplevel(parent)
-    export_window.title("导出选项")
+    export_window.title(tr("导出选项"))
     export_window.geometry("400x350")
     export_window.transient(parent)
     ctk.CTkLabel(
-        export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")
+        export_window,
+        text=tr("📥 选择导出格式"),
+        font=ctk.CTkFont(size=18, weight="bold"),
     ).pack(pady=20)
 
     def export_as(target: str) -> None:
@@ -37,7 +40,7 @@ def show_export_options_dialog(
     for name, info in exporter_info.items():
         btn_text = f"{('✓' if info.available else '✗')} {name.upper()}"
         if name == "word" and info.available:
-            btn_text += " (预览)"
+            btn_text += tr(" (预览)")
         btn = ctk.CTkButton(
             export_window,
             text=btn_text,
@@ -81,25 +84,32 @@ def choose_batch_output_directory() -> str | None:
     """Ask for a batch export output directory."""
     if filedialog is None:
         return None
-    return filedialog.askdirectory(title="选择输出目录") or None
+    return filedialog.askdirectory(title=tr("选择输出目录")) or None
 
 
 def show_export_success(message: str) -> None:
     """Show a generic export success message."""
     if messagebox is not None:
-        messagebox.showinfo("成功", f"导出成功: {message}")
+        messagebox.showinfo(tr("成功"), tr("导出成功: {message}").format(message=message))
 
 
 def show_export_error(message: str) -> None:
     """Show a generic export failure message."""
     if messagebox is not None:
-        messagebox.showerror("错误", f"导出失败: {message}")
+        messagebox.showerror(tr("错误"), tr("导出失败: {message}").format(message=message))
 
 
 def show_batch_export_success(success_count: int, total: int, dir_path: str) -> None:
     """Show a batch export success summary."""
     if messagebox is not None:
-        messagebox.showinfo("成功", f"导出完成: {success_count}/{total} 篇\n输出目录: {dir_path}")
+        messagebox.showinfo(
+            tr("成功"),
+            tr("导出完成: {success}/{total} 篇\n输出目录: {path}").format(
+                success=success_count,
+                total=total,
+                path=dir_path,
+            ),
+        )
 
 
 __all__ = [

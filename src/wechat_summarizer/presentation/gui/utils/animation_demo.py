@@ -6,21 +6,33 @@ import tkinter as tk
 
 from .animation_engine import AnimationEngine
 from .animation_models import EasingType, Tween
+from .i18n import tr
 
 
 def run_animation_demo() -> None:
     """Run the manual animation engine demo."""
     root = tk.Tk()
-    root.title("动画引擎测试")
+    root.title(tr("动画引擎测试"))
     root.geometry("800x600")
     root.configure(bg="#121212")
 
     engine = AnimationEngine(root)
-    fps_label = tk.Label(root, text="FPS: 0", bg="#121212", fg="#e5e5e5", font=("Segoe UI", 12))
+    fps_label = tk.Label(
+        root,
+        text=tr("FPS: 0"),
+        bg="#121212",
+        fg="#e5e5e5",
+        font=("Segoe UI", 12),
+    )
     fps_label.pack(pady=10)
 
     def update_fps() -> None:
-        fps_label.config(text=f"FPS: {engine.get_fps()} | 活动动画: {engine.get_active_count()}")
+        fps_label.config(
+            text=tr("FPS: {fps} | 活动动画: {count}").format(
+                fps=engine.get_fps(),
+                count=engine.get_active_count(),
+            )
+        )
         root.after(500, update_fps)
 
     update_fps()
@@ -80,7 +92,7 @@ def run_animation_demo() -> None:
 
     tk.Button(
         root,
-        text="开始动画",
+        text=tr("开始动画"),
         command=animate_ball,
         bg="#3b82f6",
         fg="#ffffff",
@@ -92,7 +104,7 @@ def run_animation_demo() -> None:
 
     tk.Button(
         root,
-        text="停止所有",
+        text=tr("停止所有"),
         command=engine.stop_all,
         bg="#ef4444",
         fg="#ffffff",

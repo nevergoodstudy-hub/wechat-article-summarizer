@@ -8,6 +8,7 @@ import customtkinter as ctk
 
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 750
@@ -40,12 +41,12 @@ def add_preview_toolbar(preview_window: ctk.CTkToplevel) -> None:
     toolbar.pack(fill="x", padx=15, pady=(10, 5))
     ctk.CTkLabel(
         toolbar,
-        text="📄 Word文档预览",
+        text=tr("📄 Word文档预览"),
         font=ctk.CTkFont(size=16, weight="bold"),
     ).pack(side="left")
     ctk.CTkLabel(
         toolbar,
-        text="以下预览与最终生成的Word文档布局一致",
+        text=tr("以下预览与最终生成的Word文档布局一致"),
         font=ctk.CTkFont(size=11),
         text_color="gray",
     ).pack(side="right")

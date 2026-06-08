@@ -156,7 +156,7 @@
 
 ## 4. P3 持续改进（滚动推进）
 
-- [ ] i18n 文案抽离完整化（禁止新增硬编码）
+- [x] i18n 文案抽离完整化（禁止新增硬编码）
 - [x] CLI 增加批量 JSON 标准输出
 - [x] 测试标记分层（unit/integration/e2e/slow）
 - [x] 架构 ADR 文档化（关键决策可追溯）
@@ -167,7 +167,7 @@
 
 > 证据：新增 `docs/adr/` 与 5 份 ADR：Clean Architecture 边界、SSRF 网络访问策略、TaskGroup 结构化并发、统一质量门禁、性能采样与缓存治理；新增 `scripts/check_adr_docs.py` 并接入 `scripts/quality_gate.py --mode architecture`，`tests/test_adr_docs.py` 覆盖当前 ADR 索引、必需章节与索引缺失场景。ADR 模板遵循本地 `architecture` skill 的上下文/决策/理由/取舍/后果结构，并参考 MADR 风格的轻量决策记录。
 
-> i18n 当前状态：已新增 `scripts/check_gui_i18n_hardcoded.py` 并接入 `scripts/quality_gate.py --mode architecture`，对 GUI 用户可见硬编码与不可翻译 `tr(...)` 调用建立当前基线，禁止新增净硬编码；本轮进一步将守卫扩展到 `_set_status`、`_on_status_change`、`ToastNotification` 位置参数，并新增 `en.json` 重复键检查。已抽离运行态状态/Toast/日志面板、首页 dashboard/状态卡、快捷键描述、API 密钥状态、低内存提示、sidebar/splash、退出确认、批量压缩导出与 Word 预览相关文案，统一采用 `tr("完整模板").format(...)` 的命名占位符形式，补齐 `translations/en.json`。硬编码基线已从 174 分阶段收紧到 101，不可翻译 `tr(...)` 从 9 清零到 0；`tests/test_gui_i18n_hardcoded_guard.py` 锁定已迁移产品文件不得再出现原始用户可见 literal。`scripts/quality_gate.py --mode lint`、`--mode architecture`、`--mode mypy`、`--mode test` 均通过；GUI/i18n 专项 `tests/test_gui_i18n_hardcoded_guard.py tests/test_gui_i18n_composition.py tests/test_gui_app_composition.py tests/test_gui_export_dialogs.py tests/test_gui_remaining_dialogs.py` 共 95 个用例通过。由于 `presentation/gui` 仍有 101 个历史硬编码残留，且 demo/通用模型/部分对话框仍待逐批迁移，`i18n 文案抽离完整化` 暂不勾选。
+> i18n 当前状态：`scripts/check_gui_i18n_hardcoded.py` 已接入 `scripts/quality_gate.py --mode architecture`，对 GUI 用户可见硬编码、动态 `tr(...)` key、缺失翻译 key、重复 `en.json` key 建立强制守卫；守卫覆盖 `_set_status`、`_on_status_change`、`ToastNotification`、`title(...)`、`announce(...)`、用户可见关键字参数和用户可见 f-string。已抽离运行态状态/Toast/日志面板、首页 dashboard/状态卡、快捷键描述、API 密钥状态、低内存提示、sidebar/splash、退出确认、导出/设置对话框、批量状态、剪贴板检测、图谱查看器、DataGrid/Select、草稿恢复、单篇结果标题、批量压缩导出、Word 预览、性能悬浮窗、快捷键帮助面板以及全部 GUI demo/辅助面板文案，统一采用 `tr("完整模板").format(...)` 的静态 key 与命名占位符形式，补齐 `translations/en.json`。硬编码基线已从 174 分阶段收紧到 0，不可翻译 `tr(...)` 从 9 清零到 0；`tests/test_gui_i18n_hardcoded_guard.py` 锁定已迁移产品文件和 demo/辅助面板不得再出现原始用户可见 literal，并覆盖窗口标题、live-region announce 与 f-string 检测。`scripts/check_gui_i18n_hardcoded.py` 当前输出 `hardcoded=0/0, untranslatable_tr=0/0`；GUI/i18n 专项 `tests/test_gui_i18n_hardcoded_guard.py tests/test_gui_i18n_composition.py tests/test_gui_app_composition.py tests/test_gui_export_dialogs.py tests/test_gui_remaining_dialogs.py tests/test_gui_settings_dialogs.py` 当前 101 个用例通过。
 
 ---
 
@@ -203,7 +203,7 @@
 7. [x] P1-2 TaskGroup 迁移
 8. [x] P1-8 测试隔离
 9. [x] P2 质量与 CI 平台化
-10. [ ] P3 持续优化
+10. [x] P3 持续优化
 
 ---
 

@@ -6,6 +6,7 @@ import json
 import time
 import tkinter as tk
 
+from .i18n import tr
 from .performance_monitor import PerformanceMonitor
 from .performance_overlay import PerformanceOverlay
 
@@ -13,7 +14,7 @@ from .performance_overlay import PerformanceOverlay
 def run_performance_demo() -> None:
     """Run the manual performance monitor demo."""
     root = tk.Tk()
-    root.title("性能监控测试")
+    root.title(tr("性能监控测试"))
     root.geometry("800x600")
     root.configure(bg="#121212")
 
@@ -24,7 +25,9 @@ def run_performance_demo() -> None:
 
     tk.Label(
         main_frame,
-        text="性能监控系统\n\n功能:\n• FPS实时监测\n• 内存占用追踪\n• CPU使用率\n• 慢操作警告\n• 性能报告生成",
+        text=tr(
+            "性能监控系统\n\n功能:\n- FPS实时监测\n- 内存占用追踪\n- CPU使用率\n- 慢操作警告\n- 性能报告生成"
+        ),
         bg="#121212",
         fg="#e5e5e5",
         font=("Segoe UI", 14),
@@ -44,7 +47,7 @@ def run_performance_demo() -> None:
 
     tk.Button(
         btn_frame,
-        text="模拟慢操作",
+        text=tr("模拟慢操作"),
         bg="#3b82f6",
         fg="#ffffff",
         font=("Segoe UI", 11),
@@ -54,7 +57,7 @@ def run_performance_demo() -> None:
 
     tk.Button(
         btn_frame,
-        text="生成报告",
+        text=tr("生成报告"),
         bg="#10b981",
         fg="#ffffff",
         font=("Segoe UI", 11),

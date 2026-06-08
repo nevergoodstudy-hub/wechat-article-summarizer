@@ -22,6 +22,7 @@ from .dialogs import (
     show_url_file_read_error,
 )
 from .styles import ModernColors
+from .utils.i18n import tr
 
 
 def on_import_urls(gui: Any) -> None:
@@ -81,10 +82,10 @@ def start_batch_processing(gui: Any, urls: list[str]) -> None:
         gui.batch_start_btn.configure(state="disabled")
 
     gui.batch_page.batch_progress.set(0)
-    gui.batch_status_label.configure(text=f"正在处理 0/{len(urls)} 篇...")
+    gui.batch_status_label.configure(text=tr("正在处理 0/{total} 篇...").format(total=len(urls)))
     gui.batch_page.batch_elapsed_label.configure(text="00:00")
     gui.batch_page.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     # 设置任务状态（用于退出确认）
@@ -106,7 +107,12 @@ def update_batch_progress_ui(gui: Any, info: ProgressInfo) -> None:
     """更新批量处理的 GUI 进度显示（在主线程中调用）。"""
     progress_value = info.percentage / 100.0
     gui.batch_progress.set(progress_value)
-    gui.batch_status_label.configure(text=f"正在处理 {info.progress_text} ({info.percentage_text})")
+    gui.batch_status_label.configure(
+        text=tr("正在处理 {progress} ({percentage})").format(
+            progress=info.progress_text,
+            percentage=info.percentage_text,
+        )
+    )
     gui.batch_elapsed_label.configure(text=info.elapsed_formatted)
     gui.batch_eta_label.configure(text=info.eta_formatted)
     gui.batch_rate_label.configure(text=info.rate_formatted)
@@ -223,7 +229,12 @@ def batch_process_complete(gui: Any) -> None:
     gui.batch_progress.set(1.0)
     success_count = len(gui.batch_results)
     total = len(gui.batch_urls)
-    gui.batch_status_label.configure(text=f"完成: {success_count}/{total} 篇成功")
+    gui.batch_status_label.configure(
+        text=tr("完成: {success}/{total} 篇成功").format(
+            success=success_count,
+            total=total,
+        )
+    )
     logger.success(f"批量处理完成: {success_count}/{total}")
 
     if gui.batch_results:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 from ..utils.i18n import tr
@@ -174,12 +176,12 @@ class SingleArticleResultFrame(ctk.CTkFrame):
         )
         self.word_count_label.pack(fill="x", padx=15, pady=(4, 12))
 
-        self._build_textbox_section("📝 文章摘要", "摘要", "summary_text", height=150)
-        self._build_textbox_section("📌 关键要点", "要点", "points_text", height=None)
+        self._build_textbox_section(lambda: tr("📝 文章摘要"), "摘要", "summary_text", height=150)
+        self._build_textbox_section(lambda: tr("📌 关键要点"), "要点", "points_text", height=None)
 
     def _build_textbox_section(
         self,
-        title: str,
+        title_factory: Callable[[], str],
         copy_label: str,
         attr_name: str,
         *,
@@ -190,13 +192,13 @@ class SingleArticleResultFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             header,
-            text=tr(title),
+            text=title_factory(),
             font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(side="left")
 
         ctk.CTkButton(
             header,
-            text="📋 复制",
+            text=tr("📋 复制"),
             width=60,
             height=24,
             corner_radius=Spacing.RADIUS_SM,

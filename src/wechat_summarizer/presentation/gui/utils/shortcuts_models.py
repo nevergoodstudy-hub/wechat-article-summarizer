@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from .i18n import tr
+
 
 @dataclass
 class Shortcut:
@@ -14,7 +16,7 @@ class Shortcut:
     name: str
     keys: str
     callback: Callable[[], None] | None = None
-    group: str = "通用"
+    group: str = tr("通用")
     description: str = ""
     enabled: bool = True
 
@@ -22,28 +24,88 @@ class Shortcut:
 def default_shortcuts() -> list[Shortcut]:
     """Return built-in shortcuts without callbacks."""
     return [
-        Shortcut(id="save", name="保存", keys="Ctrl+S", group="文件", description="保存当前文件"),
-        Shortcut(id="open", name="打开", keys="Ctrl+O", group="文件", description="打开文件"),
-        Shortcut(id="new", name="新建", keys="Ctrl+N", group="文件", description="新建文件"),
-        Shortcut(id="undo", name="撤销", keys="Ctrl+Z", group="编辑", description="撤销上一步操作"),
-        Shortcut(id="redo", name="重做", keys="Ctrl+Y", group="编辑", description="重做上一步操作"),
-        Shortcut(id="copy", name="复制", keys="Ctrl+C", group="编辑", description="复制选中内容"),
         Shortcut(
-            id="paste", name="粘贴", keys="Ctrl+V", group="编辑", description="粘贴剪贴板内容"
+            id="save",
+            name=tr("保存"),
+            keys="Ctrl+S",
+            group=tr("文件"),
+            description=tr("保存当前文件"),
         ),
-        Shortcut(id="cut", name="剪切", keys="Ctrl+X", group="编辑", description="剪切选中内容"),
         Shortcut(
-            id="select_all", name="全选", keys="Ctrl+A", group="编辑", description="选中所有内容"
+            id="open", name=tr("打开"), keys="Ctrl+O", group=tr("文件"), description=tr("打开文件")
         ),
-        Shortcut(id="find", name="查找", keys="Ctrl+F", group="编辑", description="打开查找对话框"),
-        Shortcut(id="zoom_in", name="放大", keys="Ctrl+=", group="视图", description="放大界面"),
-        Shortcut(id="zoom_out", name="缩小", keys="Ctrl+-", group="视图", description="缩小界面"),
+        Shortcut(
+            id="new", name=tr("新建"), keys="Ctrl+N", group=tr("文件"), description=tr("新建文件")
+        ),
+        Shortcut(
+            id="undo",
+            name=tr("撤销"),
+            keys="Ctrl+Z",
+            group=tr("编辑"),
+            description=tr("撤销上一步操作"),
+        ),
+        Shortcut(
+            id="redo",
+            name=tr("重做"),
+            keys="Ctrl+Y",
+            group=tr("编辑"),
+            description=tr("重做上一步操作"),
+        ),
+        Shortcut(
+            id="copy",
+            name=tr("复制"),
+            keys="Ctrl+C",
+            group=tr("编辑"),
+            description=tr("复制选中内容"),
+        ),
+        Shortcut(
+            id="paste",
+            name=tr("粘贴"),
+            keys="Ctrl+V",
+            group=tr("编辑"),
+            description=tr("粘贴剪贴板内容"),
+        ),
+        Shortcut(
+            id="cut",
+            name=tr("剪切"),
+            keys="Ctrl+X",
+            group=tr("编辑"),
+            description=tr("剪切选中内容"),
+        ),
+        Shortcut(
+            id="select_all",
+            name=tr("全选"),
+            keys="Ctrl+A",
+            group=tr("编辑"),
+            description=tr("选中所有内容"),
+        ),
+        Shortcut(
+            id="find",
+            name=tr("查找"),
+            keys="Ctrl+F",
+            group=tr("编辑"),
+            description=tr("打开查找对话框"),
+        ),
+        Shortcut(
+            id="zoom_in",
+            name=tr("放大"),
+            keys="Ctrl+=",
+            group=tr("视图"),
+            description=tr("放大界面"),
+        ),
+        Shortcut(
+            id="zoom_out",
+            name=tr("缩小"),
+            keys="Ctrl+-",
+            group=tr("视图"),
+            description=tr("缩小界面"),
+        ),
         Shortcut(
             id="zoom_reset",
-            name="重置缩放",
+            name=tr("重置缩放"),
             keys="Ctrl+0",
-            group="视图",
-            description="重置界面缩放",
+            group=tr("视图"),
+            description=tr("重置界面缩放"),
         ),
     ]
 

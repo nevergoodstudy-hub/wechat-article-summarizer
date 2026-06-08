@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from .i18n import tr
 from .responsive_breakpoints import BreakpointManager
 from .responsive_grid import ResponsiveGrid
 from .responsive_models import Breakpoint
@@ -12,20 +13,26 @@ from .responsive_models import Breakpoint
 def run_demo() -> None:
     """Run the responsive layout demo."""
     root = tk.Tk()
-    root.title("响应式布局测试")
+    root.title(tr("响应式布局测试"))
     root.geometry("1200x800")
     root.configure(bg="#121212")
 
     bp_manager = BreakpointManager(root)
 
     def on_bp_change(bp: Breakpoint, width: int, height: int) -> None:
-        info_label.config(text=f"断点: {bp.value} | 宽度: {width}px | 高度: {height}px")
+        info_label.config(
+            text=tr("断点: {breakpoint} | 宽度: {width}px | 高度: {height}px").format(
+                breakpoint=bp.value,
+                width=width,
+                height=height,
+            )
+        )
 
     bp_manager.on_breakpoint_change(on_bp_change)
 
     info_label = tk.Label(
         root,
-        text="调整窗口大小查看断点变化",
+        text=tr("调整窗口大小查看断点变化"),
         bg="#121212",
         fg="#e5e5e5",
         font=("Segoe UI", 14),
