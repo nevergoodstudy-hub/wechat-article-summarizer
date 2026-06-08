@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from wechat_summarizer.domain.value_objects import ArticleURL
 from wechat_summarizer.infrastructure.adapters.scrapers.generic_httpx import GenericHttpxScraper
 from wechat_summarizer.infrastructure.adapters.scrapers.wechat_httpx import WechatHttpxScraper
 from wechat_summarizer.shared.exceptions import ScraperBlockedError
-from wechat_summarizer.shared.utils.ssrf_protection import SSRFBlockedError
+from wechat_summarizer.shared.utils.ssrf_protection import SSRFBlockedError, safe_fetch_sync
 
 
 @pytest.mark.parametrize(
@@ -56,3 +57,59 @@ def test_wechat_scraper_allows_safe_dns_and_requests():
         article = scraper.scrape(article_url)
 
     assert article.title
+
+
+def test_scraper_blocks_dns_rebinding_between_validation_and_transport():
+    """DNS rebind from public IP to metadata IP must be blocked before connection."""
+    scraper = GenericHttpxScraper(timeout=1, max_retries=1)
+    article_url = ArticleURL.from_string("https://rebind.example.com/article")
+    public_dns = [(2, 1, 6, "", ("93.184.216.34", 443))]
+    metadata_dns = [(2, 1, 6, "", ("169.254.169.254", 443))]
+
+    with (
+        patch("socket.getaddrinfo", side_effect=[public_dns, metadata_dns]),
+        patch.object(httpx.HTTPTransport, "handle_request") as base_transport,
+        pytest.raises(ScraperBlockedError, match="SSRF防护拦截"),
+    ):
+        scraper.scrape(article_url)
+
+    base_transport.assert_not_called()
+
+
+def test_safe_fetch_sync_blocks_redirect_to_metadata_ip_per_hop():
+    """Redirect targets are normalized and validated before the next request."""
+
+    def _redirect_once(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            302,
+            headers={"location": "//169.254.169.254/latest/meta-data"},
+            request=request,
+        )
+
+    public_dns = [(2, 1, 6, "", ("93.184.216.34", 443))]
+
+    with (
+        patch("socket.getaddrinfo", return_value=public_dns),
+        patch.object(
+            httpx.HTTPTransport, "handle_request", side_effect=_redirect_once
+        ) as base_transport,
+        pytest.raises(SSRFBlockedError, match=r"169\.254\.169\.254"),
+    ):
+        safe_fetch_sync("https://redirect.example.com/start", max_redirects=5)
+
+    assert base_transport.call_count == 1
+
+
+@pytest.mark.parametrize("host", ["2130706433", "0177.0.0.1"])
+def test_scraper_blocks_alternative_ip_notation_before_connection(host: str):
+    """Alternative IPv4 notations must not reach the HTTP transport."""
+    scraper = GenericHttpxScraper(timeout=1, max_retries=1)
+    article_url = ArticleURL.from_string(f"https://{host}/article")
+
+    with (
+        patch.object(httpx.HTTPTransport, "handle_request") as base_transport,
+        pytest.raises(ScraperBlockedError, match="alternative IP notation"),
+    ):
+        scraper.scrape(article_url)
+
+    base_transport.assert_not_called()

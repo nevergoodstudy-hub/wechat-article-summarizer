@@ -38,7 +38,9 @@
 - [x] 禁止自动跟随重定向，重定向目标逐跳校验
 - [x] 拦截替代 IP 表示法（十进制/八进制/IPv6-mapped）
 - [x] 拦截云元数据地址段（如 169.254.169.254）
-- [ ] 增加集成测试：DNS rebinding / redirect / alt-IP
+- [x] 增加集成测试：DNS rebinding / redirect / alt-IP
+
+> 证据：`tests/test_dns_rebinding_integration.py` 覆盖抓取器路径上的 DNS rebinding（二次解析变更为元数据 IP 且不进入 HTTPTransport）、逐跳 redirect 目标校验（跳转到 169.254.169.254 即阻断）、替代 IP 表示法（十进制整型/前导零）在连接前阻断。
 
 ### P0-4 MCP 输入安全加固
 - [x] 所有 `@tool` 入参统一接入 `MCPInputValidator`
@@ -139,7 +141,7 @@
 ## 6. 推荐执行顺序（严格版）
 
 1. [x] P0-4 MCP 输入安全
-2. [ ] P0-3 SSRF Rebinding
+2. [x] P0-3 SSRF Rebinding
 3. [x] P0-1 容器测试阻断
 4. [ ] P0-2 GUI 解耦
 5. [x] P1-1 边界守卫
