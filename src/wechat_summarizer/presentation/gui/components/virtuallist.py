@@ -15,37 +15,27 @@
 - 渲染超时保护
 """
 
-import contextlib
 import logging
 import time
 import tkinter as tk
+import tkinter.ttk as ttk
 from collections.abc import Callable
-from dataclasses import dataclass
-from tkinter import ttk
-from typing import Any, cast
+from typing import Any
+
+from .virtuallist_models import (
+    MAX_ITEM_HEIGHT,
+    MAX_ITEMS,
+    MIN_ITEM_HEIGHT,
+    RENDER_TIMEOUT_MS,
+    SCROLL_THROTTLE_MS,
+    VirtualItem,
+)
+from .virtuallist_render import VirtualListRenderMixin
 
 logger = logging.getLogger(__name__)
 
 
-# 安全限制
-MAX_ITEMS = 100000  # 最大数据条数
-MAX_ITEM_HEIGHT = 500  # 单项最大高度
-MIN_ITEM_HEIGHT = 20  # 单项最小高度
-RENDER_TIMEOUT_MS = 100  # 渲染超时
-SCROLL_THROTTLE_MS = 16  # 滚动节流 (60fps)
-
-
-@dataclass
-class VirtualItem:
-    """虚拟列表项"""
-
-    index: int
-    data: Any
-    height: int = 40
-    y_offset: int = 0
-
-
-class VirtualList(tk.Frame):
+class VirtualList(VirtualListRenderMixin, tk.Frame):
     """虚拟列表组件
 
     只渲染可见区域的列表项，支持大数据量(10万+)
@@ -212,138 +202,6 @@ class VirtualList(tk.Frame):
 
         return (start_index, end_index)
 
-    def _render_visible(self):
-        """渲染可见区域"""
-        start_time = time.time()
-
-        new_range = self._get_visible_range()
-        if new_range == self._visible_range and self._rendered_widgets:
-            return
-
-        _old_start, _old_end = self._visible_range
-        new_start, new_end = new_range
-
-        # 移除不再可见的项
-        for i in list(self._rendered_widgets.keys()):
-            if i < new_start or i >= new_end:
-                widget = self._rendered_widgets.pop(i)
-                widget.destroy()
-
-        # 渲染新可见的项
-        for i in range(new_start, new_end):
-            # 超时保护
-            if (time.time() - start_time) * 1000 > RENDER_TIMEOUT_MS:
-                logger.warning("渲染超时，延迟剩余项")
-                self.after(50, self._render_visible)
-                break
-
-            if i not in self._rendered_widgets and i in self._items:
-                self._render_item_at(i)
-
-        self._visible_range = new_range
-
-        # 检查是否需要加载更多
-        self._check_load_more()
-
-    def _render_item_at(self, index: int):
-        """渲染指定索引的项"""
-        if index >= len(self._data):
-            return
-
-        item = self._items.get(index)
-        if not item:
-            return
-
-        # 创建项容器
-        container = tk.Frame(self._content, bg=self._bg, height=item.height)
-
-        # 渲染内容
-        try:
-            widget = self._render_item(container, item.data, index)
-            if widget:
-                widget.pack(fill=tk.BOTH, expand=True)
-        except Exception as e:
-            logger.error(f"渲染项失败 ({index}): {e}")
-            return
-
-        # 定位
-        container.place(x=0, y=item.y_offset, relwidth=1.0, height=item.height)
-
-        # 绑定事件
-        self._bind_item_events(container, index)
-
-        self._rendered_widgets[index] = container
-
-    def _bind_item_events(self, widget: tk.Widget, index: int):
-        """绑定项事件"""
-
-        def on_enter(e):
-            self._hover_index = index
-            if index != self._selected_index:
-                cast(Any, widget).configure(bg="#252525")
-                for child in widget.winfo_children():
-                    with contextlib.suppress(tk.TclError):
-                        cast(Any, child).configure(bg="#252525")
-
-        def on_leave(e):
-            self._hover_index = None
-            if index != self._selected_index:
-                cast(Any, widget).configure(bg=self._bg)
-                for child in widget.winfo_children():
-                    with contextlib.suppress(tk.TclError):
-                        cast(Any, child).configure(bg=self._bg)
-
-        def on_click(e):
-            self._select_item(index)
-            if self._on_item_click:
-                try:
-                    self._on_item_click(index, self._data[index])
-                except Exception as err:
-                    logger.error(f"点击回调失败: {err}")
-
-        widget.bind("<Enter>", on_enter)
-        widget.bind("<Leave>", on_leave)
-        widget.bind("<Button-1>", on_click)
-
-        # 递归绑定子组件
-        for child in widget.winfo_children():
-            child.bind("<Enter>", on_enter)
-            child.bind("<Leave>", on_leave)
-            child.bind("<Button-1>", on_click)
-
-    def _select_item(self, index: int):
-        """选择项"""
-        # 取消之前选择
-        if self._selected_index is not None and self._selected_index in self._rendered_widgets:
-            old_widget = self._rendered_widgets[self._selected_index]
-            cast(Any, old_widget).configure(bg=self._bg)
-            for child in old_widget.winfo_children():
-                with contextlib.suppress(tk.TclError):
-                    cast(Any, child).configure(bg=self._bg)
-
-        # 设置新选择
-        self._selected_index = index
-        if index in self._rendered_widgets:
-            widget = self._rendered_widgets[index]
-            cast(Any, widget).configure(bg="#3b82f6")
-            for child in widget.winfo_children():
-                with contextlib.suppress(tk.TclError):
-                    cast(Any, child).configure(bg="#3b82f6")
-
-    def _default_render(self, container: tk.Frame, data: Any, index: int) -> tk.Widget:
-        """默认渲染函数"""
-        label = tk.Label(
-            container,
-            text=str(data),
-            bg=self._bg,
-            fg="#e5e5e5",
-            font=("Segoe UI", 12),
-            anchor="w",
-            padx=12,
-            pady=8,
-        )
-        return label
-
     def _on_scroll_command(self, *args):
         """滚动条命令"""
         self._canvas.yview(*args)
@@ -444,49 +302,12 @@ class VirtualList(tk.Frame):
         self._canvas.configure(scrollregion=(0, 0, 0, 0))
 
 
-# 使用示例
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("虚拟列表测试")
-    root.geometry("600x500")
-    root.configure(bg="#121212")
-
-    # 生成测试数据
-    test_data = [f"项目 {i + 1} - 这是一段测试文本内容" for i in range(10000)]
-
-    # 自定义渲染函数
-    def render_item(container, data, index):
-        frame = tk.Frame(container, bg="#1a1a1a")
-
-        tk.Label(
-            frame, text=f"#{index + 1}", bg="#1a1a1a", fg="#808080", font=("Segoe UI", 10), width=6
-        ).pack(side=tk.LEFT, padx=(12, 0))
-
-        tk.Label(
-            frame, text=data, bg="#1a1a1a", fg="#e5e5e5", font=("Segoe UI", 12), anchor="w"
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
-
-        return frame
-
-    def on_click(index, data):
-        print(f"点击: {index} - {data}")
-
-    # 创建虚拟列表
-    vlist = VirtualList(
-        root, item_height=40, render_item=render_item, on_item_click=on_click, bg="#1a1a1a"
-    )
-    vlist.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-
-    # 设置数据
-    vlist.set_data(test_data)
-
-    # 状态栏
-    tk.Label(
-        root,
-        text=f"共 {len(test_data)} 条数据 | 只渲染可见区域",
-        bg="#121212",
-        fg="#808080",
-        font=("Segoe UI", 10),
-    ).pack(side=tk.BOTTOM, pady=10)
-
-    root.mainloop()
+__all__ = [
+    "MAX_ITEMS",
+    "MAX_ITEM_HEIGHT",
+    "MIN_ITEM_HEIGHT",
+    "RENDER_TIMEOUT_MS",
+    "SCROLL_THROTTLE_MS",
+    "VirtualItem",
+    "VirtualList",
+]

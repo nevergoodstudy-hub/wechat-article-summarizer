@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
-from ...shared.utils import utc_now
+from ..time import utc_now
 
 
 class SummaryMethod(StrEnum):

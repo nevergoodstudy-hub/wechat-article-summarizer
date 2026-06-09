@@ -22,7 +22,7 @@ If applicable, add screenshots to help explain your problem.
 
 ## Environment
 - OS: Windows 10/11
-- Python version: 3.10/3.11/3.12
+- Python version: 3.11/3.12/3.13/3.14
 - App version: x.y.z
 
 ## Additional context

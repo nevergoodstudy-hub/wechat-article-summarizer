@@ -10,6 +10,7 @@ from loguru import logger
 from .ctk_compat import ctk
 from .dialogs.exit_confirm import ExitConfirmDialog
 from .styles.colors import ModernColors
+from .utils.i18n import tr
 from .utils.windows_integration import Windows11StyleHelper
 from .widgets.animation_helper import TransitionManager
 from .widgets.helpers import adjust_color_brightness
@@ -20,7 +21,7 @@ class GUINavigationMixin:
     """Encapsulates page switching, theme propagation, and exit handling."""
 
     def _play_welcome_animation(self: Any) -> None:
-        self._set_status("欢迎使用！", ModernColors.SUCCESS)
+        self._set_status(tr("欢迎使用！"), ModernColors.SUCCESS)
 
     def _on_window_close(self: Any) -> None:
         active_task = self._get_active_task_info()
@@ -28,8 +29,8 @@ class GUINavigationMixin:
         if active_task:
             dialog = ExitConfirmDialog(
                 self.root,
-                title="任务正在进行中",
-                message="当前有任务正在运行，确定要退出吗？",
+                title=tr("任务正在进行中"),
+                message=tr("当前有任务正在运行，确定要退出吗？"),
                 task_info=active_task,
                 icon="warning",
             )
@@ -105,12 +106,12 @@ class GUINavigationMixin:
 
         try:
             if hasattr(self, "_toast_manager") and self._toast_manager:
-                self._toast_manager.info("程序正在后台运行，双击托盘图标可恢复窗口")
+                self._toast_manager.info(tr("程序正在后台运行，双击托盘图标可恢复窗口"))
             else:
                 ToastNotification(
                     self.root,
-                    "程序已最小化",
-                    "程序正在后台运行\n双击托盘图标可恢复窗口",
+                    tr("程序已最小化"),
+                    tr("程序正在后台运行\n双击托盘图标可恢复窗口"),
                     "info",
                     duration_ms=3000,
                 )
@@ -262,7 +263,7 @@ class GUINavigationMixin:
 
     def _animate_status_change(self: Any, text: str) -> None:
         self._set_status(text, ModernColors.INFO)
-        self.root.after(1500, lambda: self._set_status("就绪", ModernColors.SUCCESS))
+        self.root.after(1500, lambda: self._set_status(tr("就绪"), ModernColors.SUCCESS))
 
     def _on_theme_change(self: Any, value: str) -> None:
         mode = "light" if value == "浅色" else "dark"
@@ -350,4 +351,4 @@ class GUINavigationMixin:
             self.settings_page.update_summarizer_status_display()
         self._refresh_summarizer_menus()
         logger.info("已刷新服务状态")
-        self._set_status("已刷新", ModernColors.SUCCESS)
+        self._set_status(tr("已刷新"), ModernColors.SUCCESS)

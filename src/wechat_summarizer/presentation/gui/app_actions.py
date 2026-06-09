@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import threading
-from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from .dialogs import (
+    confirm_export_without_configured_directory,
+    confirm_process_non_wechat_url,
+    show_duplicate_urls_removed,
+    show_empty_article_url_warning,
+    show_single_fetch_error,
+)
 from .styles.colors import ModernColors
+from .utils.i18n import tr
 from .widgets.helpers import ExporterInfo, SummarizerInfo
 
 if TYPE_CHECKING:
@@ -104,12 +111,12 @@ class GUIActionsMixin:
 
         if self._is_valid_wechat_url(url):
             self.url_status_label.configure(
-                text="✓ 有效的微信公众号链接",
+                text=f"✓ {tr('有效的微信公众号链接')}",
                 text_color=ModernColors.SUCCESS,
             )
         else:
             self.url_status_label.configure(
-                text="✗ 请输入有效的微信公众号文章链接",
+                text=f"✗ {tr('请输入有效的微信公众号文章链接')}",
                 text_color=ModernColors.ERROR,
             )
 
@@ -146,10 +153,7 @@ class GUIActionsMixin:
             self.batch_url_text.index("insert")
             self.batch_url_text.delete("1.0", "end")
             self.batch_url_text.insert("1.0", "\n".join(unique_urls))
-            messagebox.showinfo(
-                "已自动去重",
-                f"检测到 {duplicate_count} 个重复链接\n已自动删除重复项",
-            )
+            show_duplicate_urls_removed(duplicate_count)
             logger.info(f"已自动删除 {duplicate_count} 个重复链接")
 
         total_count = len(unique_urls)
@@ -157,37 +161,37 @@ class GUIActionsMixin:
 
         if total_count > 0 and invalid_count == 0:
             self.batch_url_status_label.configure(
-                text=f"✓ 共 {total_count} 个有效链接",
+                text=tr("✓ 共 {count} 个有效链接").format(count=total_count),
                 text_color=ModernColors.SUCCESS,
             )
             return None
 
         if total_count > 0 and invalid_count > 0:
             self.batch_url_status_label.configure(
-                text=f"✓ {total_count} 个有效 | ✗ {invalid_count} 个无效",
+                text=tr("✓ {valid} 个有效 | ✗ {invalid} 个无效").format(
+                    valid=total_count,
+                    invalid=invalid_count,
+                ),
                 text_color=ModernColors.WARNING,
             )
         else:
             self.batch_url_status_label.configure(
-                text="✗ 未找到有效的微信公众号链接",
+                text=f"✗ {tr('未找到有效的微信公众号链接')}",
                 text_color=ModernColors.ERROR,
             )
 
     def _on_fetch(self: Any) -> None:
         url = self.single_page.url_entry.get().strip()
         if not url:
-            messagebox.showwarning("提示", "请输入文章URL")
+            show_empty_article_url_warning()
             return None
 
-        if not self._is_valid_wechat_url(url) and not messagebox.askyesno(
-            "提示",
-            "输入的链接可能不是有效的微信公众号链接\n\n是否继续处理？",
-        ):
+        if not self._is_valid_wechat_url(url) and not confirm_process_non_wechat_url():
             return None
 
         self._single_processing_active = True
         self.single_page.fetch_btn.configure(state="disabled")
-        self._set_status("正在抓取...", ModernColors.INFO, pulse=True)
+        self._set_status(tr("正在抓取..."), ModernColors.INFO, pulse=True)
         logger.info(f"开始抓取: {url}")
         threading.Thread(target=self._fetch_article, args=(url,), daemon=True).start()
 
@@ -217,9 +221,13 @@ class GUIActionsMixin:
         self._single_processing_active = False
 
         single_page = self.single_page
-        single_page.title_label.configure(text=f"标题: {article.title}")
-        single_page.author_label.configure(text=f"公众号: {article.account_name or '未知'}")
-        single_page.word_count_label.configure(text=f"字数: {article.word_count}")
+        single_page.title_label.configure(text=tr("标题: {title}").format(title=article.title))
+        single_page.author_label.configure(
+            text=tr("公众号: {account}").format(account=article.account_name or tr("未知"))
+        )
+        single_page.word_count_label.configure(
+            text=tr("字数: {word_count}").format(word_count=article.word_count)
+        )
 
         single_page.preview_text.delete("1.0", "end")
         preview = (
@@ -239,13 +247,13 @@ class GUIActionsMixin:
 
         single_page.export_btn.configure(state="normal")
         single_page.fetch_btn.configure(state="normal")
-        self._set_status("处理完成", ModernColors.SUCCESS, pulse=False)
+        self._set_status(tr("处理完成"), ModernColors.SUCCESS, pulse=False)
 
     def _show_error(self: Any, message: str) -> None:
         self._single_processing_active = False
         self.single_page.fetch_btn.configure(state="normal")
-        self._set_status("处理失败", ModernColors.ERROR, pulse=False)
-        messagebox.showerror("错误", message)
+        self._set_status(tr("处理失败"), ModernColors.ERROR, pulse=False)
+        show_single_fetch_error(message)
 
     def _check_export_dir_configured(self: Any) -> bool:
         user_export_dir = self.user_prefs.export_dir
@@ -254,15 +262,7 @@ class GUIActionsMixin:
         )
 
         if not user_export_dir and not default_export_dir:
-            result = messagebox.askyesno(
-                "导出目录未设置",
-                "您尚未设置默认导出目录。\n\n"
-                "建议在「设置」页面配置导出目录，这样每次导出时会自动定位到该目录。\n\n"
-                "是否继续导出？\n"
-                "\n· 点击「是」继续导出（每次需手动选择位置）"
-                "\n· 点击「否」前往设置页配置导出目录",
-                icon="warning",
-            )
+            result = confirm_export_without_configured_directory()
 
             if not result:
                 self._show_page_animated(self.PAGE_SETTINGS)

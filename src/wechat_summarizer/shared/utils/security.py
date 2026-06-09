@@ -10,6 +10,8 @@ import base64
 import hashlib
 import os
 import secrets
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -19,6 +21,28 @@ from loguru import logger
 KEY_FILE_DIR = Path.home() / ".wechat_summarizer"
 KEY_FILE_NAME = ".keyfile"
 KEY_FILE_PATH = KEY_FILE_DIR / KEY_FILE_NAME
+SALT_FILE_NAME = ".salt"
+
+# PBKDF2-HMAC-SHA256 policy. OWASP currently recommends 600,000+ iterations for
+# PBKDF2-HMAC-SHA256 when PBKDF2 is required.
+PBKDF2_HASH_NAME = "sha256"
+PBKDF2_ITERATIONS = 600_000
+PBKDF2_KEY_LENGTH = 32
+MIN_SALT_BYTES = 16
+SALT_BYTES = 32
+LEGACY_CREDENTIAL_PREFIXES = ("DPAPI:", "XOR:")
+
+LegacyCredentialDecryptor = Callable[[str], str]
+
+
+@dataclass(frozen=True)
+class CredentialMigrationResult:
+    """Result of reading or migrating a stored credential."""
+
+    plaintext: str = field(repr=False)
+    encrypted_text: str = field(repr=False)
+    migrated: bool
+    legacy_format: str | None = None
 
 
 def _ensure_key_dir() -> None:
@@ -33,6 +57,45 @@ def _ensure_key_dir() -> None:
             ctypes.windll.kernel32.SetFileAttributesW(str(KEY_FILE_DIR), file_attribute_hidden)
         except Exception:
             pass  # 如果设置隐藏失败，不影响功能
+
+
+def _get_salt_path() -> Path:
+    """返回盐值文件路径"""
+    return KEY_FILE_DIR / SALT_FILE_NAME
+
+
+def _is_valid_salt(salt: bytes) -> bool:
+    """校验 PBKDF2 盐值长度"""
+    return len(salt) >= MIN_SALT_BYTES
+
+
+def _write_private_bytes(path: Path, data: bytes) -> None:
+    """以仅当前用户可读写的方式原子写入二进制数据"""
+    _ensure_key_dir()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.tmp-{secrets.token_hex(4)}")
+
+    try:
+        temp_path.write_bytes(data)
+        _set_file_permissions(temp_path)
+        temp_path.replace(path)
+        _set_file_permissions(path)
+    finally:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError as e:
+            logger.debug(f"清理临时安全文件失败 ({temp_path.name}): {e}")
+
+
+def _create_salt(salt_path: Path | None = None) -> bytes:
+    """创建并保存新的随机盐值"""
+    path = salt_path or _get_salt_path()
+    salt = secrets.token_bytes(SALT_BYTES)
+    try:
+        _write_private_bytes(path, salt)
+    except Exception as e:
+        logger.warning(f"无法保存盐值文件: {e}")
+    return salt
 
 
 def _generate_key_from_machine() -> bytes:
@@ -60,7 +123,13 @@ def _generate_key_from_machine() -> bytes:
     # 使用 PBKDF2 派生密钥
     # 使用随机盐值（存储在 salt 文件中），比固定盐更安全
     salt = _get_or_create_salt()
-    key = hashlib.pbkdf2_hmac("sha256", machine_id.encode(), salt, 600_000)
+    key = hashlib.pbkdf2_hmac(
+        PBKDF2_HASH_NAME,
+        machine_id.encode(),
+        salt,
+        PBKDF2_ITERATIONS,
+        dklen=PBKDF2_KEY_LENGTH,
+    )
     return base64.urlsafe_b64encode(key)
 
 
@@ -69,26 +138,19 @@ def _get_or_create_salt() -> bytes:
 
     盐值存储在密钥目录中，每台机器生成一次。
     """
-    salt_path = KEY_FILE_DIR / ".salt"
+    salt_path = _get_salt_path()
 
     if salt_path.exists():
         try:
             salt = salt_path.read_bytes()
-            if len(salt) >= 16:
+            if _is_valid_salt(salt):
                 return salt
-        except Exception:
-            pass
+            logger.warning("盐值文件长度不足，将重新生成随机盐值")
+        except Exception as e:
+            logger.warning(f"无法读取盐值文件，将重新生成: {e}")
 
     # 生成新的随机盐值
-    _ensure_key_dir()
-    salt = secrets.token_bytes(32)
-    try:
-        salt_path.write_bytes(salt)
-        _set_file_permissions(salt_path)
-    except Exception as e:
-        logger.warning(f"无法保存盐值文件: {e}")
-
-    return salt
+    return _create_salt(salt_path)
 
 
 def _get_or_create_key() -> bytes:
@@ -115,9 +177,7 @@ def _get_or_create_key() -> bytes:
 
     # 保存到文件
     try:
-        with open(KEY_FILE_PATH, "wb") as f:
-            f.write(key)
-        _set_file_permissions(KEY_FILE_PATH)
+        _write_private_bytes(KEY_FILE_PATH, key)
     except Exception as e:
         logger.error(f"无法保存密钥文件: {e}")
 
@@ -179,10 +239,13 @@ def decrypt_credential(encrypted_text: str) -> str:
     if not encrypted_text:
         return ""
 
+    if is_legacy_encrypted(encrypted_text):
+        raise ValueError("检测到旧版凭据格式，请先使用 migrate_legacy_credential() 迁移")
+
     try:
         key = _get_or_create_key()
         f = Fernet(key)
-        encrypted_bytes = base64.b64decode(encrypted_text)
+        encrypted_bytes = base64.b64decode(encrypted_text, validate=True)
         decrypted = f.decrypt(encrypted_bytes)
         return decrypted.decode()
     except InvalidToken as err:
@@ -191,6 +254,47 @@ def decrypt_credential(encrypted_text: str) -> str:
     except Exception as e:
         logger.error(f"解密凭证失败: {e}")
         raise
+
+
+def is_legacy_encrypted(text: str) -> bool:
+    """检查文本是否为旧版加密格式"""
+    return bool(text) and text.startswith(LEGACY_CREDENTIAL_PREFIXES)
+
+
+def migrate_legacy_credential(
+    encrypted_text: str,
+    legacy_decryptor: LegacyCredentialDecryptor | None = None,
+) -> CredentialMigrationResult:
+    """兼容读取并迁移旧版凭据格式。
+
+    旧 ``DPAPI:`` / ``XOR:`` 数据需要调用方提供历史解密器；本模块不会重新
+    引入已废弃的 XOR 混淆实现。迁移成功后返回新的 Fernet 加密文本，调用方
+    可将其写回原配置位置。
+    """
+    if not encrypted_text:
+        return CredentialMigrationResult(
+            plaintext="",
+            encrypted_text="",
+            migrated=False,
+        )
+
+    if not is_legacy_encrypted(encrypted_text):
+        return CredentialMigrationResult(
+            plaintext=decrypt_credential(encrypted_text),
+            encrypted_text=encrypted_text,
+            migrated=False,
+        )
+
+    if legacy_decryptor is None:
+        raise ValueError("检测到旧版凭据格式，需要提供 legacy_decryptor 完成迁移")
+
+    plaintext = legacy_decryptor(encrypted_text)
+    return CredentialMigrationResult(
+        plaintext=plaintext,
+        encrypted_text=encrypt_credential(plaintext),
+        migrated=True,
+        legacy_format=encrypted_text.split(":", 1)[0],
+    )
 
 
 def is_encrypted(text: str) -> bool:
@@ -205,10 +309,13 @@ def is_encrypted(text: str) -> bool:
     if not text:
         return False
 
+    if is_legacy_encrypted(text):
+        return True
+
     # 简单启发式检查：加密文本是base64编码的，通常很长且包含特定字符
     try:
         # 尝试base64解码
-        decoded = base64.b64decode(text)
+        decoded = base64.b64decode(text, validate=True)
         # 加密文本通常至少几十字节
         return len(decoded) >= 32 and len(text) > 40
     except Exception:

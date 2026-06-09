@@ -21,6 +21,9 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 from platformdirs import user_data_dir
 
+from .responses import authorization_error_response, rate_limit_error_response
+from .security_config import is_human_confirmation_valid
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -110,6 +113,11 @@ class AuditLogger:
         re.compile(r"^[a-zA-Z0-9+/]{40,}={0,2}$"),  # Base64-like long strings (potential secrets)
         re.compile(r"^[a-f0-9]{32,}$", re.IGNORECASE),  # Hex strings (API keys, hashes)
     ]
+    EMBEDDED_SECRET_PATTERNS = [
+        re.compile(r"sk-[a-zA-Z0-9]{20,}"),
+        re.compile(r"key-[a-zA-Z0-9]{20,}"),
+        re.compile(r"Bearer\s+[a-zA-Z0-9._-]{20,}", re.IGNORECASE),
+    ]
 
     def _sanitize_args(self, args: dict[str, Any]) -> dict[str, Any]:
         """清洗参数（移除敏感信息）
@@ -164,6 +172,7 @@ class AuditLogger:
             # Check if string looks like an API key pattern
             if self._looks_like_secret(value):
                 return "***REDACTED***"
+            value = self._redact_embedded_secrets(value)
             # Truncate long strings
             if len(value) > self.MAX_STRING_LENGTH:
                 return value[: self.MAX_STRING_LENGTH] + "...[truncated]"
@@ -187,6 +196,13 @@ class AuditLogger:
         """
         # Check against known API key patterns
         return any(pattern.match(value) for pattern in self.API_KEY_PATTERNS)
+
+    def _redact_embedded_secrets(self, value: str) -> str:
+        """Redact token-looking substrings without dropping safe surrounding context."""
+        redacted = value
+        for pattern in self.EMBEDDED_SECRET_PATTERNS:
+            redacted = pattern.sub("***REDACTED***", redacted)
+        return redacted
 
     def get_recent_logs(self, limit: int = 100) -> list[dict[str, Any]]:
         """获取最近的审计日志
@@ -406,11 +422,22 @@ def reset_security_manager() -> None:
     _security_manager = None
 
 
-def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
+def _extract_human_confirmation(kwargs: dict[str, Any]) -> bool:
+    """Read and remove supported HITL confirmation flags from tool arguments."""
+    confirmed = kwargs.pop("human_confirmed", kwargs.pop("confirmed", False))
+    return bool(confirmed)
+
+
+def require_permission(
+    permission: PermissionLevel,
+    *,
+    confirmation_operation: str | None = None,
+) -> Callable[[F], F]:
     """工具权限装饰器
 
     Args:
         permission: 需要的权限级别
+        confirmation_operation: 需要人工确认的危险操作类型，默认使用权限名
 
     Returns:
         装饰器函数
@@ -419,11 +446,27 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            call_kwargs = dict(kwargs)
             manager = get_security_manager()
             tool_name = func.__name__
+            operation = confirmation_operation or permission.value
 
             # 注册工具权限
             manager.register_tool_permission(tool_name, permission)
+
+            human_confirmed = _extract_human_confirmation(call_kwargs)
+            audit_args = {**call_kwargs, "human_confirmed": human_confirmed}
+            if not is_human_confirmation_valid(operation, confirmed=human_confirmed):
+                error_msg = f"Human confirmation required for {operation} operation"
+                logger.warning(f"{tool_name} 缺少危险操作人工确认")
+                manager.log_tool_call(
+                    tool_name=tool_name,
+                    arguments=audit_args,
+                    result="error",
+                    execution_time_ms=0.0,
+                    error_message=error_msg,
+                )
+                return authorization_error_response(error_msg)
 
             # 检查速率限制
             allowed, wait_time = manager.check_rate_limit(tool_name)
@@ -432,23 +475,23 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
                 logger.warning(f"{tool_name} 触发速率限制")
                 manager.log_tool_call(
                     tool_name=tool_name,
-                    arguments=kwargs,
+                    arguments=audit_args,
                     result="error",
                     execution_time_ms=0.0,
                     error_message=error_msg,
                 )
-                return {"success": False, "error": error_msg}
+                return rate_limit_error_response(error_msg)
 
             # 执行工具
             start_time = time.time()
             try:
-                result = await func(*args, **kwargs)
+                result = await func(*args, **call_kwargs)
                 execution_time_ms = (time.time() - start_time) * 1000
 
                 # 记录成功调用
                 manager.log_tool_call(
                     tool_name=tool_name,
-                    arguments=kwargs,
+                    arguments=audit_args,
                     result="success",
                     execution_time_ms=execution_time_ms,
                 )
@@ -465,7 +508,7 @@ def require_permission(permission: PermissionLevel) -> Callable[[F], F]:
 
                 manager.log_tool_call(
                     tool_name=tool_name,
-                    arguments=kwargs,
+                    arguments=audit_args,
                     result="error",
                     execution_time_ms=execution_time_ms,
                     error_message=safe_error,

@@ -10,19 +10,35 @@ repo_url: "https://github.com/wechat-summarizer/wechat-article-summarizer"
 
 # Navigation
 nav:
-  - Home: index.md
+  - Home: README.md
   - Getting Started:
-      - Quick Start: getting-started.md
-      - Installation: installation.md
+      - Quick Start: GETTING_STARTED.md
+      - Project Structure: PROJECT_STRUCTURE.md
+      - Windows Build: WINDOWS_BUILD.md
   - User Guide:
-      - GUI Usage: gui-usage.md
-      - CLI Usage: cli-usage.md
-      - Configuration: configuration.md
+      - GUI Refactoring: GUI_REFACTORING.md
+      - GUI Animation Optimization: GUI_Animation_Optimization.md
   - Development:
-      - Architecture: architecture.md
-      - Contributing: contributing.md
-      - API Reference: api/
-  - Release Notes: changelog.md
+      - Architecture: ARCHITECTURE.md
+      - Contributing: CONTRIBUTING.md
+      - Iteration Roadmap: ITERATION_ROADMAP.md
+      - Migration Index: MIGRATION_INDEX.md
+  - Plans:
+      - Architecture Renovation: plans/ARCHITECTURE_RENOVATION_PLAN.md
+      - Architecture Renewal Checklist: plans/ARCHITECTURE_RENEWAL_CHECKLIST.md
+      - Deep Renewal Feasibility: plans/DEEP_RENEWAL_FEASIBILITY_PLAN.md
+      - Core Scope View: plans/CORE_SCOPE_VIEW.md
+      - Improvement Plan: plans/IMPROVEMENT_PLAN.md
+      - Repo Hygiene Cycle: plans/REPO_HYGIENE_CYCLE.md
+  - Audits:
+      - Security Audit: audits/SECURITY_AUDIT.md
+      - Test Report: audits/TEST_REPORT.md
+      - Deep Audit Issues: audits/DEEP_AUDIT_ISSUES.md
+      - Deep Audit Improvements: audits/DEEP_AUDIT_IMPROVEMENTS.md
+  - Superpowers:
+      - Deep Renewal Execution Design: superpowers/specs/2026-04-03-deep-renewal-execution-design.md
+      - Deep Renewal Implementation Plan: superpowers/specs/2026-04-03-deep-renewal-implementation-plan.md
+      - Vertical Slice Refactor Design: superpowers/specs/2026-04-13-modular-monolith-vertical-slice-refactor-design.md
 
 # Theme
 theme:
@@ -74,8 +90,10 @@ plugins:
             show_source: true
             show_root_heading: true
             show_category_heading: true
-      watch:
-        - src/wechat_summarizer
+
+validation:
+  nav:
+    omitted_files: ignore
 
 # Footer
 copyright: "Copyright © 2024-2026 WeChatSummarizer Team"

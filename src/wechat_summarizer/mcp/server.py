@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from .resources import register_article_resources
+from .responses import authorization_error_response
 from .toolsets import register_analysis_tools, register_article_tools
 
 if TYPE_CHECKING:
@@ -43,13 +44,19 @@ def _get_mcp() -> FastMCP:
 
 def _register_tools(mcp_instance: FastMCP) -> None:
     """Register all MCP toolsets."""
-    register_article_tools(mcp_instance)
-    register_analysis_tools(mcp_instance)
+    from ..infrastructure.config import get_container
+
+    container = get_container()
+    register_article_tools(mcp_instance, lambda: container.article_workflow_service)
+    register_analysis_tools(mcp_instance, lambda: container.analysis_workflow_service)
 
 
 def _register_resources(mcp_instance: FastMCP) -> None:
     """Register all MCP resources."""
-    register_article_resources(mcp_instance)
+    from ..infrastructure.config import get_container
+
+    container = get_container()
+    register_article_resources(mcp_instance, lambda: container.article_workflow_service)
 
 
 def _ensure_mcp() -> FastMCP:
@@ -76,7 +83,7 @@ def build_http_app(mcp_instance: FastMCP, auth_token: str | None = None) -> Star
                 request_token = request.headers.get("x-mcp-token")
                 if request_token != auth_token:
                     return JSONResponse(
-                        {"success": False, "error": "Unauthorized"},
+                        authorization_error_response(),
                         status_code=401,
                     )
             return await call_next(request)
@@ -108,8 +115,11 @@ def run_mcp_server(
     if is_remote_host and not allow_remote:
         raise ValueError("远程监听已被禁止。若确需远程访问，请显式传入 --allow-remote。")
 
+    if is_remote_host and not auth_token:
+        raise ValueError("远程 MCP HTTP 监听必须配置认证 token。")
+
     if is_remote_host:
-        logger.warning("MCP HTTP 正在远程监听，请确保网络隔离与鉴权配置。")
+        logger.warning("MCP HTTP 正在远程监听，请确保网络隔离配置。")
 
     import uvicorn
 

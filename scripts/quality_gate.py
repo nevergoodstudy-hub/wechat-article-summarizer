@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+PIP_AUDIT_CACHE = ROOT / ".cache" / "pip-audit"
 
 
 class GateError(RuntimeError):
@@ -18,24 +21,47 @@ class GateError(RuntimeError):
 def run(cmd: list[str], *, allow_nonzero: set[int] | None = None) -> int:
     allow_nonzero = allow_nonzero or set()
     print(f"\n[quality-gate] >>> {' '.join(cmd)}")
-    result = subprocess.run(cmd, cwd=ROOT, check=False)
+    env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        str(SRC) if not existing_pythonpath else os.pathsep.join([str(SRC), existing_pythonpath])
+    )
+    result = subprocess.run(cmd, cwd=ROOT, env=env, check=False)
     if result.returncode != 0 and result.returncode not in allow_nonzero:
         raise GateError(f"Command failed ({result.returncode}): {' '.join(cmd)}")
     return result.returncode
 
 
 def run_lint() -> None:
-    run(["ruff", "check", "src/", "tests/"])
-    run(["ruff", "format", "--check", "src/", "tests/"])
+    run([sys.executable, "-m", "ruff", "check", "src/", "tests/"])
+    run([sys.executable, "-m", "ruff", "format", "--check", "src/", "tests/"])
 
 
 def run_mypy() -> None:
-    run(["mypy", "src/wechat_summarizer", "--ignore-missing-imports"])
+    run([sys.executable, "-m", "mypy", "src/wechat_summarizer", "--ignore-missing-imports"])
+
+
+def run_architecture() -> None:
+    run([sys.executable, "scripts/check_architecture_boundaries.py"])
+    run([sys.executable, "scripts/check_domain_boundary.py"])
+    run([sys.executable, "scripts/check_http_fetch_security.py"])
+    run([sys.executable, "scripts/check_test_filesystem_isolation.py"])
+    run([sys.executable, "scripts/check_pytest_markers.py"])
+    run([sys.executable, "scripts/check_ci_python_matrix.py"])
+    run([sys.executable, "scripts/check_mypy_core_strictness.py"])
+    run([sys.executable, "scripts/check_adr_docs.py"])
+    run([sys.executable, "scripts/check_gui_i18n_hardcoded.py"])
+
+
+def run_test_executability() -> None:
+    run([sys.executable, "scripts/check_test_executability.py", "--min-ratio", "0.90"])
 
 
 def run_tests() -> None:
     run(
         [
+            sys.executable,
+            "-m",
             "pytest",
             "tests/",
             "--cov=src/wechat_summarizer",
@@ -48,8 +74,21 @@ def run_tests() -> None:
 
 
 def run_security() -> None:
-    run(["pip-audit", "--desc", "on"])
-    run(["bandit", "-r", "src/wechat_summarizer", "-ll"])
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pip_audit",
+            ".",
+            "--desc",
+            "on",
+            "--progress-spinner",
+            "off",
+            "--cache-dir",
+            str(PIP_AUDIT_CACHE),
+        ]
+    )
+    run([sys.executable, "-m", "bandit", "-r", "src/wechat_summarizer", "-ll"])
 
 
 def run_security_smoke() -> None:
@@ -59,16 +98,66 @@ def run_security_smoke() -> None:
     for now to keep rollout incremental while still enabling a unified entry.
     """
 
-    rc = run(["pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5})
+    rc = run(
+        [sys.executable, "-m", "pytest", "tests/", "-q", "-k", "ssrf or mcp"], allow_nonzero={5}
+    )
     if rc == 5:
         print("[quality-gate] No SSRF/MCP smoke tests collected yet; treated as pass.")
+
+
+def run_phase_a() -> None:
+    """Run the Phase A acceptance pack for core, MCP security, and GUI startup."""
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_use_cases.py",
+            "tests/test_cli.py::TestFetchCommand",
+            "tests/test_cli.py::TestBatchCommand",
+            "tests/test_entrypoints.py",
+            "-q",
+        ]
+    )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_mcp.py",
+            "tests/test_mcp_input_validator.py",
+            "tests/test_mcp_toolsets.py",
+            "tests/test_mcp_server_composition.py",
+            "tests/test_security_config.py",
+            "-q",
+        ]
+    )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_gui_app_composition.py",
+            "tests/test_gui_i18n_hardcoded_guard.py",
+            "-q",
+        ]
+    )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Unified quality gate runner")
     parser.add_argument(
         "--mode",
-        choices=["all", "lint", "mypy", "test", "security", "security-smoke"],
+        choices=[
+            "all",
+            "lint",
+            "mypy",
+            "architecture",
+            "test",
+            "security",
+            "security-smoke",
+            "phase-a",
+        ],
         default="all",
         help="Which gate to run",
     )
@@ -83,17 +172,25 @@ def main() -> int:
             run_lint()
         elif args.mode == "mypy":
             run_mypy()
+        elif args.mode == "architecture":
+            run_architecture()
+            run_test_executability()
         elif args.mode == "test":
             run_tests()
         elif args.mode == "security":
             run_security()
         elif args.mode == "security-smoke":
             run_security_smoke()
+        elif args.mode == "phase-a":
+            run_phase_a()
         else:
             run_lint()
+            run_architecture()
+            run_test_executability()
             run_mypy()
             run_tests()
             run_security_smoke()
+            run_phase_a()
         print("\n[quality-gate] PASS")
         return 0
     except GateError as exc:

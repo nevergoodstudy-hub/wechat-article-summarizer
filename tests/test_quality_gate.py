@@ -48,3 +48,61 @@ def test_quality_gate_fail_message_is_ascii(capsys) -> None:
     output = capsys.readouterr().out
     assert "[quality-gate] FAIL: boom" in output
     assert "❌" not in output
+
+
+def test_quality_gate_phase_a_runs_acceptance_pack() -> None:
+    """Phase A mode should remain a single acceptance entrypoint."""
+    quality_gate = _load_quality_gate_module()
+    calls: list[str] = []
+
+    with (
+        patch.object(
+            quality_gate,
+            "parse_args",
+            return_value=argparse.Namespace(mode="phase-a"),
+        ),
+        patch.object(quality_gate, "run_phase_a", side_effect=lambda: calls.append("phase-a")),
+    ):
+        assert quality_gate.main() == 0
+
+    assert calls == ["phase-a"]
+
+
+def test_quality_gate_all_includes_phase_a_acceptance() -> None:
+    """The default full gate should keep Phase A acceptance in the chain."""
+    quality_gate = _load_quality_gate_module()
+    calls: list[str] = []
+
+    with (
+        patch.object(quality_gate, "parse_args", return_value=argparse.Namespace(mode="all")),
+        patch.object(quality_gate, "run_lint", side_effect=lambda: calls.append("lint")),
+        patch.object(
+            quality_gate,
+            "run_architecture",
+            side_effect=lambda: calls.append("architecture"),
+        ),
+        patch.object(
+            quality_gate,
+            "run_test_executability",
+            side_effect=lambda: calls.append("test-executability"),
+        ),
+        patch.object(quality_gate, "run_mypy", side_effect=lambda: calls.append("mypy")),
+        patch.object(quality_gate, "run_tests", side_effect=lambda: calls.append("test")),
+        patch.object(
+            quality_gate,
+            "run_security_smoke",
+            side_effect=lambda: calls.append("security-smoke"),
+        ),
+        patch.object(quality_gate, "run_phase_a", side_effect=lambda: calls.append("phase-a")),
+    ):
+        assert quality_gate.main() == 0
+
+    assert calls == [
+        "lint",
+        "architecture",
+        "test-executability",
+        "mypy",
+        "test",
+        "security-smoke",
+        "phase-a",
+    ]

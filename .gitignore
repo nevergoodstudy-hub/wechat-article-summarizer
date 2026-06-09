@@ -42,6 +42,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.cache/
 nosetests.xml
 coverage.xml
 *.cover
@@ -130,6 +131,7 @@ security_audit.txt
 
 # Build artifacts
 build/wechat_summarizer/
+site/
 
 # Backup directories
 backup_*/

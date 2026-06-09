@@ -7,7 +7,7 @@
 **项目名称**: 微信公众号文章总结器 (WeChat Article Summarizer)  
 **版本**: v2.4.0  
 **架构**: DDD + 六边形架构（Clean Architecture）  
-**语言**: Python 3.10+  
+**语言**: Python 3.11+  
 **框架**: CustomTkinter (GUI), Click (CLI), FastMCP (MCP Server)
 
 **核心功能**:

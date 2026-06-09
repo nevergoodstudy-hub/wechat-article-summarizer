@@ -10,12 +10,12 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
+from wechat_summarizer.mcp.responses import AUTHORIZATION_ERROR_CODE, RATE_LIMIT_ERROR_CODE
 from wechat_summarizer.mcp.security import (
     AuditEntry,
     AuditLogger,
@@ -59,21 +59,27 @@ class TestRateLimiter:
     def test_refill_restores_tokens(self):
         """等待后令牌自动补充"""
         limiter = RateLimiter(max_tokens=10, refill_rate=1000.0)
-        # 耗尽所有令牌
-        limiter.consume(10)
-        assert limiter.consume(1) is False
+        base_time = 1_000.0
+        limiter._last_refill = base_time
 
-        # 等待一小段时间让令牌补充
-        time.sleep(0.02)
-        assert limiter.consume(1) is True
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time):
+            assert limiter.consume(10) is True
+            assert limiter.consume(1) is False
+
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time + 0.02):
+            assert limiter.consume(1) is True
 
     def test_refill_does_not_exceed_max(self):
         """补充不会超过桶容量"""
         limiter = RateLimiter(max_tokens=5, refill_rate=1000.0)
-        time.sleep(0.05)
-        # 即使等待了很久，也只能消费 max_tokens
-        assert limiter.consume(5) is True
-        assert limiter.consume(1) is False
+        base_time = 1_000.0
+        limiter._last_refill = base_time
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time + 0.05):
+            # 即使等待了很久，也只能消费 max_tokens
+            assert limiter.consume(5) is True
+
+        with patch("wechat_summarizer.mcp.security.time.time", return_value=base_time + 0.05):
+            assert limiter.consume(1) is False
 
     def test_get_wait_time_zero_when_available(self):
         """有令牌时等待时间为 0"""
@@ -221,6 +227,39 @@ class TestAuditLogger:
         assert sanitized["cookie"] == "***REDACTED***"
         assert sanitized["url"] == "https://example.com"
 
+    def test_sanitize_redacts_nested_and_embedded_secrets(self, tmp_path: Path):
+        """参数清洗递归处理嵌套对象和嵌入式令牌"""
+        audit = AuditLogger(log_dir=tmp_path)
+        api_key = "sk-" + "a" * 24
+        bearer_token = "Bearer " + "b" * 24
+        sanitized = audit._sanitize_args(
+            {
+                "messages": [
+                    {
+                        "content": f"failed with {api_key}",
+                        "metadata": {"authorization": bearer_token},
+                    }
+                ],
+                "headers": {"x-request-id": "req-123"},
+            }
+        )
+
+        message = sanitized["messages"][0]
+        assert message["content"] == "failed with ***REDACTED***"
+        assert message["metadata"]["authorization"] == "***REDACTED***"
+        assert sanitized["headers"]["x-request-id"] == "req-123"
+        assert api_key not in str(sanitized)
+        assert bearer_token not in str(sanitized)
+
+    def test_sanitize_truncates_long_strings(self, tmp_path: Path):
+        """参数清洗会截断超长字符串，避免审计日志膨胀"""
+        audit = AuditLogger(log_dir=tmp_path)
+        long_value = "safe text " * 30
+
+        sanitized = audit._sanitize_args({"content": long_value})
+
+        assert sanitized["content"] == long_value[: audit.MAX_STRING_LENGTH] + "...[truncated]"
+
     def test_log_redacts_sensitive_error_message(self, tmp_path: Path):
         """写入审计日志时会脱敏错误消息中的敏感值"""
         audit = AuditLogger(log_dir=tmp_path)
@@ -335,6 +374,54 @@ class TestRequirePermission:
         mgr = get_security_manager()
         assert mgr.tool_permissions["write_tool"] == PermissionLevel.WRITE
 
+    def test_decorator_blocks_dangerous_operation_without_human_confirmation(self):
+        """危险操作缺少人工确认时直接返回授权错误。"""
+
+        @require_permission(PermissionLevel.WRITE)
+        async def write_tool() -> dict:
+            return {"done": True}
+
+        result = asyncio.run(write_tool())
+
+        assert result["success"] is False
+        assert result["isError"] is True
+        assert result["error_code"] == AUTHORIZATION_ERROR_CODE
+        assert result["error_type"] == "authorization"
+        assert "Human confirmation required" in result["error"]
+
+    def test_decorator_allows_dangerous_operation_with_human_confirmation(self):
+        """危险操作带人工确认后可以执行，确认标志不传入业务函数。"""
+
+        @require_permission(PermissionLevel.WRITE)
+        async def write_tool(payload: str) -> dict:
+            return {"done": True, "payload": payload}
+
+        result = asyncio.run(write_tool(payload="ok", human_confirmed=True))
+
+        assert result == {"done": True, "payload": "ok"}
+
+    def test_decorator_accepts_legacy_confirmed_alias(self):
+        """confirmed 兼容别名也可作为人工确认开关。"""
+
+        @require_permission(PermissionLevel.ADMIN, confirmation_operation="delete")
+        async def admin_delete_tool() -> dict:
+            return {"deleted": True}
+
+        result = asyncio.run(admin_delete_tool(confirmed=True))
+
+        assert result == {"deleted": True}
+
+    def test_decorator_does_not_require_confirmation_for_read_tools(self):
+        """只读工具不需要人工确认。"""
+
+        @require_permission(PermissionLevel.READ)
+        async def read_tool() -> dict:
+            return {"read": True}
+
+        result = asyncio.run(read_tool())
+
+        assert result == {"read": True}
+
     def test_decorator_rate_limited(self):
         """装饰器集成速率限制"""
         # 配置一个极小的令牌桶
@@ -359,6 +446,9 @@ class TestRequirePermission:
             # 第二次应被速率限制
             r2 = asyncio.run(limited_tool())
             assert r2.get("success") is False
+            assert r2.get("isError") is True
+            assert r2.get("error_code") == RATE_LIMIT_ERROR_CODE
+            assert r2.get("error_type") == "rate_limit"
             assert "速率限制" in r2.get("error", "")
 
     def test_decorator_propagates_exceptions(self):

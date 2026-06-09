@@ -1,8 +1,12 @@
 """来源实体"""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
+
+from ..time import utc_now
 
 
 class SourceType(StrEnum):
@@ -32,7 +36,7 @@ class ArticleSource:
     feed_title: str | None = None
 
     # 抓取信息
-    scraped_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    scraped_at: datetime = field(default_factory=utc_now)
     scraper_name: str = "unknown"
 
     @classmethod

@@ -13,7 +13,15 @@ import re
 from pathlib import PurePosixPath, PureWindowsPath
 from urllib.parse import urlparse
 
-from .security_config import MCP_SECURITY_CONFIG
+from .security_config import (
+    MCP_SECURITY_CONFIG,
+    get_allowed_hosts,
+    get_max_aspect_length,
+    get_max_aspects,
+    get_max_batch_urls,
+    get_max_summary_length,
+    is_host_allowed,
+)
 
 
 class MCPValidationError(Exception):
@@ -121,6 +129,13 @@ class MCPInputValidator:
         if any(ch in invalid_host_chars for ch in netloc):
             raise MCPValidationError("Invalid character in URL hostname")
 
+        if not is_host_allowed(parsed.hostname):
+            allowed_hosts = ", ".join(sorted(get_allowed_hosts()))
+            raise MCPValidationError(
+                f"URL host not allowed by MCP network policy: {parsed.hostname!r}. "
+                f"Allowed hosts: {allowed_hosts}"
+            )
+
         # SSRF 防护（延迟导入避免循环依赖）
         from ..shared.utils.ssrf_protection import SSRFBlockedError, SSRFSafeTransport
 
@@ -132,7 +147,7 @@ class MCPInputValidator:
         return url
 
     @classmethod
-    def validate_urls(cls, urls: list[str], max_count: int = 10) -> list[str]:
+    def validate_urls(cls, urls: list[str], max_count: int | None = None) -> list[str]:
         """批量验证 URL 列表
 
         Args:
@@ -144,6 +159,9 @@ class MCPInputValidator:
         """
         if not isinstance(urls, list):
             raise MCPValidationError("URLs must be a list")
+
+        if max_count is None:
+            max_count = get_max_batch_urls()
 
         if len(urls) > max_count:
             raise MCPValidationError(f"Too many URLs: {len(urls)} > {max_count}")
@@ -261,7 +279,7 @@ class MCPInputValidator:
         return method
 
     @classmethod
-    def validate_max_length(cls, value: int, lower: int = 50, upper: int = 10_000) -> int:
+    def validate_max_length(cls, value: int, lower: int = 50, upper: int | None = None) -> int:
         """验证长度参数在合理范围内
 
         Args:
@@ -272,6 +290,9 @@ class MCPInputValidator:
         Returns:
             验证通过的长度值
         """
+        if upper is None:
+            upper = get_max_summary_length()
+
         if not isinstance(value, int) or value < lower or value > upper:
             raise MCPValidationError(
                 f"max_length must be integer in [{lower}, {upper}], got {value}"
@@ -317,7 +338,7 @@ class MCPInputValidator:
         return value
 
     @classmethod
-    def validate_aspects(cls, aspects: list[str] | None, max_count: int = 10) -> list[str]:
+    def validate_aspects(cls, aspects: list[str] | None, max_count: int | None = None) -> list[str]:
         """验证对比维度列表
 
         Args:
@@ -333,7 +354,10 @@ class MCPInputValidator:
         if not isinstance(aspects, list):
             raise MCPValidationError("Aspects must be a list")
 
+        if max_count is None:
+            max_count = get_max_aspects()
+
         if len(aspects) > max_count:
             raise MCPValidationError(f"Too many aspects: {len(aspects)} > {max_count}")
 
-        return [cls.sanitize_text(a, max_length=100) for a in aspects]
+        return [cls.sanitize_text(a, max_length=get_max_aspect_length()) for a in aspects]

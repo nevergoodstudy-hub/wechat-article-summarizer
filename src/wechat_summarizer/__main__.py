@@ -36,13 +36,13 @@ def main() -> None:
     # 兼容：显式 cli 前缀
     if mode_or_cmd == "cli":
         sys.argv.pop(1)
-        from .presentation.cli import run_cli
+        from .bootstrap.cli import run_cli
 
         run_cli()
         return
 
     # 其他情况：按 CLI 命令解析（推荐）
-    from .presentation.cli import run_cli
+    from .bootstrap.cli import run_cli
 
     run_cli()
 
@@ -50,7 +50,7 @@ def main() -> None:
 def _run_gui_or_exit() -> None:
     """启动 GUI；失败时给出 CLI 退路。"""
     try:
-        from .presentation.gui import run_gui
+        from .bootstrap.gui import run_gui
 
         run_gui()
     except ImportError as e:

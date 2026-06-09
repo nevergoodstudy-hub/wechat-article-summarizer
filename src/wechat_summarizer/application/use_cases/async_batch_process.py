@@ -1,12 +1,10 @@
 """异步批量处理用例
 
-使用 asyncio.Semaphore 限制最大并发数，防止触发限流。
-使用 asyncio.TaskGroup 批量执行异步任务（Python 3.11+ 结构化并发）。
+使用结构化并发工具和 Semaphore 限制最大并发数，防止触发限流。
 """
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -14,7 +12,9 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from ...domain.entities import Article
+from ...shared.utils.structured_concurrency import run_limited_tasks
 from ..ports.inbound import BatchProgress
+from .performance_sampling import PerformanceSample, PerformanceSampler
 
 if TYPE_CHECKING:
     from ...domain.value_objects import ArticleURL
@@ -28,6 +28,7 @@ class AsyncBatchResult:
 
     articles: list[Article] = field(default_factory=list)
     errors: list[tuple[str, str]] = field(default_factory=list)  # (url, error_message)
+    performance_sample: PerformanceSample | None = None
 
     @property
     def success_count(self) -> int:
@@ -94,81 +95,86 @@ class AsyncBatchProcessUseCase:
         """
         from ...domain.value_objects import ArticleURL
 
-        progress = BatchProgress(total=len(urls))
         result = AsyncBatchResult()
-        semaphore = asyncio.Semaphore(self._max_concurrent)
+        progress = BatchProgress(total=len(urls))
 
         async def process_one(url: str) -> Article | None:
-            """处理单个 URL（带信号量限制）"""
-            async with semaphore:
-                try:
-                    # 解析 URL
-                    article_url = ArticleURL.from_string(url)
-                    normalized_url = str(article_url)
+            """处理单个 URL。"""
+            try:
+                # 解析 URL
+                article_url = ArticleURL.from_string(url)
+                normalized_url = str(article_url)
 
-                    # 检查缓存
-                    if self._storage is not None:
-                        try:
-                            cached = self._storage.get_by_url(normalized_url)
-                            if cached is not None:
-                                logger.info(f"缓存命中: {normalized_url}")
-                                progress.mark_success(url)
-                                if on_progress:
-                                    on_progress(progress)
-                                return cached
-                        except Exception as e:
-                            logger.warning(f"缓存读取失败，忽略: {e}")
+                # 检查缓存
+                if self._storage is not None:
+                    try:
+                        cached = self._storage.get_by_url(normalized_url)
+                        if cached is not None:
+                            logger.info(f"缓存命中: {normalized_url}")
+                            progress.mark_success(url)
+                            if on_progress:
+                                on_progress(progress)
+                            return cached
+                    except Exception as e:
+                        logger.warning(f"缓存读取失败，忽略: {e}")
 
-                    # 选择并使用抓取器
-                    article = await self._scrape_with_fallback(article_url)
+                # 选择并使用抓取器
+                article = await self._scrape_with_fallback(article_url)
 
-                    if article is None:
-                        raise Exception(f"没有可用的抓取器能处理URL: {url}")
+                if article is None:
+                    raise Exception(f"没有可用的抓取器能处理URL: {url}")
 
-                    # 生成摘要（同步，因为大多数 LLM 调用是同步的）
-                    if summarize and article.content:
-                        article = await self._summarize_article(article, method)
+                # 生成摘要（同步，因为大多数 LLM 调用是同步的）
+                if summarize and article.content:
+                    article = await self._summarize_article(article, method)
 
-                    # 保存缓存
-                    if self._storage is not None:
-                        try:
-                            self._storage.save(article)
-                        except Exception as e:
-                            logger.warning(f"缓存写入失败，忽略: {e}")
+                # 保存缓存
+                if self._storage is not None:
+                    try:
+                        self._storage.save(article)
+                    except Exception as e:
+                        logger.warning(f"缓存写入失败，忽略: {e}")
 
-                    progress.mark_success(url)
-                    if on_progress:
-                        on_progress(progress)
+                progress.mark_success(url)
+                if on_progress:
+                    on_progress(progress)
 
-                    return article
+                return article
 
-                except Exception as e:
-                    logger.error(f"处理失败 {url}: {e}")
-                    progress.mark_failed(url, str(e))
-                    if on_progress:
-                        on_progress(progress)
-                    return None
+            except Exception as e:
+                logger.error(f"处理失败 {url}: {e}")
+                progress.mark_failed(url, str(e))
+                if on_progress:
+                    on_progress(progress)
+                return None
 
-        # 使用 TaskGroup 并发执行所有任务（结构化并发）
-        # process_one 内部已捕获异常并返回 None，所以 TaskGroup 不会因单任务失败而取消全部
-        task_results: list[Article | None] = []
-        async with asyncio.TaskGroup() as tg:
-
-            async def _collect(url: str) -> None:
-                task_results.append(await process_one(url))
-
-            for url in urls:
-                tg.create_task(_collect(url))
+        with PerformanceSampler(
+            "async_batch_process_urls",
+            metadata={"url_count": len(urls), "max_concurrent": self._max_concurrent},
+        ) as sampler:
+            task_results = await run_limited_tasks(urls, self._max_concurrent, process_one)
 
         # 收集结果
         for res in task_results:
             if res is not None:
                 result.articles.append(res)
-            # res 为 None 的情况已经在 process_one 中记录了
+
+        result.errors.extend(progress.errors)
+        result.performance_sample = PerformanceSample(
+            name=sampler.sample.name,
+            duration_ms=sampler.sample.duration_ms,
+            peak_memory_kb=sampler.sample.peak_memory_kb,
+            metadata={
+                **sampler.sample.metadata,
+                "success_count": result.success_count,
+                "failed_count": result.failed_count,
+            },
+        )
 
         logger.info(
-            f"异步批量处理完成: 成功 {result.success_count}/{result.total}, "
-            f"失败 {result.failed_count}"
+            f"异步批量处理完成: 成功 {result.success_count}/{len(urls)}, "
+            f"失败 {result.failed_count}, 用时 {result.performance_sample.duration_ms:.1f}ms, "
+            f"峰值内存 {result.performance_sample.peak_memory_kb:.1f}KB"
         )
 
         return result
@@ -206,6 +212,8 @@ class AsyncBatchProcessUseCase:
 
         try:
             # 在线程池中执行同步的摘要生成（避免阻塞事件循环）
+            import asyncio
+
             loop = asyncio.get_event_loop()
             content = article.content
             if content is None:

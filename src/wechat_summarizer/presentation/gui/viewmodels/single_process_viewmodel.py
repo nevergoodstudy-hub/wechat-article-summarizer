@@ -4,39 +4,26 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from ..utils.i18n import tr
 from .base import BaseViewModel, Command, Observable
+from .single_process_availability import (
+    get_available_exporters as resolve_available_exporters,
+)
+from .single_process_availability import (
+    get_available_summarizers as resolve_available_summarizers,
+)
+from .single_process_availability import (
+    get_exporter_unavailable_reason,
+    get_summarizer_unavailable_reason,
+)
+from .single_process_mapping import convert_article, convert_summary
+from .single_process_models import ArticleDisplayModel, SummaryDisplayModel
 
 if TYPE_CHECKING:
     from ....domain.entities import Article, Summary
-    from ....infrastructure.config import Container
-
-
-@dataclass
-class ArticleDisplayModel:
-    """文章显示模型"""
-
-    url: str = ""
-    title: str = ""
-    author: str = ""
-    account_name: str = ""
-    publish_time: str = ""
-    content_preview: str = ""
-    word_count: int = 0
-
-
-@dataclass
-class SummaryDisplayModel:
-    """摘要显示模型"""
-
-    content: str = ""
-    key_points: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
-    method: str = ""
-    model_name: str = ""
-    generated_at: str = ""
+    from .ports import ContainerLike
 
 
 class SingleProcessViewModel(BaseViewModel):
@@ -45,7 +32,7 @@ class SingleProcessViewModel(BaseViewModel):
     负责管理单篇文章的抓取、摘要生成和导出流程。
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: ContainerLike):
         super().__init__()
         self._container = container
 
@@ -69,27 +56,27 @@ class SingleProcessViewModel(BaseViewModel):
         self.fetch_command = Command(
             execute=self._do_fetch,
             can_execute=lambda: bool(self._url.value) and not self.is_busy,
-            description="抓取文章",
+            description=tr("抓取文章"),
         )
         self.summarize_command = Command(
             execute=self._do_summarize,
             can_execute=lambda: self._current_article is not None and not self.is_busy,
-            description="生成摘要",
+            description=tr("生成摘要"),
         )
         self.export_command = Command(
             execute=self._do_export,
             can_execute=lambda: self._current_article is not None and not self.is_busy,
-            description="导出文章",
+            description=tr("导出文章"),
         )
         self.process_all_command = Command(
             execute=self._do_process_all,
             can_execute=lambda: bool(self._url.value) and not self.is_busy,
-            description="一键处理",
+            description=tr("一键处理"),
         )
         self.cancel_command = Command(
             execute=self._do_cancel,
             can_execute=lambda: self.is_busy,
-            description="取消操作",
+            description=tr("取消操作"),
         )
 
     # region Properties
@@ -178,7 +165,7 @@ class SingleProcessViewModel(BaseViewModel):
         """异步抓取文章"""
         try:
             self.set_loading()
-            self._update_progress(0.1, "正在抓取文章...")
+            self._update_progress(0.1, tr("正在抓取文章..."))
 
             article = self._container.fetch_use_case.execute(self.url)
 
@@ -188,11 +175,11 @@ class SingleProcessViewModel(BaseViewModel):
 
             self._current_article = article
             self._article.value = self._convert_article(article)
-            self._update_progress(1.0, "抓取完成")
+            self._update_progress(1.0, tr("抓取完成"))
             self.set_success()
 
         except Exception as e:
-            self.set_error(f"抓取失败: {e}")
+            self.set_error(tr("抓取失败: {error}").format(error=e))
 
     def _do_summarize(self) -> None:
         """在后台线程中执行摘要生成"""
@@ -208,7 +195,7 @@ class SingleProcessViewModel(BaseViewModel):
 
         try:
             self.set_loading()
-            self._update_progress(0.3, "正在生成摘要...")
+            self._update_progress(0.3, tr("正在生成摘要..."))
 
             summary = self._container.summarize_use_case.execute(
                 self._current_article,
@@ -221,11 +208,11 @@ class SingleProcessViewModel(BaseViewModel):
 
             self._current_article.attach_summary(summary)
             self._summary.value = self._convert_summary(summary)
-            self._update_progress(1.0, "摘要生成完成")
+            self._update_progress(1.0, tr("摘要生成完成"))
             self.set_success()
 
         except Exception as e:
-            self.set_error(f"摘要生成失败: {e}")
+            self.set_error(tr("摘要生成失败: {error}").format(error=e))
 
     def _do_export(self) -> None:
         """在后台线程中执行导出"""
@@ -241,7 +228,7 @@ class SingleProcessViewModel(BaseViewModel):
 
         try:
             self.set_loading()
-            self._update_progress(0.5, "正在导出...")
+            self._update_progress(0.5, tr("正在导出..."))
 
             result = self._container.export_use_case.execute(
                 self._current_article,
@@ -252,11 +239,11 @@ class SingleProcessViewModel(BaseViewModel):
                 self.reset()
                 return
 
-            self._update_progress(1.0, f"已导出: {result}")
+            self._update_progress(1.0, tr("已导出: {path}").format(path=result))
             self.set_success()
 
         except Exception as e:
-            self.set_error(f"导出失败: {e}")
+            self.set_error(tr("导出失败: {error}").format(error=e))
 
     def _do_process_all(self) -> None:
         """一键处理：抓取 + 摘要 + 导出"""
@@ -269,7 +256,7 @@ class SingleProcessViewModel(BaseViewModel):
             self.set_loading()
 
             # 步骤1: 抓取
-            self._update_progress(0.1, "正在抓取文章...")
+            self._update_progress(0.1, tr("正在抓取文章..."))
             article = self._container.fetch_use_case.execute(self.url)
             self._current_article = article
             self._article.value = self._convert_article(article)
@@ -280,7 +267,7 @@ class SingleProcessViewModel(BaseViewModel):
 
             # 步骤2: 摘要（如果启用）
             if not self.no_summary:
-                self._update_progress(0.4, "正在生成摘要...")
+                self._update_progress(0.4, tr("正在生成摘要..."))
                 summary = self._container.summarize_use_case.execute(
                     article,
                     method=self.selected_summarizer,
@@ -293,22 +280,22 @@ class SingleProcessViewModel(BaseViewModel):
                     return
 
             # 步骤3: 导出
-            self._update_progress(0.8, "正在导出...")
+            self._update_progress(0.8, tr("正在导出..."))
             result = self._container.export_use_case.execute(
                 article,
                 target=self.selected_exporter,
             )
 
-            self._update_progress(1.0, f"处理完成: {result}")
+            self._update_progress(1.0, tr("处理完成: {path}").format(path=result))
             self.set_success()
 
         except Exception as e:
-            self.set_error(f"处理失败: {e}")
+            self.set_error(tr("处理失败: {error}").format(error=e))
 
     def _do_cancel(self) -> None:
         """请求取消当前操作"""
         self._cancel_requested = True
-        self._update_progress(0, "正在取消...")
+        self._update_progress(0, tr("正在取消..."))
 
     # endregion
 
@@ -322,40 +309,12 @@ class SingleProcessViewModel(BaseViewModel):
     @staticmethod
     def _convert_article(article: Article) -> ArticleDisplayModel:
         """转换文章为显示模型"""
-        publish_time = ""
-        if article.publish_time:
-            publish_time = article.publish_time.strftime("%Y-%m-%d %H:%M")
-
-        content_preview = ""
-        if article.content:
-            text = article.content_text or ""
-            content_preview = text[:500] + "..." if len(text) > 500 else text
-
-        return ArticleDisplayModel(
-            url=str(article.url),
-            title=article.title,
-            author=article.author or "",
-            account_name=article.account_name or "",
-            publish_time=publish_time,
-            content_preview=content_preview,
-            word_count=len(article.content_text or "") if article.content else 0,
-        )
+        return convert_article(article)
 
     @staticmethod
     def _convert_summary(summary: Summary) -> SummaryDisplayModel:
         """转换摘要为显示模型"""
-        generated_at = ""
-        if summary.created_at:
-            generated_at = summary.created_at.strftime("%Y-%m-%d %H:%M:%S")
-
-        return SummaryDisplayModel(
-            content=summary.content,
-            key_points=list(summary.key_points) if summary.key_points else [],
-            tags=list(summary.tags) if summary.tags else [],
-            method=summary.method.value if summary.method else "",
-            model_name=summary.model_name or "",
-            generated_at=generated_at,
-        )
+        return convert_summary(summary)
 
     def clear(self) -> None:
         """清空所有数据"""
@@ -374,17 +333,7 @@ class SingleProcessViewModel(BaseViewModel):
         Returns:
             列表，每项为 (名称, 是否可用, 不可用原因)
         """
-        result = []
-        summarizers = self._container.summarizers
-
-        for name in ["simple", "ollama", "openai", "anthropic", "zhipu"]:
-            if name in summarizers:
-                result.append((name, True, ""))
-            else:
-                reason = self._get_summarizer_unavailable_reason(name)
-                result.append((name, False, reason))
-
-        return result
+        return resolve_available_summarizers(self._container)
 
     def get_available_exporters(self) -> list[tuple[str, bool, str]]:
         """获取可用的导出器列表
@@ -392,33 +341,15 @@ class SingleProcessViewModel(BaseViewModel):
         Returns:
             列表，每项为 (名称, 是否可用, 不可用原因)
         """
-        result = []
-        exporters = self._container.exporters
-
-        for name in ["html", "markdown", "obsidian", "notion", "onenote", "zip"]:
-            if name in exporters:
-                result.append((name, True, ""))
-            else:
-                reason = self._get_exporter_unavailable_reason(name)
-                result.append((name, False, reason))
-
-        return result
+        return resolve_available_exporters(self._container)
 
     def _get_summarizer_unavailable_reason(self, name: str) -> str:
         """获取摘要器不可用原因"""
-        reasons = {
-            "openai": "缺少 OPENAI_API_KEY",
-            "anthropic": "缺少 ANTHROPIC_API_KEY",
-            "zhipu": "缺少 ZHIPU_API_KEY",
-            "ollama": "Ollama 服务不可用",
-        }
-        return reasons.get(name, "未知原因")
+        return get_summarizer_unavailable_reason(name)
 
     def _get_exporter_unavailable_reason(self, name: str) -> str:
         """获取导出器不可用原因"""
-        reasons = {
-            "obsidian": "缺少 OBSIDIAN_VAULT_PATH",
-            "notion": "缺少 NOTION_API_KEY 或 DATABASE_ID",
-            "onenote": "缺少 ONENOTE_CLIENT_ID",
-        }
-        return reasons.get(name, "未知原因")
+        return get_exporter_unavailable_reason(name)
+
+
+__all__ = ["ArticleDisplayModel", "SingleProcessViewModel", "SummaryDisplayModel"]

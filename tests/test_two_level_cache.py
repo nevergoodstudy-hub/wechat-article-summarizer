@@ -237,3 +237,20 @@ class TestTwoLevelCacheEdgeCases:
         for i in range(20):
             result = cache.get(f"key_{i}")
             assert result == f"value_{i}"
+
+    def test_disk_cache_enforces_entry_capacity(self, cache_dir: Path) -> None:
+        """L2 disk cache should trim oldest entries beyond disk_max_entries."""
+        config = TwoLevelCacheConfig(
+            memory_max_size=2,
+            disk_max_entries=3,
+            disk_dir=cache_dir,
+        )
+        cache = TwoLevelCache(config)
+
+        for i in range(5):
+            cache.set(f"bounded_{i}", f"value_{i}")
+
+        cache_files = list(cache_dir.glob("*.json"))
+        assert len(cache_files) == 3
+        assert cache.get("bounded_0") is None
+        assert cache.get("bounded_4") == "value_4"

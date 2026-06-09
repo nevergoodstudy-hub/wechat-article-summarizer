@@ -17,7 +17,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from loguru import logger
 
@@ -26,7 +26,7 @@ V = TypeVar("V")
 
 
 @dataclass
-class CacheEntry[V]:
+class CacheEntry(Generic[V]):
     """缓存条目"""
 
     value: V
@@ -46,7 +46,7 @@ class CacheEntry[V]:
         self.accessed_at = time.time()
 
 
-class MemoryCache[K, V]:
+class MemoryCache(Generic[K, V]):
     """
     内存缓存
 
@@ -84,7 +84,7 @@ class MemoryCache[K, V]:
             default_ttl: 默认过期时间（秒），None 表示永不过期
             cleanup_interval: 自动清理间隔（秒）
         """
-        self._max_size = max_size
+        self._max_size = max(1, max_size)
         self._default_ttl = default_ttl
         self._cleanup_interval = cleanup_interval
 

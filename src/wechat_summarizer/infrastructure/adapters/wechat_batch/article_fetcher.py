@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
@@ -15,6 +14,7 @@ from loguru import logger
 from ....domain.entities.article_list import ArticleList, ArticleListItem
 from ....domain.entities.official_account import OfficialAccount
 from ....infrastructure.config.settings import get_settings
+from ....shared.utils.structured_concurrency import run_limited_tasks
 from ..http_client_pool import get_http_pool
 from .auth_manager import WechatAuthManager
 from .rate_limiter import RateLimitConfig, RateLimiter
@@ -340,8 +340,7 @@ class WechatArticleFetcher:
     ) -> dict[str, ArticleList]:
         """并发获取多个公众号的文章列表
 
-        使用 asyncio.Semaphore 控制并发数量，
-        配合 asyncio.gather 实现高效并发获取。
+        使用结构化并发工具和 Semaphore 控制并发数量。
 
         Args:
             accounts: 要获取的公众号列表
@@ -361,40 +360,30 @@ class WechatArticleFetcher:
         if not accounts:
             return {}
 
-        # 使用信号量控制并发
-        semaphore = asyncio.Semaphore(max_concurrency)
         results: dict[str, ArticleList] = {}
         errors: dict[str, str] = {}
 
         async def fetch_one(account: OfficialAccount) -> tuple[str, ArticleList | None, str | None]:
-            """(并发安全) 获取单个公众号的文章"""
-            async with semaphore:  # 控制并发
-                try:
-                    article_list = await self.get_all_articles(
-                        account,
-                        max_count=max_count_per_account,
-                        use_cache=use_cache,
-                    )
-                    return (account.fakeid, article_list, None)
-                except Exception as e:
-                    logger.error(f"获取 {account.nickname} 文章失败: {e}")
-                    return (account.fakeid, None, str(e))
+            """获取单个公众号的文章。"""
+            try:
+                article_list = await self.get_all_articles(
+                    account,
+                    max_count=max_count_per_account,
+                    use_cache=use_cache,
+                )
+                return (account.fakeid, article_list, None)
+            except Exception as e:
+                logger.error(f"获取 {account.nickname} 文章失败: {e}")
+                return (account.fakeid, None, str(e))
 
         # 并发执行
         logger.info(f"开始并发获取 {len(accounts)} 个公众号（并发数: {max_concurrency}）")
-        task_results: list[tuple[str, ArticleList | None, str | None]] = []
-        async with asyncio.TaskGroup() as tg:
-
-            async def _collect(acct: OfficialAccount) -> None:
-                task_results.append(await fetch_one(acct))
-
-            for account in accounts:
-                tg.create_task(_collect(account))
+        task_results = await run_limited_tasks(accounts, max_concurrency, fetch_one)
 
         # 收集结果
         success_count = 0
         for fakeid, article_list, error in task_results:
-            if article_list:
+            if article_list is not None:
                 results[fakeid] = article_list
                 success_count += 1
             elif error:

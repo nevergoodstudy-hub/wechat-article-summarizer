@@ -10,6 +10,7 @@ from loguru import logger
 
 from ...features.article_workflow import ArticleWorkflowService
 from ..input_validator import MCPInputValidator, MCPValidationError
+from ..responses import business_error_response, validation_error_response
 from ..security import PermissionLevel, require_permission
 
 if TYPE_CHECKING:
@@ -31,18 +32,12 @@ _METHOD_DESCRIPTIONS = {
 }
 
 
-def _default_service_factory() -> ArticleWorkflowService:
-    from ...infrastructure.config import get_container
-
-    return get_container().article_workflow_service
-
-
 def register_article_tools(
     mcp_instance: FastMCP,
-    service_factory: ArticleWorkflowFactory | None = None,
+    service_factory: ArticleWorkflowFactory,
 ) -> None:
     """Register article workflow tools on an MCP server."""
-    get_service = service_factory or _default_service_factory
+    get_service = service_factory
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -62,10 +57,10 @@ def register_article_tools(
                 "content_truncated": payload.content_truncated,
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"抓取文章失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -99,10 +94,10 @@ def register_article_tools(
                 },
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"摘要生成失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -121,10 +116,10 @@ def register_article_tools(
                 "preview": payload.preview,
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
         except Exception as exc:
             logger.error(f"获取文章信息失败: {exc}")
-            return {"success": False, "error": str(exc)}
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)
@@ -160,7 +155,10 @@ def register_article_tools(
                 ],
             }
         except MCPValidationError as exc:
-            return {"success": False, "error": f"参数校验失败: {exc}"}
+            return validation_error_response(exc)
+        except Exception as exc:
+            logger.error(f"批量摘要失败: {exc}")
+            return business_error_response(exc)
 
     @mcp_instance.tool()
     @require_permission(PermissionLevel.READ)

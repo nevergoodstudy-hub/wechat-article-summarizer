@@ -8,12 +8,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
+from ....features.export_workflow import ArchiveFormatPayload
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
+from ..utils.i18n import tr
 
 
 class BatchArchiveExportDialog:
@@ -26,27 +29,29 @@ class BatchArchiveExportDialog:
     - 模态对话框
     """
 
-    def __init__(self, parent, articles: list, archive_exporter=None):
+    def __init__(
+        self,
+        parent,
+        articles: list,
+        archive_formats: Sequence[ArchiveFormatPayload],
+    ):
         """创建批量压缩导出对话框
 
         Args:
             parent: 父窗口
             articles: 文章列表
-            archive_exporter: 多格式压缩导出器实例（用于检测格式可用性）
+            archive_formats: 可用压缩格式信息
         """
-        from ....infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
         self.result = None  # {'articles': [...], 'format': 'zip', 'path': '...'}
         self.articles = articles
-        self._archive_exporter = archive_exporter or MultiFormatArchiveExporter()
-        self._format_infos = self._archive_exporter.get_available_formats()
+        self._format_infos = tuple(archive_formats)
 
         # 存储复选框变量
         self._article_vars: list[ctk.BooleanVar] = []
 
         # 创建对话框窗口
         self.dialog = ctk.CTkToplevel(parent)
-        self.dialog.title("📦 批量压缩导出")
+        self.dialog.title(tr("📦 批量压缩导出"))
 
         # 根据文章数量调整窗口高度
         base_height = 480
@@ -72,12 +77,12 @@ class BatchArchiveExportDialog:
         header_frame.pack(fill="x", pady=(0, 10))
 
         ctk.CTkLabel(
-            header_frame, text="📦 批量压缩导出", font=ctk.CTkFont(size=20, weight="bold")
+            header_frame, text=tr("📦 批量压缩导出"), font=ctk.CTkFont(size=20, weight="bold")
         ).pack(side="left")
 
         ctk.CTkLabel(
             header_frame,
-            text=f"共 {len(articles)} 篇文章",
+            text=tr("共 {count} 篇文章").format(count=len(articles)),
             font=ctk.CTkFont(size=13),
             text_color=(ModernColors.LIGHT_TEXT_SECONDARY, ModernColors.DARK_TEXT_SECONDARY),
         ).pack(side="right")
@@ -91,7 +96,9 @@ class BatchArchiveExportDialog:
         article_header.pack(fill="x", pady=(0, 5))
 
         ctk.CTkLabel(
-            article_header, text="📄 选择要导出的文章", font=ctk.CTkFont(size=14, weight="bold")
+            article_header,
+            text=tr("📄 选择要导出的文章"),
+            font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(side="left")
 
         # 全选/反选按钮
@@ -100,7 +107,7 @@ class BatchArchiveExportDialog:
 
         ctk.CTkButton(
             btn_frame,
-            text="全选",
+            text=tr("全选"),
             width=60,
             height=28,
             corner_radius=Spacing.RADIUS_SM,
@@ -111,7 +118,7 @@ class BatchArchiveExportDialog:
 
         ctk.CTkButton(
             btn_frame,
-            text="反选",
+            text=tr("反选"),
             width=60,
             height=28,
             corner_radius=Spacing.RADIUS_SM,
@@ -158,7 +165,7 @@ class BatchArchiveExportDialog:
         # 选中计数标签
         self.selection_count_label = ctk.CTkLabel(
             article_section,
-            text=f"已选择 {len(articles)} 篇",
+            text=tr("已选择 {count} 篇").format(count=len(articles)),
             font=ctk.CTkFont(size=11),
             text_color=ModernColors.INFO,
         )
@@ -169,7 +176,9 @@ class BatchArchiveExportDialog:
         format_section.pack(fill="x", pady=(10, 10))
 
         ctk.CTkLabel(
-            format_section, text="📁 选择压缩格式", font=ctk.CTkFont(size=14, weight="bold")
+            format_section,
+            text=tr("📁 选择压缩格式"),
+            font=ctk.CTkFont(size=14, weight="bold"),
         ).pack(anchor="w", pady=(0, 8))
 
         # 格式选项
@@ -192,7 +201,7 @@ class BatchArchiveExportDialog:
         # 取消按钮
         ctk.CTkButton(
             btn_section,
-            text="取消",
+            text=tr("取消"),
             width=100,
             height=40,
             corner_radius=Spacing.RADIUS_MD,
@@ -204,7 +213,7 @@ class BatchArchiveExportDialog:
         # 导出按钮
         self.export_btn = ctk.CTkButton(
             btn_section,
-            text="📦 选择路径并导出",
+            text=tr("📦 选择路径并导出"),
             width=180,
             height=40,
             corner_radius=Spacing.RADIUS_MD,
@@ -232,7 +241,7 @@ class BatchArchiveExportDialog:
             frame,
             text="",
             variable=self._format_var,
-            value=format_info.format.value,
+            value=format_info.value,
             width=20,
             radiobutton_width=18,
             radiobutton_height=18,
@@ -291,7 +300,7 @@ class BatchArchiveExportDialog:
     def _update_selection_count(self):
         """更新选中计数"""
         count = sum(1 for var in self._article_vars if var.get())
-        self.selection_count_label.configure(text=f"已选择 {count} 篇")
+        self.selection_count_label.configure(text=tr("已选择 {count} 篇").format(count=count))
 
         # 如果没有选中任何文章，禁用导出按钮
         if count == 0:
@@ -314,26 +323,35 @@ class BatchArchiveExportDialog:
         ]
 
         if not selected_articles:
-            messagebox.showwarning("提示", "请至少选择一篇文章")
+            messagebox.showwarning(tr("提示"), tr("请至少选择一篇文章"))
             return
 
         # 获取选中的格式
         format_value = self._format_var.get()
 
         # 检查格式是否可用
-        format_info = next((f for f in self._format_infos if f.format.value == format_value), None)
+        format_info = next((f for f in self._format_infos if f.value == format_value), None)
         if not format_info or not format_info.available:
-            messagebox.showerror("错误", f"所选格式 {format_value} 不可用")
+            messagebox.showerror(
+                tr("错误"),
+                tr("所选格式 {format} 不可用").format(format=format_value),
+            )
             return
 
         # 选择保存路径
         ext = format_info.extension
-        filetypes = [(f"{format_info.name} 文件", f"*{ext}"), ("所有文件", "*.*")]
+        filetypes = [
+            (tr("{name} 文件").format(name=format_info.name), f"*{ext}"),
+            (tr("所有文件"), "*.*"),
+        ]
 
         path = filedialog.asksaveasfilename(
             defaultextension=ext,
             filetypes=filetypes,
-            initialfile=f"articles_{len(selected_articles)}篇{ext}",
+            initialfile=tr("articles_{count}篇{extension}").format(
+                count=len(selected_articles),
+                extension=ext,
+            ),
         )
 
         if not path:

@@ -8,7 +8,7 @@ version = "2.4.3"
 description = "微信公众号文章总结器 - 企业级架构 (Hexagonal + DDD)"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 authors = [
     {name = "Developer", email = "dev@example.com"}
 ]
@@ -19,7 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -152,6 +151,8 @@ dev = [
     "pytest-timeout>=2.2.0",
     "pytest-randomly>=3.15.0",
     "respx>=0.20.0",
+    "customtkinter>=5.2.0",
+    "starlette>=0.27.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
@@ -159,17 +160,17 @@ dev = [
 ]
 
 [project.scripts]
-wechat-summarizer = "wechat_summarizer.presentation.cli:run_cli"
+wechat-summarizer = "wechat_summarizer.bootstrap.cli:run_cli"
 
 [project.gui-scripts]
-wechat-summarizer-gui = "wechat_summarizer.presentation.gui:run_gui"
+wechat-summarizer-gui = "wechat_summarizer.bootstrap.gui:run_gui"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "C4", "RUF"]
@@ -209,6 +210,7 @@ addopts = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
     "unit: marks tests as unit tests",
 ]
 asyncio_mode = "auto"

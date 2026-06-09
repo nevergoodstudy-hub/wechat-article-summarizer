@@ -6,7 +6,7 @@
 
 ### 必需软件
 
-1. **Python 3.10+**
+1. **Python 3.11+**
    - 下载: https://www.python.org/downloads/
    - 安装时勾选 "Add Python to PATH"
 
@@ -20,7 +20,7 @@
 ### 验证安装
 
 ```powershell
-python --version  # 应显示 Python 3.10+
+python --version  # 应显示 Python 3.11+
 git --version
 iscc /version     # 可选
 ```

@@ -19,14 +19,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.12', '3.14']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
@@ -42,7 +42,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       with:
         files: ./coverage.xml
         flags: unittests
@@ -54,10 +54,10 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -70,13 +70,16 @@ jobs:
     - name: Run lint (unified gate)
       run: python scripts/quality_gate.py --mode lint
 
+    - name: Run architecture boundary check (unified gate)
+      run: python scripts/quality_gate.py --mode architecture
+
     - name: Run mypy (unified gate)
       run: |
         python scripts/quality_gate.py --mode mypy | tee mypy-report.txt
 
     - name: Upload mypy report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: mypy-report
         path: mypy-report.txt
@@ -88,10 +91,10 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
@@ -110,7 +113,7 @@ jobs:
 
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: security-reports
         path: |
@@ -123,10 +126,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -146,10 +149,10 @@ jobs:
     needs: [test, lint, docs]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
@@ -165,7 +168,7 @@ jobs:
       run: twine check dist/*
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dist
         path: dist/
@@ -177,10 +180,10 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Download artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: dist
         path: dist/

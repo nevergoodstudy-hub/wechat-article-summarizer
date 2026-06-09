@@ -6,20 +6,28 @@
 from __future__ import annotations
 
 import threading
-from tkinter import filedialog, messagebox
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 
 import customtkinter as ctk
 from loguru import logger
 
 from ...domain.entities import Article
 from ...shared.progress import BatchProgressTracker, ProgressInfo
+from .dialogs import (
+    choose_url_text_file,
+    show_clipboard_empty_warning,
+    show_empty_batch_url_warning,
+    show_no_valid_url_warning,
+    show_url_file_read_error,
+)
 from .styles import ModernColors
+from .utils.i18n import tr
 
 
 def on_import_urls(gui: Any) -> None:
     """导入 URL 文本文件到批量输入框。"""
-    path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    path = choose_url_text_file()
     if not path:
         return
 
@@ -30,7 +38,7 @@ def on_import_urls(gui: Any) -> None:
         gui.batch_url_text.insert("1.0", content)
         logger.info(f"已导入URL文件: {path}")
     except Exception as e:
-        messagebox.showerror("错误", f"读取失败: {e}")
+        show_url_file_read_error(e)
 
 
 def on_paste_urls(gui: Any) -> None:
@@ -39,19 +47,19 @@ def on_paste_urls(gui: Any) -> None:
         content = gui.root.clipboard_get()
         gui.batch_url_text.insert("end", content)
     except Exception:
-        messagebox.showwarning("提示", "剪贴板为空")
+        show_clipboard_empty_warning()
 
 
 def on_batch_process(gui: Any) -> None:
     """校验并启动批量处理。"""
     content = gui.batch_url_text.get("1.0", "end").strip()
     if not content:
-        messagebox.showwarning("提示", "请输入URL")
+        show_empty_batch_url_warning()
         return
 
     urls = [line.strip() for line in content.split("\n") if line.strip()]
     if not urls:
-        messagebox.showwarning("提示", "未找到有效URL")
+        show_no_valid_url_warning()
         return
 
     start_batch_processing(gui, urls)
@@ -74,10 +82,10 @@ def start_batch_processing(gui: Any, urls: list[str]) -> None:
         gui.batch_start_btn.configure(state="disabled")
 
     gui.batch_page.batch_progress.set(0)
-    gui.batch_status_label.configure(text=f"正在处理 0/{len(urls)} 篇...")
+    gui.batch_status_label.configure(text=tr("正在处理 0/{total} 篇...").format(total=len(urls)))
     gui.batch_page.batch_elapsed_label.configure(text="00:00")
     gui.batch_page.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     # 设置任务状态（用于退出确认）
@@ -99,7 +107,12 @@ def update_batch_progress_ui(gui: Any, info: ProgressInfo) -> None:
     """更新批量处理的 GUI 进度显示（在主线程中调用）。"""
     progress_value = info.percentage / 100.0
     gui.batch_progress.set(progress_value)
-    gui.batch_status_label.configure(text=f"正在处理 {info.progress_text} ({info.percentage_text})")
+    gui.batch_status_label.configure(
+        text=tr("正在处理 {progress} ({percentage})").format(
+            progress=info.progress_text,
+            percentage=info.percentage_text,
+        )
+    )
     gui.batch_elapsed_label.configure(text=info.elapsed_formatted)
     gui.batch_eta_label.configure(text=info.eta_formatted)
     gui.batch_rate_label.configure(text=info.rate_formatted)
@@ -111,35 +124,56 @@ def update_batch_progress_ui(gui: Any, info: ProgressInfo) -> None:
 
 def batch_process_worker(gui: Any) -> None:
     """批量处理工作线程。"""
-    method = gui.batch_method_var.get()
-    len(gui.batch_urls)
-    tracker = gui._batch_progress_tracker
+    monitor = getattr(gui, "_perf_monitor", None)
+    timer_context = (
+        monitor.timer("gui_batch_process_worker") if monitor is not None else _NoopContextManager()
+    )
 
-    for _i, url in enumerate(gui.batch_urls):
-        # 检查取消标志
-        if getattr(gui, "_batch_cancel_requested", False):
-            logger.info("ℹ️ 用户取消了批量处理")
-            break
+    with timer_context:
+        method = gui.batch_method_var.get()
+        len(gui.batch_urls)
+        tracker = gui._batch_progress_tracker
 
-        short_url = url[:50] + "..." if len(url) > 50 else url
-        try:
-            article = gui.container.fetch_use_case.execute(url)
+        for _i, url in enumerate(gui.batch_urls):
+            # 检查取消标志
+            if getattr(gui, "_batch_cancel_requested", False):
+                logger.info("ℹ️ 用户取消了批量处理")
+                break
+
+            short_url = url[:50] + "..." if len(url) > 50 else url
             try:
-                summary = gui.container.summarize_use_case.execute(article, method=method)
-                article.attach_summary(summary)
-            except Exception as e:
-                logger.warning(f"摘要失败: {e}")
+                article = gui.container.fetch_use_case.execute(url)
+                try:
+                    summary = gui.container.summarize_use_case.execute(article, method=method)
+                    article.attach_summary(summary)
+                except Exception as e:
+                    logger.warning(f"摘要失败: {e}")
 
-            gui.batch_results.append(article)
-            tracker.update_success(current_item=article.title[:30])
-            gui.root.after(0, lambda a=article: gui._add_batch_result_item(a, True))
-        except Exception as e:
-            logger.error(f"处理失败 {short_url}: {e}")
-            tracker.update_failure(current_item=short_url, error=str(e))
-            gui.root.after(0, lambda u=url, err=str(e): gui._add_batch_result_item_error(u, err))
+                gui.batch_results.append(article)
+                tracker.update_success(current_item=article.title[:30])
+                gui.root.after(0, lambda a=article: gui._add_batch_result_item(a, True))
+            except Exception as e:
+                logger.error(f"处理失败 {short_url}: {e}")
+                tracker.update_failure(current_item=short_url, error=str(e))
+                gui.root.after(
+                    0, lambda u=url, err=str(e): gui._add_batch_result_item_error(u, err)
+                )
 
     tracker.finish()
     gui.root.after(0, gui._batch_process_complete)
+
+
+class _NoopContextManager:
+    def __enter__(self) -> _NoopContextManager:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
+        return False
 
 
 def update_batch_progress(gui: Any, value: float, status: str) -> None:
@@ -195,7 +229,12 @@ def batch_process_complete(gui: Any) -> None:
     gui.batch_progress.set(1.0)
     success_count = len(gui.batch_results)
     total = len(gui.batch_urls)
-    gui.batch_status_label.configure(text=f"完成: {success_count}/{total} 篇成功")
+    gui.batch_status_label.configure(
+        text=tr("完成: {success}/{total} 篇成功").format(
+            success=success_count,
+            total=total,
+        )
+    )
     logger.success(f"批量处理完成: {success_count}/{total}")
 
     if gui.batch_results:

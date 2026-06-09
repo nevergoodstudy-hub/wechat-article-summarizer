@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
-from ...shared.utils import utc_now
+from ..time import utc_now
 
 
 @dataclass(frozen=True)

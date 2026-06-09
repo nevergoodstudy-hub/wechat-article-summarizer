@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -503,7 +504,7 @@ class TestBatchCommand:
             assert result.exit_code == 0
             assert "处理完成" in result.output
 
-    def test_batch_from_file(self, runner: CliRunner, sample_article) -> None:
+    def test_batch_from_file(self, runner: CliRunner, sample_article, tmp_path: Path) -> None:
         """测试从文件读取 URL"""
         mock_container = MagicMock()
         mock_container.fetch_use_case.execute.return_value = sample_article
@@ -519,7 +520,7 @@ class TestBatchCommand:
                 "wechat_summarizer.presentation.cli.app.get_container",
                 return_value=mock_container,
             ),
-            runner.isolated_filesystem(),
+            runner.isolated_filesystem(temp_dir=tmp_path),
         ):
             url_file = Path("urls.txt")
             url_file.write_text(
@@ -533,7 +534,7 @@ class TestBatchCommand:
             assert mock_container.fetch_use_case.execute.call_count == 2
 
     def test_batch_json_output(self, runner: CliRunner, sample_article) -> None:
-        """测试 JSON 输出格式"""
+        """JSON 模式应只输出可被机器解析的批处理结果。"""
         mock_container = MagicMock()
         mock_container.fetch_use_case.execute.return_value = sample_article
         mock_container.summarize_use_case.execute.return_value = MagicMock(
@@ -558,6 +559,33 @@ class TestBatchCommand:
             )
 
             assert result.exit_code == 0
-            # JSON 输出
-            assert "{" in result.output
-            assert "success_count" in result.output
+            output_data = json.loads(result.output)
+            assert output_data["success"] is True
+            assert output_data["success_count"] == 1
+            assert output_data["failed_count"] == 0
+            assert output_data["total"] == 1
+            assert output_data["results"][0]["success"] is True
+            assert output_data["results"][0]["title"] == sample_article.title
+            assert output_data["results"][0]["summary"] == "摘要内容"
+            assert "开始批量处理" not in result.output
+            assert "处理完成" not in result.output
+            assert "OK" not in result.output
+
+    def test_batch_json_missing_urls_outputs_standard_error(self, runner: CliRunner) -> None:
+        """JSON 模式下的错误也应保持单一 JSON stdout。"""
+        result = runner.invoke(cli, ["batch", "--output-format", "json"])
+
+        assert result.exit_code == 1
+        output_data = json.loads(result.output)
+        assert output_data == {
+            "success": False,
+            "error": {
+                "type": "missing_urls",
+                "message": "没有提供 URL，请通过参数、--input-file 或 --from-clipboard 提供",
+            },
+            "total": 0,
+            "success_count": 0,
+            "failed_count": 0,
+            "results": [],
+            "exported_files": [],
+        }

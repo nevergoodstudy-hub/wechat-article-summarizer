@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 
@@ -64,8 +65,8 @@ class ArticleListCache:
         else:
             self._cache_dir = Path(settings.batch.cache_dir)
 
-        # 内存缓存（利用 dict 插入顺序实现 FIFO 淘汰）
-        self._memory_cache: dict[str, tuple[ArticleList, float]] = {}
+        # 内存缓存（OrderedDict 支持 LRU move_to_end + popitem(last=False)）
+        self._memory_cache: OrderedDict[str, tuple[ArticleList, float]] = OrderedDict()
 
         # 确保缓存目录存在
         if self._enabled:
@@ -80,6 +81,11 @@ class ArticleListCache:
     def ttl_seconds(self) -> float:
         """TTL（秒）"""
         return self._ttl_hours * 3600
+
+    @property
+    def max_memory_entries(self) -> int:
+        """内存缓存最大条目数"""
+        return self._max_memory_entries
 
     def _get_cache_path(self, fakeid: str) -> Path:
         """获取缓存文件路径"""
@@ -103,6 +109,7 @@ class ArticleListCache:
         if fakeid in self._memory_cache:
             article_list, cached_at = self._memory_cache[fakeid]
             if time.time() - cached_at < self.ttl_seconds:
+                self._memory_cache.move_to_end(fakeid)
                 logger.debug(f"内存缓存命中: {fakeid}")
                 return article_list
             else:
@@ -122,6 +129,8 @@ class ArticleListCache:
 
                     # 加载到内存缓存
                     self._memory_cache[fakeid] = (article_list, cached_at)
+                    self._memory_cache.move_to_end(fakeid)
+                    self._evict_memory_if_needed()
 
                     logger.debug(f"文件缓存命中: {fakeid}")
                     return article_list
@@ -149,6 +158,7 @@ class ArticleListCache:
 
         # 保存到内存缓存（淘汰最旧条目以保持上限）
         self._memory_cache[fakeid] = (article_list, cached_at)
+        self._memory_cache.move_to_end(fakeid)
         self._evict_memory_if_needed()
 
         # 保存到文件
@@ -170,8 +180,7 @@ class ArticleListCache:
     def _evict_memory_if_needed(self) -> None:
         """淘汰最旧的内存缓存条目以维持上限"""
         while len(self._memory_cache) > self._max_memory_entries:
-            oldest_key = next(iter(self._memory_cache))
-            del self._memory_cache[oldest_key]
+            oldest_key, _ = self._memory_cache.popitem(last=False)
             logger.debug(f"内存缓存淘汰: {oldest_key}")
 
     def delete(self, fakeid: str) -> None:
@@ -268,6 +277,7 @@ class ArticleListCache:
             "enabled": self._enabled,
             "ttl_hours": self._ttl_hours,
             "memory_cache_count": memory_count,
+            "memory_cache_max_entries": self._max_memory_entries,
             "file_cache_count": file_count,
             "total_articles": total_articles,
             "total_size_kb": round(total_size / 1024, 2),

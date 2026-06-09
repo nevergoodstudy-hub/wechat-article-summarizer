@@ -11,12 +11,18 @@ from .base import BaseViewModel
 from .batch_process_viewmodel import BatchProcessViewModel
 from .main_viewmodel import MainViewModel
 from .settings_viewmodel import SettingsViewModel
-from .single_process_viewmodel import SingleProcessViewModel
+from .single_process_viewmodel import (
+    ArticleDisplayModel,
+    SingleProcessViewModel,
+    SummaryDisplayModel,
+)
 
 __all__ = [
+    "ArticleDisplayModel",
     "BaseViewModel",
     "BatchProcessViewModel",
     "MainViewModel",
     "SettingsViewModel",
     "SingleProcessViewModel",
+    "SummaryDisplayModel",
 ]

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -19,6 +19,7 @@ from uuid import UUID
 from loguru import logger
 
 from ....domain.entities import Article
+from ....domain.time import utc_now
 from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import CACHE_DIR_NAME, CONFIG_DIR_NAME
 from ....shared.exceptions import StorageError
@@ -74,6 +75,7 @@ class LocalJsonStorage:
 
             self._index[url] = str(article.id)
             self._persist_index()
+            self._enforce_capacity_limit()
         except Exception as e:
             raise StorageError(f"保存失败: {e}") from e
 
@@ -261,6 +263,62 @@ class LocalJsonStorage:
 
         os.replace(tmp_path, self._index_path)
 
+    def _iter_article_cache_files(self) -> list[Path]:
+        """Return article cache files, excluding index and temp files."""
+        return [
+            cache_file
+            for cache_file in self._dir.glob("*.json")
+            if cache_file.name != self._index_path.name and not cache_file.name.startswith(".")
+        ]
+
+    def _enforce_capacity_limit(self) -> int:
+        """Trim stored article cache files to the configured capacity."""
+        files: list[tuple[float, Path]] = []
+        for cache_file in self._iter_article_cache_files():
+            try:
+                files.append((self._cache_file_sort_time(cache_file), cache_file))
+            except Exception:
+                continue
+
+        max_entries = max(0, self._config.max_entries)
+        overflow = len(files) - max_entries
+        if overflow <= 0:
+            return 0
+
+        cleaned = 0
+        removed_ids: set[str] = set()
+        for _, cache_file in sorted(files, key=lambda item: (item[0], item[1].name))[:overflow]:
+            try:
+                removed_ids.add(cache_file.stem)
+                cache_file.unlink()
+                cleaned += 1
+            except Exception as e:
+                logger.warning(f"缓存容量清理失败 {cache_file}: {e}")
+
+        if removed_ids:
+            self._index = {
+                url: article_id
+                for url, article_id in self._index.items()
+                if article_id not in removed_ids
+            }
+            self._persist_index()
+
+        if cleaned > 0:
+            logger.info(f"已清理 {cleaned} 条超限缓存")
+
+        return cleaned
+
+    def _cache_file_sort_time(self, cache_file: Path) -> float:
+        """Return stable cache age for capacity trimming."""
+        try:
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            created_at = data.get("created_at")
+            if isinstance(created_at, str) and created_at:
+                return datetime.fromisoformat(created_at).timestamp()
+        except Exception:
+            pass
+        return cache_file.stat().st_mtime
+
     @staticmethod
     def _article_to_dict(article: Article) -> dict[str, Any]:
         publish_time = article.publish_time.isoformat() if article.publish_time else None
@@ -296,10 +354,10 @@ class LocalJsonStorage:
         publish_dt = datetime.fromisoformat(publish_time) if publish_time else None
 
         created_at = data.get("created_at")
-        created_dt = datetime.fromisoformat(created_at) if created_at else datetime.now(UTC)
+        created_dt = datetime.fromisoformat(created_at) if created_at else utc_now()
 
         updated_at = data.get("updated_at")
-        updated_dt = datetime.fromisoformat(updated_at) if updated_at else datetime.now(UTC)
+        updated_dt = datetime.fromisoformat(updated_at) if updated_at else utc_now()
 
         c = data.get("content") or {}
         content = ArticleContent(

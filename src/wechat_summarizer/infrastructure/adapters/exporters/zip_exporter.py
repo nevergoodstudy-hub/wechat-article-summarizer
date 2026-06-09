@@ -12,10 +12,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
 from loguru import logger
 
 from ....shared.exceptions import ExporterError
+from ....shared.utils.ssrf_protection import safe_fetch_sync
 from .base import BaseExporter
 from .html import HtmlExporter
 
@@ -188,10 +188,9 @@ class ZipExporter(BaseExporter):
 
             try:
                 # 下载图片
-                with httpx.Client(timeout=self._image_timeout) as client:
-                    response = client.get(img_url)
-                    response.raise_for_status()
-                    img_data = response.content
+                response = safe_fetch_sync(img_url, timeout=self._image_timeout)
+                response.raise_for_status()
+                img_data = response.content
 
                 # 确定图片扩展名
                 content_type = response.headers.get("content-type", "")

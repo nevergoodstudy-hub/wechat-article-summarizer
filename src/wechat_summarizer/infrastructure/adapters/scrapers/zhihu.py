@@ -20,6 +20,7 @@ from ....domain.entities import Article, ArticleSource, SourceType
 from ....domain.value_objects import ArticleContent, ArticleURL
 from ....shared.constants import USER_AGENTS
 from ....shared.exceptions import ScraperBlockedError, ScraperError, ScraperTimeoutError
+from ....shared.utils.ssrf_protection import safe_fetch, safe_fetch_sync
 from .base import BaseScraper
 
 
@@ -90,11 +91,7 @@ class ZhihuScraper(BaseScraper):
         headers = self._get_headers()
 
         try:
-            with httpx.Client(
-                timeout=self._timeout,
-                follow_redirects=True,
-            ) as client:
-                response = client.get(str(url), headers=headers)
+            response = safe_fetch_sync(str(url), headers=headers, timeout=self._timeout)
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
         except httpx.TransportError as e:
@@ -130,11 +127,7 @@ class ZhihuScraper(BaseScraper):
         headers = self._get_headers()
 
         try:
-            async with httpx.AsyncClient(
-                timeout=self._timeout,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(str(url), headers=headers)
+            response = await safe_fetch(str(url), headers=headers, timeout=self._timeout)
         except httpx.TimeoutException as e:
             raise ScraperTimeoutError(f"请求超时: {e}") from e
         except httpx.TransportError as e:

@@ -2,7 +2,10 @@ from pathlib import Path
 
 from wechat_summarizer.domain.entities import Article
 from wechat_summarizer.domain.value_objects import ArticleContent, ArticleURL
-from wechat_summarizer.infrastructure.adapters.storage.local_json import LocalJsonStorage
+from wechat_summarizer.infrastructure.adapters.storage.local_json import (
+    CacheConfig,
+    LocalJsonStorage,
+)
 
 
 def test_local_json_storage_save_and_get_by_url(tmp_path: Path) -> None:
@@ -35,3 +38,20 @@ def test_local_json_storage_list_recent(tmp_path: Path) -> None:
 
     recent = storage.list_recent(limit=2)
     assert len(recent) == 2
+
+
+def test_local_json_storage_enforces_max_entries(tmp_path: Path) -> None:
+    storage = LocalJsonStorage(cache_dir=str(tmp_path), config=CacheConfig(max_entries=2))
+
+    saved_urls: list[str] = []
+    for i in range(4):
+        url = ArticleURL.from_string(f"https://mp.weixin.qq.com/s/bounded-{i}")
+        article = Article(url=url, title=f"t{i}", content=ArticleContent.from_text("x"))
+        storage.save(article)
+        saved_urls.append(str(url))
+
+    stats = storage.get_stats()
+    assert stats.total_entries == 2
+    assert storage.get_by_url(saved_urls[0]) is None
+    assert storage.get_by_url(saved_urls[-1]) is not None
+    assert len([p for p in tmp_path.glob("*.json") if p.name != "index.json"]) == 2

@@ -7,15 +7,22 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from tkinter import filedialog, messagebox
 from typing import Any
 
-import customtkinter as ctk
 from loguru import logger
 
 from ...shared.progress import BatchProgressTracker, ProgressInfo
-from .dialogs.batch_archive_export import BatchArchiveExportDialog
+from .dialogs import (
+    BatchArchiveExportDialog,
+    choose_batch_output_directory,
+    choose_export_file_path,
+    show_batch_export_success,
+    show_export_error,
+    show_export_options_dialog,
+    show_export_success,
+)
 from .styles.colors import ModernColors
+from .utils.i18n import tr
 
 
 def on_export(gui: Any) -> None:
@@ -26,40 +33,13 @@ def on_export(gui: Any) -> None:
     if not gui._check_export_dir_configured():
         return
 
-    export_window = ctk.CTkToplevel(gui.root)
-    export_window.title("导出选项")
-    export_window.geometry("400x350")
-    export_window.transient(gui.root)
-    ctk.CTkLabel(
-        export_window, text="📥 选择导出格式", font=ctk.CTkFont(size=18, weight="bold")
-    ).pack(pady=20)
-
     def export_as(target: str) -> None:
-        export_window.destroy()
         if target == "word":
             gui._show_word_preview()
         else:
             do_export(gui, target)
 
-    for name, info in gui._exporter_info.items():
-        btn_text = f"{('✓' if info.available else '✗')} {name.upper()}"
-        if name == "word" and info.available:
-            btn_text += " (预览)"
-        btn = ctk.CTkButton(
-            export_window,
-            text=btn_text,
-            font=ctk.CTkFont(size=14),
-            height=45,
-            corner_radius=10,
-            fg_color=ModernColors.INFO if info.available else ModernColors.NEUTRAL_BTN_DISABLED,
-            state="normal" if info.available else "disabled",
-            command=lambda t=name: export_as(t),
-        )
-        btn.pack(fill="x", padx=30, pady=5)
-        if not info.available and info.reason:
-            ctk.CTkLabel(
-                export_window, text=info.reason, font=ctk.CTkFont(size=11), text_color="gray"
-            ).pack()
+    show_export_options_dialog(gui.root, gui._exporter_info, export_as)
 
 
 def do_export(gui: Any, target: str) -> None:
@@ -86,11 +66,12 @@ def do_export(gui: Any, target: str) -> None:
         if default_dir and Path(default_dir).exists():
             initial_dir = default_dir
 
-    path = filedialog.asksaveasfilename(
-        defaultextension=ext_info[0],
-        filetypes=[(ext_info[1], ext_info[2])],
-        initialfile=f"{gui.current_article.title[:30]}{ext_info[0]}",
-        initialdir=initial_dir,
+    path = choose_export_file_path(
+        extension=ext_info[0],
+        filetype_name=ext_info[1],
+        filetype_pattern=ext_info[2],
+        article_title=gui.current_article.title,
+        initial_dir=initial_dir,
     )
     if not path:
         logger.info("导出已取消")
@@ -103,7 +84,7 @@ def do_export(gui: Any, target: str) -> None:
             logger.info(f"已记住导出目录: {export_dir}")
 
     gui.export_btn.configure(state="disabled")
-    gui._set_status("正在导出...", ModernColors.INFO)
+    gui._set_status(tr("正在导出..."), ModernColors.INFO)
 
     def do_export_thread() -> None:
         try:
@@ -125,11 +106,11 @@ def export_complete(gui: Any, success: bool, message: str) -> None:
     """单篇导出完成。"""
     gui.export_btn.configure(state="normal")
     if success:
-        gui._set_status("导出完成", ModernColors.SUCCESS)
-        messagebox.showinfo("成功", f"导出成功: {message}")
+        gui._set_status(tr("导出完成"), ModernColors.SUCCESS)
+        show_export_success(message)
     else:
-        gui._set_status("导出失败", ModernColors.ERROR)
-        messagebox.showerror("错误", f"导出失败: {message}")
+        gui._set_status(tr("导出失败"), ModernColors.ERROR)
+        show_export_error(message)
 
 
 def on_batch_export(gui: Any) -> None:
@@ -140,7 +121,8 @@ def on_batch_export(gui: Any) -> None:
     if not gui._check_export_dir_configured():
         return
 
-    dialog = BatchArchiveExportDialog(gui.root, gui.batch_results)
+    archive_formats = gui.container.export_workflow_service.list_archive_formats()
+    dialog = BatchArchiveExportDialog(gui.root, gui.batch_results, archive_formats)
     result = dialog.get()
     if not result:
         return
@@ -166,10 +148,15 @@ def do_archive_export(gui: Any, articles: list, archive_format: str, path: str) 
     format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
     format_name = format_names.get(archive_format, archive_format.upper())
 
-    gui.batch_status_label.configure(text=f"正在打包 0/{len(articles)} 篇为 {format_name}...")
+    gui.batch_status_label.configure(
+        text=tr("正在打包 0/{total} 篇为 {format}...").format(
+            total=len(articles),
+            format=format_name,
+        )
+    )
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     gui._batch_export_active = True
@@ -182,16 +169,13 @@ def do_archive_export(gui: Any, articles: list, archive_format: str, path: str) 
 def archive_export_worker(gui: Any, articles: list, archive_format: str, path: str) -> None:
     """工作线程：执行多格式压缩导出。"""
     try:
-        from ...infrastructure.adapters.exporters import MultiFormatArchiveExporter
-
         tracker = gui._archive_progress_tracker
 
         def progress_callback(current: int, total: int, item_name: str) -> None:
             if current > tracker.current:
                 tracker.update_success(current_item=item_name)
 
-        exporter = MultiFormatArchiveExporter()
-        result = exporter.export_batch(
+        result = gui.container.export_workflow_service.export_archive(
             articles=articles,
             path=path,
             archive_format=archive_format,
@@ -216,9 +200,9 @@ def archive_export_complete(gui: Any, result: str, archive_format: str) -> None:
     format_names = {"zip": "ZIP", "7z": "7z", "rar": "RAR"}
     format_name = format_names.get(archive_format, archive_format.upper())
 
-    gui.batch_status_label.configure(text=f"{format_name} 导出完成")
+    gui.batch_status_label.configure(text=tr("{format} 导出完成").format(format=format_name))
     logger.success(f"批量导出成功: {result}")
-    messagebox.showinfo("成功", f"导出成功: {result}")
+    show_export_success(result)
 
 
 def archive_export_error(gui: Any, error: str) -> None:
@@ -226,8 +210,8 @@ def archive_export_error(gui: Any, error: str) -> None:
     gui._batch_export_active = False
 
     enable_export_buttons(gui)
-    gui.batch_status_label.configure(text="压缩导出失败")
-    messagebox.showerror("错误", f"导出失败: {error}")
+    gui.batch_status_label.configure(text=tr("压缩导出失败"))
+    show_export_error(error)
 
 
 def on_batch_export_format(gui: Any, target: str) -> None:
@@ -242,7 +226,7 @@ def on_batch_export_format(gui: Any, target: str) -> None:
         gui._show_batch_word_preview()
         return
 
-    dir_path = filedialog.askdirectory(title="选择输出目录")
+    dir_path = choose_batch_output_directory()
     if not dir_path:
         return
 
@@ -257,10 +241,12 @@ def do_batch_export(gui: Any, target: str, dir_path: str) -> None:
     )
     gui._export_progress_tracker.set_callback(gui._on_export_progress_update)
     gui.batch_progress.set(0)
-    gui.batch_status_label.configure(text=f"正在导出 0/{len(gui.batch_results)} 篇...")
+    gui.batch_status_label.configure(
+        text=tr("正在导出 0/{total} 篇...").format(total=len(gui.batch_results))
+    )
     gui.batch_elapsed_label.configure(text="00:00")
     gui.batch_eta_label.configure(text="--:--")
-    gui.batch_rate_label.configure(text="计算中...")
+    gui.batch_rate_label.configure(text=tr("计算中..."))
     gui.batch_count_label.configure(text="0 / 0")
 
     gui._batch_export_active = True
@@ -278,7 +264,12 @@ def update_export_progress_ui(gui: Any, info: ProgressInfo) -> None:
     """更新导出进度 GUI 显示。"""
     progress_value = info.percentage / 100.0
     gui.batch_progress.set(progress_value)
-    gui.batch_status_label.configure(text=f"正在导出 {info.progress_text} ({info.percentage_text})")
+    gui.batch_status_label.configure(
+        text=tr("正在导出 {progress} ({percentage})").format(
+            progress=info.progress_text,
+            percentage=info.percentage_text,
+        )
+    )
     gui.batch_elapsed_label.configure(text=info.elapsed_formatted)
     gui.batch_eta_label.configure(text=info.eta_formatted)
     gui.batch_rate_label.configure(text=info.rate_formatted)
@@ -324,10 +315,15 @@ def batch_export_complete(gui: Any, success_count: int, failure_count: int, dir_
 
     enable_export_buttons(gui)
     gui.batch_progress.set(1.0)
-    gui.batch_status_label.configure(text=f"导出完成: {success_count} 成功, {failure_count} 失败")
+    gui.batch_status_label.configure(
+        text=tr("导出完成: {success} 成功, {failure} 失败").format(
+            success=success_count,
+            failure=failure_count,
+        )
+    )
     total = success_count + failure_count
     logger.success(f"批量导出完成: {success_count}/{total}")
-    messagebox.showinfo("成功", f"导出完成: {success_count}/{total} 篇\n输出目录: {dir_path}")
+    show_batch_export_success(success_count, total, dir_path)
 
 
 def batch_export_error(gui: Any, error: str) -> None:
@@ -335,8 +331,8 @@ def batch_export_error(gui: Any, error: str) -> None:
     gui._batch_export_active = False
 
     enable_export_buttons(gui)
-    gui.batch_status_label.configure(text="导出失败")
-    messagebox.showerror("错误", f"导出失败: {error}")
+    gui.batch_status_label.configure(text=tr("导出失败"))
+    show_export_error(error)
 
 
 def disable_export_buttons(gui: Any) -> None:

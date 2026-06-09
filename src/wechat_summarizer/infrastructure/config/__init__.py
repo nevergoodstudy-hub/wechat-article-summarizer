@@ -1,6 +1,6 @@
 """配置模块"""
 
-from .container import Container, get_container, reset_container
+from .container import Container, get_container, override_container, reset_container
 from .paths import (
     get_cache_dir,
     get_config_dir,
@@ -20,6 +20,7 @@ __all__ = [
     "get_log_dir",
     "get_settings",
     "migrate_legacy_config",
+    "override_container",
     "reset_container",
     "reset_settings",
 ]

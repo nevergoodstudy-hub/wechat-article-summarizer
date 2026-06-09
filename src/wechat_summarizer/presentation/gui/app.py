@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from ...infrastructure.config import get_settings
 from ...shared.constants import GUI_MIN_SIZE, GUI_WINDOW_TITLE
 from .app_actions import GUIActionsMixin
 from .app_bootstrap import GUIBootstrapMixin
+from .app_layout import GUILayoutMixin
 from .app_navigation import GUINavigationMixin
 from .app_runtime import GUIRuntimeMixin
 from .ctk_compat import CTK_AVAILABLE, ctk
@@ -21,11 +21,12 @@ from .widgets.splash_screen import SplashScreen
 
 if TYPE_CHECKING:
     from ...domain.entities import Article
-    from ...infrastructure.config import AppSettings, Container
+    from .viewmodels.ports import AppSettingsLike, ContainerLike
 
 
 class WechatSummarizerGUI(
     GUIBootstrapMixin,
+    GUILayoutMixin,
     GUINavigationMixin,
     GUIActionsMixin,
     GUIRuntimeMixin,
@@ -38,7 +39,7 @@ class WechatSummarizerGUI(
     PAGE_HISTORY = "history"
     PAGE_SETTINGS = "settings"
 
-    def __init__(self, container: Container, settings: AppSettings):
+    def __init__(self, container: ContainerLike, settings: AppSettingsLike):
         if not CTK_AVAILABLE:
             raise ImportError("customtkinter未安装，请运行 pip install customtkinter")
 
@@ -92,16 +93,18 @@ class WechatSummarizerGUI(
         self.root.mainloop()
 
 
-def run_gui() -> None:
+def run_gui(*, container: ContainerLike, settings: AppSettingsLike) -> None:
     """Launch the GUI through the thin `MainWindow` coordinator."""
     if not CTK_AVAILABLE:
         print("错误: customtkinter未安装")
         print("请运行: pip install customtkinter")
         return None
 
-    window = MainWindow(WechatSummarizerGUI, settings=get_settings())
+    window = MainWindow(WechatSummarizerGUI, container=container, settings=settings)
     window.run()
 
 
 if __name__ == "__main__":
-    run_gui()
+    from ...bootstrap.gui import run_gui as run_bootstrapped_gui
+
+    run_bootstrapped_gui()

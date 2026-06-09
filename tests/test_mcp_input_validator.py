@@ -18,6 +18,7 @@ from unittest.mock import patch
 import pytest
 
 from wechat_summarizer.mcp.input_validator import MCPInputValidator, MCPValidationError
+from wechat_summarizer.mcp.security_config import MCP_SECURITY_CONFIG
 
 # ── validate_url ───────────────────────────────────────
 
@@ -52,11 +53,18 @@ class TestValidateUrl:
         with pytest.raises(MCPValidationError, match="Suspicious character"):
             MCPInputValidator.validate_url("https://evil.com;rm -rf/")
 
+    def test_rejects_hosts_outside_network_allowlist(self):
+        with pytest.raises(MCPValidationError, match="host not allowed"):
+            MCPInputValidator.validate_url("https://example.com/article")
+
     def test_strips_invisible_unicode(self):
         """移除零宽字符后仍应正确验证"""
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            return_value="https://example.com/article",
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                return_value="https://example.com/article",
+            ),
         ):
             result = MCPInputValidator.validate_url("https://example.com/\u200barticle")
             assert "\u200b" not in result
@@ -92,18 +100,24 @@ class TestValidateUrls:
             MCPInputValidator.validate_urls(["https://example.com/ok", "ftp://evil.com/bad"])
 
     def test_accepts_valid_url_list(self):
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=lambda u: u,
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=lambda u: u,
+            ),
         ):
             urls = ["https://example.com/1", "https://example.com/2"]
             result = MCPInputValidator.validate_urls(urls)
             assert len(result) == 2
 
     def test_accepts_url_list_at_max_count_boundary(self):
-        with patch(
-            "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
-            side_effect=lambda u: u,
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"allowed_network_hosts": ["example.com"]}),
+            patch(
+                "wechat_summarizer.shared.utils.ssrf_protection.SSRFSafeTransport.validate_url",
+                side_effect=lambda u: u,
+            ),
         ):
             urls = [f"https://example.com/{i}" for i in range(10)]
             result = MCPInputValidator.validate_urls(urls, max_count=10)
@@ -112,6 +126,14 @@ class TestValidateUrls:
     def test_accepts_empty_url_list(self):
         result = MCPInputValidator.validate_urls([], max_count=10)
         assert result == []
+
+    def test_uses_configured_default_max_count(self):
+        """默认批量 URL 上限来自 MCP 安全配置"""
+        with (
+            patch.dict(MCP_SECURITY_CONFIG, {"max_batch_urls": 1}),
+            pytest.raises(MCPValidationError, match="Too many URLs: 2 > 1"),
+        ):
+            MCPInputValidator.validate_urls(["https://example.com/1", "https://example.com/2"])
 
 
 # ── validate_file_path ─────────────────────────────────
@@ -255,6 +277,13 @@ class TestValidateMaxLength:
         with pytest.raises(MCPValidationError, match="must be integer"):
             MCPInputValidator.validate_max_length(20_000, upper=10_000)
 
+    def test_uses_configured_default_upper_bound(self):
+        """默认摘要长度上限来自 MCP 安全配置"""
+        with patch.dict(MCP_SECURITY_CONFIG, {"max_summary_length": 120}):
+            assert MCPInputValidator.validate_max_length(120) == 120
+            with pytest.raises(MCPValidationError, match=r"\[50, 120\]"):
+                MCPInputValidator.validate_max_length(121)
+
     def test_rejects_non_integer(self):
         with pytest.raises(MCPValidationError, match="must be integer"):
             MCPInputValidator.validate_max_length("100")
@@ -349,3 +378,12 @@ class TestValidateAspects:
     def test_accepts_valid_aspects(self):
         result = MCPInputValidator.validate_aspects(["主题", "情感", "实体"])
         assert len(result) == 3
+
+    def test_uses_configured_aspect_limits(self):
+        """维度数量和单项长度上限来自 MCP 安全配置"""
+        with patch.dict(MCP_SECURITY_CONFIG, {"max_aspects": 1, "max_aspect_length": 3}):
+            with pytest.raises(MCPValidationError, match="Too many aspects: 2 > 1"):
+                MCPInputValidator.validate_aspects(["主题", "情感"])
+
+            with pytest.raises(MCPValidationError, match="Input too long: 4 > 3"):
+                MCPInputValidator.validate_aspects(["abcd"])

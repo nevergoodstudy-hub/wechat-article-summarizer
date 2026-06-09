@@ -38,7 +38,7 @@
 
 ### 2.1 安装 Python
 
-本工具需要 **Python 3.10 或更高版本**。
+本工具需要 **Python 3.11 或更高版本**。
 
 **检查是否已安装 Python：**
 
@@ -48,12 +48,12 @@
 python --version
 ```
 
-如果显示 `Python 3.10.x` 或更高版本，说明已安装。
+如果显示 `Python 3.11.x` 或更高版本，说明已安装。
 
 **如果未安装，请下载安装：**
 
 1. 访问 [Python 官网](https://www.python.org/downloads/)
-2. 下载最新版本（推荐 Python 3.11 或 3.12）
+2. 下载最新版本（推荐 Python 3.12 或 3.14）
 3. 安装时 **务必勾选** "Add Python to PATH"（添加到环境变量）
 4. 安装完成后重新打开命令行，验证安装
 
@@ -461,7 +461,7 @@ pause
 - 设置导出到你常用的笔记软件
 
 **需要帮助？**
-- 查看 [README.md](../README.md) 了解更多功能
+- 查看 [README.md](README.md) 了解更多功能
 - 查看 [CONTRIBUTING.md](./CONTRIBUTING.md) 了解如何参与开发
 
 祝你使用愉快！📰✨

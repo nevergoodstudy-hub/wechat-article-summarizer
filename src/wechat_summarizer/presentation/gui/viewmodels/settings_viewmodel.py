@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 from .base import BaseViewModel, Observable
 
 if TYPE_CHECKING:
-    from ....infrastructure.config import Container
+    from .ports import ContainerLike
 
 
 @runtime_checkable
@@ -30,7 +30,7 @@ class SettingsViewModel(BaseViewModel):
     管理应用设置的显示和编辑。
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: ContainerLike):
         super().__init__()
         self._container = container
         settings = container.settings

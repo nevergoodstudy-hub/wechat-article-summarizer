@@ -14,13 +14,17 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from ...application.ports.outbound import (
+        CommunityDetectorPort,
         EmbedderPort,
+        EntityExtractorPort,
         ExporterPort,
+        GraphBuilderPort,
         ScraperPort,
         StoragePort,
         SummarizerPort,
         VectorStorePort,
     )
+    from ...features.export_workflow import ArchiveExporterPort
     from ..plugins import PluginLoader
     from .settings import AppSettings
 
@@ -162,9 +166,7 @@ def build_exporters(
         try:
             from ..adapters.exporters.obsidian import ObsidianExporter
 
-            exporters["obsidian"] = ObsidianExporter(
-                vault_path=settings.export.obsidian_vault_path
-            )
+            exporters["obsidian"] = ObsidianExporter(vault_path=settings.export.obsidian_vault_path)
             logger.debug("Obsidian 导出器已创建")
         except Exception as exc:
             logger.warning(f"Obsidian 导出器不可用: {exc}")
@@ -207,6 +209,13 @@ def build_exporters(
 
     logger.info(f"已加载 {len(exporters)} 个导出器")
     return exporters
+
+
+def build_archive_exporter(settings: AppSettings) -> ArchiveExporterPort:
+    """Build the batch archive exporter."""
+    from ..adapters.exporters import MultiFormatArchiveExporter
+
+    return MultiFormatArchiveExporter(output_dir=settings.export.default_output_dir)
 
 
 def build_embedders(settings: AppSettings) -> dict[str, EmbedderPort]:
@@ -266,6 +275,21 @@ def build_vector_stores() -> dict[str, VectorStorePort]:
     return stores
 
 
+def build_knowledge_graph_components() -> tuple[
+    EntityExtractorPort,
+    GraphBuilderPort,
+    CommunityDetectorPort,
+]:
+    """Build default knowledge-graph analysis adapters."""
+    from ..adapters.knowledge_graph import (
+        SimpleCommunityDetector,
+        SimpleEntityExtractor,
+        SimpleGraphBuilder,
+    )
+
+    return SimpleEntityExtractor(), SimpleGraphBuilder(), SimpleCommunityDetector()
+
+
 def _create_base_summarizers(
     settings: AppSettings,
     summarizers: dict[str, SummarizerPort],
@@ -310,9 +334,7 @@ def _create_base_summarizers(
         except Exception as exc:
             logger.warning(f"DeepSeek摘要器不可用: {exc}")
 
-    anthropic_key = (
-        extra_api_keys.get("anthropic") or settings.anthropic.api_key.get_secret_value()
-    )
+    anthropic_key = extra_api_keys.get("anthropic") or settings.anthropic.api_key.get_secret_value()
     if anthropic_key:
         try:
             summarizers["anthropic"] = AnthropicSummarizer(

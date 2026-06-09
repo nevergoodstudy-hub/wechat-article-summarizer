@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -25,6 +24,7 @@ import httpx
 from loguru import logger
 
 from ....domain.entities import Article
+from ....domain.time import utc_now
 from ....shared.constants import CONFIG_DIR_NAME
 from ....shared.exceptions import ExporterAuthError, ExporterError
 from .base import BaseExporter
@@ -461,7 +461,7 @@ class OneNoteExporter(BaseExporter):
         account = escape(article.account_name or "未知")
         author = escape(article.author or "")
         publish_time = escape(article.publish_time_str)
-        created = escape(datetime.now(UTC).isoformat())
+        created = escape(utc_now().isoformat())
 
         # Summary
         summary_html = ""
