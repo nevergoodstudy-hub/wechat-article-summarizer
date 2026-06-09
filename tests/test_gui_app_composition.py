@@ -930,6 +930,106 @@ def test_gui_shell_layout_is_extracted_from_bootstrap() -> None:
 
 
 @pytest.mark.unit
+def test_gui_shell_reexports_page_widget_aliases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Runtime mixins still depend on the controller-level widget aliases."""
+
+    class FakeSinglePage:
+        url_entry = object()
+        url_status_label = object()
+        method_var = object()
+        method_menu = object()
+        summarize_var = object()
+        fetch_btn = object()
+        export_btn = object()
+        preview_text = object()
+        title_label = object()
+        author_label = object()
+        word_count_label = object()
+        summary_text = object()
+        points_text = object()
+
+        def __init__(self, _master, *, gui):  # type: ignore[no-untyped-def]
+            self.gui = gui
+
+    class FakeBatchPage:
+        batch_url_text = object()
+        batch_url_status_label = object()
+        batch_method_var = object()
+        concurrency_var = object()
+        batch_start_btn = object()
+        batch_stop_btn = object()
+        batch_result_frame = object()
+        batch_progress = object()
+        batch_status_label = object()
+        batch_elapsed_label = object()
+        batch_eta_label = object()
+        batch_rate_label = object()
+        batch_count_label = object()
+        batch_export_word_btn = object()
+        batch_export_md_btn = object()
+        batch_export_btn = object()
+        batch_export_html_btn = object()
+
+        def __init__(self, _master, *, gui):  # type: ignore[no-untyped-def]
+            self.gui = gui
+
+    class FakeHistoryPage:
+        cache_stats_label = object()
+        history_frame = object()
+
+        def __init__(self, _master, *, gui):  # type: ignore[no-untyped-def]
+            self.gui = gui
+            self.shown = False
+
+        def on_page_shown(self) -> None:
+            self.shown = True
+
+    shell = type(
+        "Shell",
+        (GUILayoutMixin,),
+        {
+            "PAGE_SINGLE": "single",
+            "PAGE_BATCH": "batch",
+            "PAGE_HISTORY": "history",
+        },
+    )()
+    shell.content_area = object()
+    shell._page_frames = {}
+
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.app_layout.SinglePage",
+        FakeSinglePage,
+    )
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.app_layout.BatchPage",
+        FakeBatchPage,
+    )
+    monkeypatch.setattr(
+        "wechat_summarizer.presentation.gui.app_layout.HistoryPage",
+        FakeHistoryPage,
+    )
+
+    shell._build_single_page()
+    shell._build_batch_page()
+    shell._build_history_page()
+
+    assert shell._page_frames["single"] is shell.single_page
+    assert shell.url_entry is shell.single_page.url_entry
+    assert shell.url_status_label is shell.single_page.url_status_label
+    assert shell.method_var is shell.single_page.method_var
+    assert shell.summary_text is shell.single_page.summary_text
+    assert shell._page_frames["batch"] is shell.batch_page
+    assert shell.batch_url_text is shell.batch_page.batch_url_text
+    assert shell.batch_url_status_label is shell.batch_page.batch_url_status_label
+    assert shell.batch_progress is shell.batch_page.batch_progress
+    assert shell.batch_export_html_btn is shell.batch_page.batch_export_html_btn
+    assert shell._page_frames["history"] is shell.history_page
+    assert shell.cache_stats_label is shell.history_page.cache_stats_label
+    assert shell.history_frame is shell.history_page.history_frame
+    assert shell.history_page.shown is True
+
+
+@pytest.mark.unit
 def test_home_page_delegates_dashboard_sections_to_frames() -> None:
     assert "_build_welcome" not in HomePage.__dict__
     assert "_build_action_cards" not in HomePage.__dict__

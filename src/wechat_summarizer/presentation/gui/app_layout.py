@@ -210,14 +210,46 @@ class GUILayoutMixin:
     def _build_single_page(self: Any) -> None:
         self.single_page = SinglePage(self.content_area, gui=self)
         self._page_frames[self.PAGE_SINGLE] = self.single_page
+        self.url_entry = self.single_page.url_entry
+        self.url_status_label = self.single_page.url_status_label
+        self.method_var = self.single_page.method_var
+        self.method_menu = self.single_page.method_menu
+        self.summarize_var = self.single_page.summarize_var
+        self.fetch_btn = self.single_page.fetch_btn
+        self.export_btn = self.single_page.export_btn
+        self.preview_text = self.single_page.preview_text
+        self.title_label = self.single_page.title_label
+        self.author_label = self.single_page.author_label
+        self.word_count_label = self.single_page.word_count_label
+        self.summary_text = self.single_page.summary_text
+        self.points_text = self.single_page.points_text
 
     def _build_batch_page(self: Any) -> None:
         self.batch_page = BatchPage(self.content_area, gui=self)
         self._page_frames[self.PAGE_BATCH] = self.batch_page
+        self.batch_url_text = self.batch_page.batch_url_text
+        self.batch_url_status_label = self.batch_page.batch_url_status_label
+        self.batch_method_var = self.batch_page.batch_method_var
+        self.concurrency_var = self.batch_page.concurrency_var
+        self.batch_start_btn = self.batch_page.batch_start_btn
+        self.batch_stop_btn = self.batch_page.batch_stop_btn
+        self.batch_result_frame = self.batch_page.batch_result_frame
+        self.batch_progress = self.batch_page.batch_progress
+        self.batch_status_label = self.batch_page.batch_status_label
+        self.batch_elapsed_label = self.batch_page.batch_elapsed_label
+        self.batch_eta_label = self.batch_page.batch_eta_label
+        self.batch_rate_label = self.batch_page.batch_rate_label
+        self.batch_count_label = self.batch_page.batch_count_label
+        self.batch_export_word_btn = self.batch_page.batch_export_word_btn
+        self.batch_export_md_btn = self.batch_page.batch_export_md_btn
+        self.batch_export_btn = self.batch_page.batch_export_btn
+        self.batch_export_html_btn = self.batch_page.batch_export_html_btn
 
     def _build_history_page(self: Any) -> None:
         self.history_page = HistoryPage(self.content_area, gui=self)
         self._page_frames[self.PAGE_HISTORY] = self.history_page
+        self.cache_stats_label = self.history_page.cache_stats_label
+        self.history_frame = self.history_page.history_frame
         self.history_page.on_page_shown()
 
     def _build_settings_page(self: Any) -> None:
