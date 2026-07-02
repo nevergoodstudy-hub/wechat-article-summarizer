@@ -14,10 +14,23 @@ import contextlib
 import random
 from typing import TYPE_CHECKING, Any
 
+from ..components.layout import (
+    MetricSpec,
+    SurfacePanel,
+    border_color,
+    create_badge,
+    create_empty_state,
+    create_metric_tile,
+    muted_text_color,
+    normal_text_color,
+    subtle_hover_color,
+    surface_alt_color,
+)
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 from ..utils.i18n import get_i18n
 from ..widgets.helpers import adjust_color_brightness
+from .home_page_data import DASHBOARD_TIPS, get_action_cards
 
 _ctk_available = True
 try:
@@ -27,16 +40,6 @@ except ImportError:
 
 if TYPE_CHECKING:
     pass
-
-# 简化提示列表 - 随机展示一条
-_TIPS = [
-    ("📋", "粘贴即用", "复制微信文章链接，直接粘贴到下方输入框即可开始处理"),
-    ("⌨️", "快捷键", "Ctrl+1~4 切换页面，Ctrl+D 切换主题，Ctrl+E 导出"),
-    ("🤖", "AI 摘要", "在设置中配置 API 密钥，即可使用 DeepSeek/OpenAI 智能摘要"),
-    ("📦", "批量打包", "批量处理后可一键导出为 ZIP 压缩包"),
-    ("🗃️", "智能缓存", "已处理文章自动缓存，重复链接秒速加载"),
-    ("📂", "文件导入", "在批量页面点击「从文件导入」支持 .txt 批量导入链接"),
-]
 
 
 class HomePage(ctk.CTkFrame):
@@ -74,86 +77,89 @@ class HomePage(ctk.CTkFrame):
 
     def _build(self):
         """构建仪表盘"""
-        # 可滚动容器
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True)
         self._scroll.grid_columnconfigure(0, weight=1)
 
-        # ① 欢迎区 + 快速粘贴
-        self._build_welcome(self._scroll)
-
-        # ② 导航卡片 (Bento 3列)
+        self._build_command_center(self._scroll)
         self._build_action_cards(self._scroll)
 
-        # ③ 状态 + 最近记录 (2列)
         info_row = ctk.CTkFrame(self._scroll, fg_color="transparent")
-        info_row.pack(fill="x", pady=(0, 10))
+        info_row.pack(fill="x", pady=(0, 12))
         info_row.grid_columnconfigure(0, weight=1)
         info_row.grid_columnconfigure(1, weight=2)
 
         self._build_status_overview(info_row)
         self._build_recent_records(info_row)
-
-        # ④ 动态提示条
         self._build_tip_bar(self._scroll)
 
     # ------------------------------------------------------------------
     # ① 欢迎区 + 快速粘贴入口
     # ------------------------------------------------------------------
 
-    def _build_welcome(self, parent):
-        """欢迎区 + 快速粘贴URL入口"""
-        frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=(0, 20))
-
-        ctk.CTkLabel(
-            frame,
-            text="👋 欢迎使用文章助手",
-            font=self.gui._get_font(28, "bold"),
-            text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-        ).pack(anchor="w")
-
-        ctk.CTkLabel(
-            frame,
-            text="快速抓取、总结和导出微信公众号文章",
-            font=self.gui._get_font(14),
-            text_color=(
-                ModernColors.LIGHT_TEXT_SECONDARY,
-                ModernColors.DARK_TEXT_SECONDARY,
-            ),
-        ).pack(anchor="w", pady=(5, 12))
-
-        # 快速粘贴栏
-        paste_row = ctk.CTkFrame(
-            frame,
+    def _build_command_center(self, parent):
+        """快速任务中心 + 粘贴URL入口"""
+        panel = ctk.CTkFrame(
+            parent,
             fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
             corner_radius=Spacing.RADIUS_LG,
             border_width=1,
-            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+            border_color=border_color(),
         )
-        paste_row.pack(fill="x")
+        panel.pack(fill="x", pady=(0, 16))
+        panel.grid_columnconfigure(0, weight=5)
+        panel.grid_columnconfigure(1, weight=3)
 
-        inner = ctk.CTkFrame(paste_row, fg_color="transparent")
-        inner.pack(fill="x", padx=16, pady=12)
+        command = ctk.CTkFrame(panel, fg_color="transparent")
+        command.grid(row=0, column=0, sticky="nsew", padx=22, pady=20)
+        command.grid_columnconfigure(0, weight=1)
+
+        create_badge(
+            command,
+            gui=self.gui,
+            text="QUICK CAPTURE",
+            tone=ModernColors.SUCCESS,
+        ).grid(row=0, column=0, sticky="w")
+
+        ctk.CTkLabel(
+            command,
+            text="把公众号文章收进你的知识库",
+            font=self.gui._get_font(22, "bold"),
+            text_color=normal_text_color(),
+            anchor="w",
+        ).grid(row=1, column=0, sticky="ew", pady=(12, 4))
+
+        ctk.CTkLabel(
+            command,
+            text="粘贴文章链接，选择摘要方式，然后导出到 Markdown、Word 或本地归档。",
+            font=self.gui._get_font(13),
+            text_color=muted_text_color(),
+            anchor="w",
+        ).grid(row=2, column=0, sticky="ew", pady=(0, 14))
+
+        input_area = ctk.CTkFrame(command, fg_color="transparent")
+        input_area.grid(row=3, column=0, sticky="ew")
+        input_area.grid_columnconfigure(0, weight=1)
 
         self._quick_entry = ctk.CTkEntry(
-            inner,
-            placeholder_text="粘贴微信文章链接，按 Enter 开始处理…",
+            input_area,
+            placeholder_text="https://mp.weixin.qq.com/s/...",
             font=self.gui._get_font(13),
-            height=40,
+            height=44,
             corner_radius=Spacing.RADIUS_MD,
             border_width=1,
-            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+            border_color=border_color(),
+            fg_color=(ModernColors.LIGHT_BG, ModernColors.DARK_INSET),
         )
-        self._quick_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self._quick_entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         self._quick_entry.bind("<Return>", self._on_quick_paste)
 
         go_btn = ctk.CTkButton(
-            inner,
-            text="开始 →",
+            input_area,
+            text="处理",
             font=self.gui._get_font(13, "bold"),
-            width=90,
-            height=40,
+            width=96,
+            height=44,
             corner_radius=Spacing.RADIUS_MD,
             fg_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
             hover_color=(
@@ -162,7 +168,81 @@ class HomePage(ctk.CTkFrame):
             ),
             command=lambda: self._on_quick_paste(None),
         )
-        go_btn.pack(side="right")
+        go_btn.grid(row=0, column=1, sticky="e")
+
+        shortcut_row = ctk.CTkFrame(command, fg_color="transparent")
+        shortcut_row.grid(row=4, column=0, sticky="ew", pady=(14, 0))
+        for label, page, tone in (
+            ("批量导入", self.PAGE_BATCH, ModernColors.INFO),
+            ("查看历史", self.PAGE_HISTORY, ModernColors.WARNING),
+            ("配置服务", self.PAGE_SETTINGS, ModernColors.BRAND_VIOLET),
+        ):
+            ctk.CTkButton(
+                shortcut_row,
+                text=label,
+                height=32,
+                width=92,
+                corner_radius=Spacing.RADIUS_MD,
+                fg_color="transparent",
+                text_color=tone,
+                border_width=1,
+                border_color=tone,
+                hover_color=subtle_hover_color(),
+                font=self.gui._get_font(12),
+                command=lambda p=page: self.gui._show_page(p),
+            ).pack(side="left", padx=(0, 8))
+
+        metrics_panel = ctk.CTkFrame(
+            panel,
+            fg_color=surface_alt_color(),
+            corner_radius=Spacing.RADIUS_LG,
+            border_width=1,
+            border_color=border_color(),
+        )
+        metrics_panel.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+
+        ctk.CTkLabel(
+            metrics_panel,
+            text="服务快照",
+            font=self.gui._get_font(14, "bold"),
+            text_color=normal_text_color(),
+            anchor="w",
+        ).pack(fill="x", padx=16, pady=(14, 2))
+        ctk.CTkLabel(
+            metrics_panel,
+            text="本机摘要、导出与缓存状态",
+            font=self.gui._get_font(11),
+            text_color=muted_text_color(),
+            anchor="w",
+        ).pack(fill="x", padx=16, pady=(0, 10))
+
+        metrics = ctk.CTkFrame(metrics_panel, fg_color="transparent")
+        metrics.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        metrics.grid_columnconfigure((0, 1), weight=1)
+
+        for index, spec in enumerate(self._collect_metric_specs()):
+            tile = create_metric_tile(metrics, gui=self.gui, spec=spec)
+            tile.grid(row=index // 2, column=index % 2, sticky="ew", padx=5, pady=5)
+
+    def _collect_metric_specs(self) -> list[MetricSpec]:
+        """收集首页指标卡片数据。"""
+        summarizers = getattr(self.gui, "_summarizer_info", {})
+        exporters = getattr(self.gui, "_exporter_info", {})
+        summarizer_available = sum(1 for info in summarizers.values() if info.available)
+        exporter_available = sum(1 for info in exporters.values() if info.available)
+
+        cache_count = 0
+        with contextlib.suppress(Exception):
+            storage = self.gui.container.storage
+            if storage:
+                cache_count = storage.get_stats().total_entries
+
+        return [
+            MetricSpec("摘要服务", f"{summarizer_available}/{len(summarizers)}", ModernColors.INFO),
+            MetricSpec("导出通道", f"{exporter_available}/{len(exporters)}", ModernColors.SUCCESS),
+            MetricSpec("本地缓存", f"{cache_count} 条", ModernColors.WARNING),
+            MetricSpec("当前模式", "深色" if self.gui._appearance_mode == "dark" else "浅色"),
+        ]
 
     def _on_quick_paste(self, _event):
         """快速粘贴处理"""
@@ -183,22 +263,22 @@ class HomePage(ctk.CTkFrame):
     def _build_action_cards(self, parent):
         """Bento 网格导航卡片"""
         cards_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        cards_frame.pack(fill="x", pady=(0, 15))
+        cards_frame.pack(fill="x", pady=(0, 16))
         cards_frame.grid_columnconfigure((0, 1, 2), weight=1)
 
-        cards = [
-            ("📄", "单篇处理", "抓取并生成摘要", self.PAGE_SINGLE, ModernColors.INFO),
-            ("📚", "批量处理", "多篇文章批量处理", self.PAGE_BATCH, ModernColors.SUCCESS),
-            ("📜", "历史记录", "查看已处理文章", self.PAGE_HISTORY, ModernColors.WARNING),
-        ]
-        for i, (icon, title, desc, page, color) in enumerate(cards):
+        cards = get_action_cards(
+            single_page=self.PAGE_SINGLE,
+            batch_page=self.PAGE_BATCH,
+            history_page=self.PAGE_HISTORY,
+        )
+        for i, card_spec in enumerate(cards):
             card = self._create_animated_card(
                 cards_frame,
-                icon=icon,
-                title=title,
-                desc=desc,
-                color=color,
-                command=lambda p=page: self.gui._show_page(p),
+                icon=card_spec.icon,
+                title=card_spec.title,
+                desc=card_spec.description,
+                color=card_spec.color,
+                command=lambda p=card_spec.page: self.gui._show_page(p),
             )
             card.grid(row=0, column=i, padx=8, pady=8, sticky="nsew")
 
@@ -208,24 +288,16 @@ class HomePage(ctk.CTkFrame):
 
     def _build_status_overview(self, parent):
         """系统状态总览卡片"""
-        card = ctk.CTkFrame(
+        card = SurfacePanel(
             parent,
-            corner_radius=Spacing.RADIUS_LG,
-            fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
-            border_width=1,
-            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+            gui=self.gui,
+            title="运行状态",
+            subtitle="当前可用服务",
+            accent=ModernColors.SUCCESS,
+            compact=True,
         )
-        card.grid(row=0, column=0, padx=(8, 6), pady=8, sticky="nsew")
-
-        inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=14)
-
-        ctk.CTkLabel(
-            inner,
-            text="📊 系统状态",
-            font=self.gui._get_font(14, "bold"),
-            text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-        ).pack(anchor="w", pady=(0, 10))
+        card.grid(row=0, column=0, padx=(0, 8), pady=0, sticky="nsew")
+        inner = card.body
 
         # 摘要器
         info = getattr(self.gui, "_summarizer_info", {})
@@ -252,7 +324,7 @@ class HomePage(ctk.CTkFrame):
         # 设置入口
         settings_btn = ctk.CTkButton(
             inner,
-            text="⚙️ 查看设置",
+            text="打开设置",
             font=self.gui._get_font(11),
             height=28,
             corner_radius=Spacing.RADIUS_SM,
@@ -297,31 +369,22 @@ class HomePage(ctk.CTkFrame):
 
     def _build_recent_records(self, parent):
         """最近处理的文章列表"""
-        card = ctk.CTkFrame(
+        card = SurfacePanel(
             parent,
-            corner_radius=Spacing.RADIUS_LG,
-            fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
-            border_width=1,
-            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+            gui=self.gui,
+            title="最近记录",
+            subtitle="最多显示 5 篇最近处理文章",
+            accent=ModernColors.WARNING,
+            compact=True,
         )
-        card.grid(row=0, column=1, padx=(6, 8), pady=8, sticky="nsew")
+        card.grid(row=0, column=1, padx=(8, 0), pady=0, sticky="nsew")
 
-        inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=16, pady=14)
-
-        header = ctk.CTkFrame(inner, fg_color="transparent")
+        header = ctk.CTkFrame(card.body, fg_color="transparent")
         header.pack(fill="x", pady=(0, 8))
-
-        ctk.CTkLabel(
-            header,
-            text="🕐 最近记录",
-            font=self.gui._get_font(14, "bold"),
-            text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
-        ).pack(side="left")
 
         ctk.CTkButton(
             header,
-            text="查看全部 →",
+            text="查看全部",
             font=self.gui._get_font(11),
             height=24,
             width=80,
@@ -335,7 +398,7 @@ class HomePage(ctk.CTkFrame):
             command=lambda: self.gui._show_page(self.PAGE_HISTORY),
         ).pack(side="right")
 
-        self._recent_container = inner
+        self._recent_container = card.body
         self._populate_recent_records()
 
     def _populate_recent_records(self):
@@ -353,16 +416,15 @@ class HomePage(ctk.CTkFrame):
                 articles = storage.list_recent(limit=5)
 
         if not articles:
-            empty = ctk.CTkLabel(
+            empty = create_empty_state(
                 self._recent_container,
-                text="暂无记录，处理文章后将在此显示",
-                font=self.gui._get_font(12),
-                text_color=(
-                    ModernColors.LIGHT_TEXT_MUTED,
-                    ModernColors.DARK_TEXT_MUTED,
-                ),
+                gui=self.gui,
+                title="暂无处理记录",
+                detail="完成第一篇文章后，标题、公众号与时间会出现在这里。",
+                command=lambda: self.gui._show_page(self.PAGE_SINGLE),
+                action_text="处理文章",
             )
-            empty.pack(anchor="w", pady=8)
+            empty.pack(fill="x", pady=8)
             self._recent_labels.append(empty)
             return
 
@@ -376,9 +438,9 @@ class HomePage(ctk.CTkFrame):
                 title = title[:38] + "…"
             ctk.CTkLabel(
                 row,
-                text=f"📄 {title}",
+                text=title,
                 font=self.gui._get_font(12),
-                text_color=(ModernColors.LIGHT_TEXT, ModernColors.DARK_TEXT),
+                text_color=normal_text_color(),
                 anchor="w",
             ).pack(side="left", fill="x", expand=True)
 
@@ -404,25 +466,24 @@ class HomePage(ctk.CTkFrame):
 
     def _build_tip_bar(self, parent):
         """底部随机提示条"""
-        tip = random.choice(_TIPS)
+        tip = random.choice(DASHBOARD_TIPS)
         tip_frame = ctk.CTkFrame(
             parent,
-            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_SURFACE_ALT),
+            fg_color=surface_alt_color(),
             corner_radius=Spacing.RADIUS_MD,
+            border_width=1,
+            border_color=border_color(),
         )
-        tip_frame.pack(fill="x", padx=8, pady=(5, 10))
+        tip_frame.pack(fill="x", pady=(0, 10))
 
         inner = ctk.CTkFrame(tip_frame, fg_color="transparent")
         inner.pack(fill="x", padx=14, pady=10)
 
         ctk.CTkLabel(
             inner,
-            text=f"{tip[0]}  {tip[1]}  ·  {tip[2]}",
+            text=f"{tip.title} / {tip.content}",
             font=self.gui._get_font(12),
-            text_color=(
-                ModernColors.LIGHT_TEXT_SECONDARY,
-                ModernColors.DARK_TEXT_SECONDARY,
-            ),
+            text_color=muted_text_color(),
             anchor="w",
         ).pack(fill="x")
 
@@ -444,31 +505,40 @@ class HomePage(ctk.CTkFrame):
             corner_radius=Spacing.RADIUS_LG,
             fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
             border_width=1,
-            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+            border_color=border_color(),
         )
 
-        icon_label = ctk.CTkLabel(card, text=icon, font=ctk.CTkFont(size=36))
-        icon_label.pack(pady=(24, 8))
+        top = ctk.CTkFrame(card, fg_color="transparent")
+        top.pack(fill="x", padx=18, pady=(18, 8))
+
+        icon_label = ctk.CTkLabel(
+            top,
+            text=icon,
+            width=42,
+            height=42,
+            corner_radius=Spacing.RADIUS_MD,
+            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_SURFACE_ALT),
+            font=ctk.CTkFont(size=24),
+        )
+        icon_label.pack(side="left")
 
         title_label = ctk.CTkLabel(
-            card, text=title, font=self.gui._get_font(16, "bold"), text_color=color
+            top, text=title, font=self.gui._get_font(16, "bold"), text_color=color
         )
-        title_label.pack()
+        title_label.pack(side="left", padx=(12, 0))
 
         desc_label = ctk.CTkLabel(
             card,
             text=desc,
             font=self.gui._get_font(12),
-            text_color=(
-                ModernColors.LIGHT_TEXT_SECONDARY,
-                ModernColors.DARK_TEXT_SECONDARY,
-            ),
+            text_color=muted_text_color(),
+            anchor="w",
         )
-        desc_label.pack(pady=(6, 16))
+        desc_label.pack(fill="x", padx=18, pady=(4, 14))
 
         btn = ctk.CTkButton(
             card,
-            text="开始使用 →",
+            text="打开",
             font=self.gui._get_font(13),
             corner_radius=Spacing.RADIUS_MD,
             height=36,
@@ -476,7 +546,7 @@ class HomePage(ctk.CTkFrame):
             hover_color=adjust_color_brightness(color, 1.15),
             command=command,
         )
-        btn.pack(pady=(0, 24), padx=24, fill="x")
+        btn.pack(pady=(0, 18), padx=18, fill="x")
 
         def on_enter(e):
             card.configure(
@@ -488,7 +558,7 @@ class HomePage(ctk.CTkFrame):
         def on_leave(e):
             card.configure(
                 fg_color=(ModernColors.LIGHT_CARD, ModernColors.DARK_CARD),
-                border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+                border_color=border_color(),
             )
             title_label.configure(text_color=color)
 

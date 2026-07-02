@@ -17,9 +17,9 @@ class Spacing:
     LG = 24
     XL = 32
     XXL = 48
-    # Windows 11 圆角半径 (基于官方 ControlCornerRadius 规范)
+    # Windows 11 风格的紧凑圆角。桌面工具类界面保持 8px 内的卡片半径。
     RADIUS_SM = 4  # 小控件: 复选框、开关
-    RADIUS_MD = 8  # 标准控件: 按钮、输入框
-    RADIUS_LG = 12  # 卡片、面板
-    RADIUS_XL = 16  # 大型容器、弹窗
+    RADIUS_MD = 6  # 标准控件: 按钮、输入框
+    RADIUS_LG = 8  # 卡片、面板
+    RADIUS_XL = 8  # 大型容器、弹窗
     RADIUS_FULL = 9999  # 完全圆形

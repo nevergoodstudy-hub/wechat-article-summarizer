@@ -10,6 +10,12 @@ from loguru import logger
 from .components.button import ButtonSize, ButtonVariant, ModernButton
 from .components.card import CardStyle, ModernCard, ShadowDepth
 from .components.input import ModernInput
+from .components.layout import (
+    create_status_pill,
+    muted_text_color,
+    normal_text_color,
+    workspace_bg_color,
+)
 from .components.toast import init_toast_manager
 from .ctk_compat import ctk
 from .pages import BatchPage, HistoryPage, HomePage, SettingsPage, SinglePage
@@ -223,7 +229,7 @@ class GUIBootstrapMixin:
             elif breakpoint == Breakpoint.SM:
                 self.sidebar.configure(width=180)
             else:
-                self.sidebar.configure(width=220)
+                self.sidebar.configure(width=236)
 
     def _register_app_shortcuts(self: Any) -> None:
         shortcuts = [
@@ -333,15 +339,18 @@ class GUIBootstrapMixin:
         self.main_container = ctk.CTkFrame(
             self.root,
             corner_radius=0,
-            fg_color=(ModernColors.LIGHT_BG, ModernColors.DARK_BG),
+            fg_color=workspace_bg_color(),
         )
         self.main_container.grid(row=0, column=1, sticky="nswe")
         self.main_container.grid_columnconfigure(0, weight=1)
-        self.main_container.grid_rowconfigure(0, weight=1)
-        self.main_container.grid_rowconfigure(1, weight=0)
+        self.main_container.grid_rowconfigure(0, weight=0)
+        self.main_container.grid_rowconfigure(1, weight=1)
+        self.main_container.grid_rowconfigure(2, weight=0)
+
+        self._build_workspace_topbar()
 
         self.content_area = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self.content_area.grid(row=0, column=0, sticky="nswe", padx=20, pady=(20, 10))
+        self.content_area.grid(row=1, column=0, sticky="nswe", padx=24, pady=(10, 12))
         self.content_area.grid_columnconfigure(0, weight=1)
         self.content_area.grid_rowconfigure(0, weight=1)
 
@@ -351,6 +360,79 @@ class GUIBootstrapMixin:
         self._build_history_page()
         self._build_settings_page()
         self._build_log_panel()
+
+    def _build_workspace_topbar(self: Any) -> None:
+        topbar = ctk.CTkFrame(
+            self.main_container,
+            height=72,
+            corner_radius=0,
+            fg_color=workspace_bg_color(),
+        )
+        topbar.grid(row=0, column=0, sticky="ew", padx=24, pady=(18, 0))
+        topbar.grid_columnconfigure(0, weight=1)
+        topbar.grid_columnconfigure(1, weight=0)
+
+        title_stack = ctk.CTkFrame(topbar, fg_color="transparent")
+        title_stack.grid(row=0, column=0, sticky="ew")
+        self.workspace_title_label = ctk.CTkLabel(
+            title_stack,
+            text="文章处理工作台",
+            font=self._get_font(22, "bold"),
+            text_color=normal_text_color(),
+            anchor="w",
+        )
+        self.workspace_title_label.pack(anchor="w")
+        self.workspace_subtitle_label = ctk.CTkLabel(
+            title_stack,
+            text="从链接抓取到摘要归档，一屏完成主要任务。",
+            font=self._get_font(12),
+            text_color=muted_text_color(),
+            anchor="w",
+        )
+        self.workspace_subtitle_label.pack(anchor="w", pady=(2, 0))
+
+        status_row = ctk.CTkFrame(topbar, fg_color="transparent")
+        status_row.grid(row=0, column=1, sticky="e")
+
+        summarizer_available = sum(1 for info in self._summarizer_info.values() if info.available)
+        exporter_available = sum(1 for info in self._exporter_info.values() if info.available)
+        create_status_pill(
+            status_row,
+            gui=self,
+            label="摘要",
+            value=f"{summarizer_available}/{len(self._summarizer_info)}",
+            tone=ModernColors.SUCCESS if summarizer_available else ModernColors.ERROR,
+        ).pack(side="left", padx=(0, 8))
+        create_status_pill(
+            status_row,
+            gui=self,
+            label="导出",
+            value=f"{exporter_available}/{len(self._exporter_info)}",
+            tone=ModernColors.INFO if exporter_available else ModernColors.ERROR,
+        ).pack(side="left", padx=(0, 8))
+        refresh_btn = self._create_modern_button(
+            status_row,
+            text="刷新",
+            command=self._refresh_availability,
+            variant="ghost",
+            size="small",
+        )
+        refresh_btn.pack(side="left")
+
+    def _update_workspace_heading(self: Any, page_id: str) -> None:
+        if not hasattr(self, "workspace_title_label"):
+            return
+
+        page_meta = {
+            self.PAGE_HOME: ("文章处理工作台", "从链接抓取到摘要归档，一屏完成主要任务。"),
+            self.PAGE_SINGLE: ("单篇文章处理", "抓取正文、生成摘要，并导出到你的知识库。"),
+            self.PAGE_BATCH: ("批量文章处理", "集中导入链接、追踪进度，并统一生成归档。"),
+            self.PAGE_HISTORY: ("历史记录", "查看、恢复或清理本地缓存的文章结果。"),
+            self.PAGE_SETTINGS: ("设置", "管理摘要服务、导出偏好、系统行为与语言。"),
+        }
+        title, subtitle = page_meta.get(page_id, page_meta[self.PAGE_HOME])
+        self.workspace_title_label.configure(text=title)
+        self.workspace_subtitle_label.configure(text=subtitle)
 
     def _build_home_page(self: Any) -> None:
         self.home_page = HomePage(self.content_area, gui=self)
@@ -443,7 +525,7 @@ class GUIBootstrapMixin:
             root=self.root,
             on_status_change=self._set_status,
         )
-        self.log_panel.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 15))
+        self.log_panel.grid(row=2, column=0, sticky="ew", padx=24, pady=(0, 18))
         self.log_text = self.log_panel.log_text
         self.log_toggle_btn = self.log_panel.log_toggle_btn
         self._log_expanded = True
