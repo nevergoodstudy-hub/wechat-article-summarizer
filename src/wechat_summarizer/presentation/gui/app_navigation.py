@@ -146,6 +146,9 @@ class GUINavigationMixin:
         if page_id in self._page_frames:
             self._page_frames[page_id].grid(row=0, column=0, sticky="nsew")
 
+        if hasattr(self, "_update_workspace_heading"):
+            self._update_workspace_heading(page_id)
+
         for pid, btn in self._nav_buttons.items():
             if pid == page_id:
                 btn.configure(
@@ -207,6 +210,8 @@ class GUINavigationMixin:
                 self.PAGE_HISTORY: "历史记录",
                 self.PAGE_SETTINGS: "设置",
             }
+            if hasattr(self, "_update_workspace_heading"):
+                self._update_workspace_heading(page_id)
             page_name = page_names.get(page_id, page_id)
             self._animate_status_change(f"已切换到{page_name}")
             with contextlib.suppress(Exception):
@@ -232,6 +237,8 @@ class GUINavigationMixin:
         new_page.grid(row=0, column=0, sticky="nsew")
         self._update_nav_buttons_animated(page_id)
         self._current_page = page_id
+        if hasattr(self, "_update_workspace_heading"):
+            self._update_workspace_heading(page_id)
 
         page_names = {
             self.PAGE_HOME: "首页",

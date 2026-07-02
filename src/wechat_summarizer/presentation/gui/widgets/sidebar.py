@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from ..components.layout import create_divider, muted_text_color, normal_text_color
 from ..styles.colors import ModernColors
 from ..styles.spacing import Spacing
 from .tooltip import create_tooltip
@@ -55,7 +56,7 @@ class Sidebar(ctk.CTkFrame):
     ):
         super().__init__(
             master,
-            width=220,
+            width=236,
             corner_radius=0,
             fg_color=(ModernColors.LIGHT_SIDEBAR, ModernColors.DARK_SIDEBAR),
             **kwargs,
@@ -78,37 +79,61 @@ class Sidebar(ctk.CTkFrame):
     def _build(self, nav_items: list[tuple[str, str, str]]):
         """构建侧边栏内容"""
         self.grid_rowconfigure(10, weight=1)
+        self.grid_columnconfigure(0, weight=1)
 
         # Logo 区域
         logo_frame = ctk.CTkFrame(self, fg_color="transparent")
-        logo_frame.grid(row=0, column=0, padx=20, pady=(25, 30), sticky="ew")
+        logo_frame.grid(row=0, column=0, padx=16, pady=(22, 18), sticky="ew")
+        logo_frame.grid_columnconfigure(1, weight=1)
+
+        mark = ctk.CTkLabel(
+            logo_frame,
+            text="W",
+            width=42,
+            height=42,
+            corner_radius=Spacing.RADIUS_LG,
+            fg_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
+            text_color="#ffffff",
+            font=self._get_font(20, "bold"),
+        )
+        mark.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 10))
 
         title_label = ctk.CTkLabel(
             logo_frame,
-            text="📰 文章助手",
-            font=self._get_font(22, "bold"),
-            text_color=(ModernColors.LIGHT_ACCENT, ModernColors.DARK_ACCENT),
+            text="文章助手",
+            font=self._get_font(19, "bold"),
+            text_color=normal_text_color(),
+            anchor="w",
         )
-        title_label.pack(anchor="w")
+        title_label.grid(row=0, column=1, sticky="ew")
 
         subtitle_label = ctk.CTkLabel(
             logo_frame,
-            text="WeChat Article Summarizer",
+            text="Summarizer Studio",
             font=self._get_font(11),
-            text_color=(
-                ModernColors.LIGHT_TEXT_SECONDARY,
-                ModernColors.DARK_TEXT_SECONDARY,
-            ),
+            text_color=muted_text_color(),
+            anchor="w",
         )
-        subtitle_label.pack(anchor="w")
+        subtitle_label.grid(row=1, column=1, sticky="ew", pady=(1, 0))
+
+        create_divider(self).grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 14))
+
+        nav_label = ctk.CTkLabel(
+            self,
+            text="工作流",
+            font=self._get_font(11, "bold"),
+            text_color=muted_text_color(),
+            anchor="w",
+        )
+        nav_label.grid(row=2, column=0, sticky="ew", padx=18, pady=(0, 6))
 
         # 导航按钮
         for i, (page_id, icon, text) in enumerate(nav_items):
             btn = ctk.CTkButton(
                 self,
-                text=f"  {icon}  {text}",
-                font=self._get_font(14),
-                height=45,
+                text=f"{icon}  {text}",
+                font=self._get_font(13, "bold" if i == 0 else "normal"),
+                height=42,
                 anchor="w",
                 corner_radius=Spacing.RADIUS_MD,
                 fg_color="transparent",
@@ -116,32 +141,36 @@ class Sidebar(ctk.CTkFrame):
                 hover_color=(ModernColors.LIGHT_HOVER_SUBTLE, ModernColors.DARK_HOVER_SUBTLE),
                 command=lambda p=page_id: self._on_navigate(p),
             )
-            btn.grid(row=i + 1, column=0, padx=12, pady=4, sticky="ew")
+            btn.grid(row=i + 3, column=0, padx=12, pady=3, sticky="ew")
             self.nav_buttons[page_id] = btn
 
         # 底部设置区域
-        settings_frame = ctk.CTkFrame(self, fg_color="transparent")
-        settings_frame.grid(row=11, column=0, padx=15, pady=15, sticky="sew")
+        settings_frame = ctk.CTkFrame(
+            self,
+            fg_color=(ModernColors.LIGHT_SURFACE_ALT, ModernColors.DARK_BG_SECONDARY),
+            corner_radius=Spacing.RADIUS_LG,
+            border_width=1,
+            border_color=(ModernColors.LIGHT_BORDER, ModernColors.DARK_BORDER),
+        )
+        settings_frame.grid(row=11, column=0, padx=12, pady=14, sticky="sew")
 
         theme_label = ctk.CTkLabel(
             settings_frame,
-            text="🎨 外观主题",
-            font=self._get_font(12),
-            text_color=(
-                ModernColors.LIGHT_TEXT_SECONDARY,
-                ModernColors.DARK_TEXT_SECONDARY,
-            ),
+            text="外观主题",
+            font=self._get_font(12, "bold"),
+            text_color=normal_text_color(),
         )
-        theme_label.pack(anchor="w", pady=(0, 5))
+        theme_label.pack(anchor="w", padx=12, pady=(12, 6))
 
         self.theme_switch = ctk.CTkSegmentedButton(
             settings_frame,
             values=["浅色", "深色"],
             command=self._on_theme_change,
             font=self._get_font(12),
+            height=30,
         )
         self.theme_switch.set("深色")
-        self.theme_switch.pack(fill="x")
+        self.theme_switch.pack(fill="x", padx=12)
 
         # 紧凑状态栏 - 类似 VS Code 底部状态栏设计
         self._build_status_bar(settings_frame)
@@ -153,7 +182,7 @@ class Sidebar(ctk.CTkFrame):
             font=self._get_font(11),
             text_color=ModernColors.SUCCESS,
         )
-        self.status_label.pack(anchor="w", pady=(10, 0))
+        self.status_label.pack(anchor="w", padx=12, pady=(10, 12))
 
     def _build_status_bar(self, parent):
         """构建侧边栏底部状态栏 - 紧凑型状态指示器
@@ -164,7 +193,7 @@ class Sidebar(ctk.CTkFrame):
         - 点击可跳转到设置页查看详情
         """
         status_bar = ctk.CTkFrame(parent, fg_color="transparent", height=30)
-        status_bar.pack(fill="x", pady=(12, 0))
+        status_bar.pack(fill="x", padx=12, pady=(12, 0))
 
         # 计算状态
         summarizer_count = sum(1 for info in self._summarizer_info.values() if info.available)
@@ -181,10 +210,10 @@ class Sidebar(ctk.CTkFrame):
         summarizer_color = ModernColors.SUCCESS if summarizer_ok else ModernColors.ERROR
         summarizer_btn = ctk.CTkButton(
             indicators,
-            text=f"● {summarizer_count}/{summarizer_total}",
+            text=f"摘要 {summarizer_count}/{summarizer_total}",
             font=self._get_font(10),
-            height=22,
-            width=55,
+            height=24,
+            width=74,
             corner_radius=Spacing.RADIUS_SM,
             fg_color="transparent",
             text_color=summarizer_color,
@@ -203,10 +232,10 @@ class Sidebar(ctk.CTkFrame):
         exporter_color = ModernColors.SUCCESS if exporter_ok else ModernColors.ERROR
         exporter_btn = ctk.CTkButton(
             indicators,
-            text=f"● {exporter_count}/{exporter_total}",
+            text=f"导出 {exporter_count}/{exporter_total}",
             font=self._get_font(10),
-            height=22,
-            width=55,
+            height=24,
+            width=74,
             corner_radius=Spacing.RADIUS_SM,
             fg_color="transparent",
             text_color=exporter_color,
@@ -233,10 +262,10 @@ class Sidebar(ctk.CTkFrame):
 
         cache_btn = ctk.CTkButton(
             indicators,
-            text=f"🗃 {cache_count}",
+            text=f"缓存 {cache_count}",
             font=self._get_font(10),
-            height=22,
-            width=50,
+            height=24,
+            width=70,
             corner_radius=Spacing.RADIUS_SM,
             fg_color="transparent",
             text_color=(

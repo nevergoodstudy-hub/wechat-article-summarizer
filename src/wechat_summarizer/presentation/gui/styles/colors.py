@@ -1,25 +1,31 @@
-"""GUI 颜色配置模块
+"""GUI 颜色配置模块。
 
-2026 现代化 UI 设计趋势：液态玻璃效果 + 渐变色彩 + OLED 友好色彩方案
+桌面端工作台视觉系统：中性背景、多语义强调色、清晰边界。
 """
 
 
 class ModernColors:
-    """现代化颜色配置 - 2026 UI设计趋势
+    """现代化颜色配置。
 
-    遵循 WCAG 2.1 可访问性标准
-    使用 #121212 深灰而非纯黑，提升OLED显示效果
+    遵循 WCAG 2.1 可访问性标准，避免单一紫蓝渐变主导界面。
     """
+
+    # ========== 品牌与语义基色 ==========
+    BRAND_TEAL = "#0f9f8f"
+    BRAND_BLUE = "#2563eb"
+    BRAND_AMBER = "#d97706"
+    BRAND_ROSE = "#e11d48"
+    BRAND_VIOLET = "#7c3aed"
 
     # ========== 深色主题 ==========
     # 背景色 - 使用深灰色而非纯黑（OLED友好）
-    DARK_BG = "#121212"  # 主背景 - 深灰而非纯黑
-    DARK_BG_SECONDARY = "#1e1e1e"  # 次级背景
-    DARK_BG_TERTIARY = "#252525"  # 第三级背景
-    DARK_SIDEBAR = "#1a1a1a"  # 侧边栏背景
-    DARK_CARD = "#1e1e1e"  # 卡片背景
-    DARK_CARD_HOVER = "#2a2a2a"  # 卡片悬停
-    DARK_ELEVATED = "#2d2d2d"  # 提升层级
+    DARK_BG = "#111315"  # 主背景 - 中性炭黑
+    DARK_BG_SECONDARY = "#171a1d"  # 次级背景
+    DARK_BG_TERTIARY = "#202428"  # 第三级背景
+    DARK_SIDEBAR = "#13171b"  # 侧边栏背景
+    DARK_CARD = "#191d21"  # 卡片背景
+    DARK_CARD_HOVER = "#22272c"  # 卡片悬停
+    DARK_ELEVATED = "#252b30"  # 提升层级
     DARK_SURFACE = DARK_BG_SECONDARY  # 通用表面层（下拉/模态等）
 
     # 灰度色阶 (10级) - 用于细腻的层次表现
@@ -34,37 +40,37 @@ class ModernColors:
     DARK_GRAY_800 = "#262626"
     DARK_GRAY_900 = "#171717"
 
-    # 强调色 - 紫色系（高识别度）
-    DARK_ACCENT = "#8b5cf6"  # 主强调色
-    DARK_ACCENT_HOVER = "#a78bfa"  # 强调色悬停
-    DARK_ACCENT_PRESSED = "#7c3aed"  # 强调色按下
-    DARK_ACCENT_LIGHT = "#c4b5fd"  # 浅色强调
+    # 强调色 - 青绿色主操作，蓝/琥珀/玫红承担辅助语义
+    DARK_ACCENT = "#14b8a6"  # 主强调色
+    DARK_ACCENT_HOVER = "#2dd4bf"  # 强调色悬停
+    DARK_ACCENT_PRESSED = "#0f766e"  # 强调色按下
+    DARK_ACCENT_LIGHT = "#99f6e4"  # 浅色强调
 
     # 文字色 - 确保对比度符合WCAG AA标准
-    DARK_TEXT = "#ffffff"  # 主文字 (对比度 15.3:1)
-    DARK_TEXT_SECONDARY = "#a1a1a1"  # 次级文字 (对比度 7.4:1)
-    DARK_TEXT_MUTED = "#737373"  # 弱化文字 (对比度 4.6:1)
-    DARK_TEXT_DISABLED = "#525252"  # 禁用文字
+    DARK_TEXT = "#f7f7f5"  # 主文字
+    DARK_TEXT_SECONDARY = "#b8c0c7"  # 次级文字
+    DARK_TEXT_MUTED = "#89939d"  # 弱化文字
+    DARK_TEXT_DISABLED = "#5f6871"  # 禁用文字
 
     # 边框与分隔线
-    DARK_BORDER = "#404040"  # 边框色
-    DARK_BORDER_SUBTLE = "#2a2a2a"  # 微妙边框
-    DARK_DIVIDER = "#333333"  # 分隔线
+    DARK_BORDER = "#343b43"  # 边框色
+    DARK_BORDER_SUBTLE = "#252b31"  # 微妙边框
+    DARK_DIVIDER = "#2f363d"  # 分隔线
 
     # 液态玻璃效果 (使用十六进制以兼容Tkinter)
     DARK_GLASS = "#1e1e1ed9"  # 玻璃背景 rgba(30,30,30,0.85) -> hex with alpha
-    DARK_GLASS_SOLID = "#1e1e1e"  # 玻璃背景纯色版本(Tkinter兼容)
+    DARK_GLASS_SOLID = "#191d21"  # 玻璃背景纯色版本(Tkinter兼容)
     DARK_GLASS_BORDER = "#ffffff1a"  # 玻璃边框 rgba(255,255,255,0.1)
-    DARK_GLASS_BORDER_SOLID = "#404040"  # 玻璃边框纯色版本(Tkinter兼容)
+    DARK_GLASS_BORDER_SOLID = "#343b43"  # 玻璃边框纯色版本(Tkinter兼容)
 
     # ========== 浅色主题 ==========
     # 背景色 - 柔和的中性色调
-    LIGHT_BG = "#fafafa"  # 主背景
-    LIGHT_BG_SECONDARY = "#f5f5f5"  # 次级背景
-    LIGHT_BG_TERTIARY = "#eeeeee"  # 第三级背景
-    LIGHT_SIDEBAR = "#ffffff"  # 侧边栏背景
+    LIGHT_BG = "#f6f4ef"  # 主背景
+    LIGHT_BG_SECONDARY = "#ece8df"  # 次级背景
+    LIGHT_BG_TERTIARY = "#e3ded4"  # 第三级背景
+    LIGHT_SIDEBAR = "#fbfaf7"  # 侧边栏背景
     LIGHT_CARD = "#ffffff"  # 卡片背景
-    LIGHT_CARD_HOVER = "#f9fafb"  # 卡片悬停
+    LIGHT_CARD_HOVER = "#f1eee7"  # 卡片悬停
     LIGHT_ELEVATED = "#ffffff"  # 提升层级
     LIGHT_SURFACE = LIGHT_BG_SECONDARY  # 通用表面层（下拉/模态等）
 
@@ -80,32 +86,32 @@ class ModernColors:
     LIGHT_GRAY_800 = "#424242"
     LIGHT_GRAY_900 = "#212121"
 
-    # 强调色 - 靳蓝色系
-    LIGHT_ACCENT = "#6366f1"  # 主强调色
-    LIGHT_ACCENT_HOVER = "#4f46e5"  # 强调色悬停
-    LIGHT_ACCENT_PRESSED = "#4338ca"  # 强调色按下
-    LIGHT_ACCENT_LIGHT = "#a5b4fc"  # 浅色强调
+    # 强调色 - 青绿色主操作
+    LIGHT_ACCENT = "#0f766e"  # 主强调色
+    LIGHT_ACCENT_HOVER = "#115e59"  # 强调色悬停
+    LIGHT_ACCENT_PRESSED = "#134e4a"  # 强调色按下
+    LIGHT_ACCENT_LIGHT = "#5eead4"  # 浅色强调
 
     # 文字色 - 确保对比度符合WCAG AA标准
-    LIGHT_TEXT = "#111827"  # 主文字 (对比度 16.1:1)
-    LIGHT_TEXT_SECONDARY = "#4b5563"  # 次级文字 (对比度 8.9:1)
-    LIGHT_TEXT_MUTED = "#6b7280"  # 弱化文字 (对比度 5.8:1)
-    LIGHT_TEXT_DISABLED = "#9ca3af"  # 禁用文字
+    LIGHT_TEXT = "#1c1917"  # 主文字
+    LIGHT_TEXT_SECONDARY = "#57534e"  # 次级文字
+    LIGHT_TEXT_MUTED = "#78716c"  # 弱化文字
+    LIGHT_TEXT_DISABLED = "#a8a29e"  # 禁用文字
 
     # 边框与分隔线
-    LIGHT_BORDER = "#e5e7eb"  # 边框色
-    LIGHT_BORDER_SUBTLE = "#f3f4f6"  # 微妙边框
-    LIGHT_DIVIDER = "#e5e7eb"  # 分隔线
+    LIGHT_BORDER = "#ddd6cc"  # 边框色
+    LIGHT_BORDER_SUBTLE = "#ebe5dc"  # 微妙边框
+    LIGHT_DIVIDER = "#ddd6cc"  # 分隔线
 
     # 液态玻璃效果 (使用十六进制以兼容Tkinter)
     LIGHT_GLASS = "#ffffffd9"  # 玻璃背景 rgba(255,255,255,0.85) -> hex with alpha
-    LIGHT_GLASS_SOLID = "#f5f5f5"  # 玻璃背景纯色版本(Tkinter兼容)
+    LIGHT_GLASS_SOLID = "#fbfaf7"  # 玻璃背景纯色版本(Tkinter兼容)
     LIGHT_GLASS_BORDER = "#0000001a"  # 玻璃边框 rgba(0,0,0,0.1)
-    LIGHT_GLASS_BORDER_SOLID = "#e0e0e0"  # 玻璃边框纯色版本(Tkinter兼容)
+    LIGHT_GLASS_BORDER_SOLID = "#ddd6cc"  # 玻璃边框纯色版本(Tkinter兼容)
 
     # ========== 语义化颜色（主题通用） ==========
     # 成功色 - 绿色系
-    SUCCESS = "#10b981"  # 主成功色
+    SUCCESS = "#0f9f8f"  # 主成功色
     SUCCESS_LIGHT = "#34d399"  # 浅色成功
     SUCCESS_DARK = "#059669"  # 深色成功
     SUCCESS_BG = "#d1fae5"  # 成功背景
@@ -123,27 +129,27 @@ class ModernColors:
     ERROR_BG = "#fee2e2"  # 错误背景
 
     # 信息色 - 蓝色系
-    INFO = "#3b82f6"  # 主信息色
+    INFO = "#2563eb"  # 主信息色
     INFO_LIGHT = "#60a5fa"  # 浅色信息
-    INFO_DARK = "#2563eb"  # 深色信息
+    INFO_DARK = "#1d4ed8"  # 深色信息
     INFO_BG = "#dbeafe"  # 信息背景
 
     # ========== 语义化控件色（双模式配对） ==========
     # 内嵌/凹陷面板背景 (信息面板、结果列表项等)
-    LIGHT_INSET = "#e8e8e8"
-    DARK_INSET = "#252525"
+    LIGHT_INSET = "#eee9df"
+    DARK_INSET = "#14181c"
 
     # 分节线 (设置页分隔线等)
     LIGHT_SEPARATOR = "#d0d0d0"
     DARK_SEPARATOR = "#404040"
 
     # 替代表面 (进度详情面板、状态面板等)
-    LIGHT_SURFACE_ALT = "#f0f0f0"
-    DARK_SURFACE_ALT = "#1e1e2e"
+    LIGHT_SURFACE_ALT = "#efe9df"
+    DARK_SURFACE_ALT = "#20212a"
 
     # 微妙 hover (工具按钮、透明按钮悬停)
-    LIGHT_HOVER_SUBTLE = "#e0e0e0"
-    DARK_HOVER_SUBTLE = "#2d2d2d"
+    LIGHT_HOVER_SUBTLE = "#e6dfd3"
+    DARK_HOVER_SUBTLE = "#262d33"
 
     # 中性/辅助按钮背景
     NEUTRAL_BTN = "#525252"
@@ -151,8 +157,8 @@ class ModernColors:
 
     # ========== 渐变色定义 ==========
     # 格式: (type, [start_color, end_color], angle)
-    GRADIENT_PRIMARY = ("linear", ["#8b5cf6", "#a78bfa"], 135)  # 紫色渐变
-    GRADIENT_SUCCESS = ("linear", ["#10b981", "#34d399"], 135)  # 绿色渐变
+    GRADIENT_PRIMARY = ("linear", ["#0f766e", "#2563eb"], 135)
+    GRADIENT_SUCCESS = ("linear", ["#0f9f8f", "#34d399"], 135)  # 绿色渐变
     GRADIENT_WARNING = ("linear", ["#f59e0b", "#fbbf24"], 135)  # 橙色渐变
     GRADIENT_ERROR = ("linear", ["#ef4444", "#f87171"], 135)  # 红色渐变
     GRADIENT_INFO = ("linear", ["#3b82f6", "#60a5fa"], 135)  # 蓝色渐变
@@ -164,17 +170,17 @@ class ModernColors:
     GRADIENT_GLASS_LIGHT_SOLID = ("linear", ["#ffffff", "#f5f5f5"], 180)  # Tkinter兼容
 
     # ========== 简单渐变色值 (Tkinter兼容) ==========
-    GRADIENT_START = "#6366f1"
-    GRADIENT_MID = "#8b5cf6"
-    GRADIENT_END = "#a855f7"
+    GRADIENT_START = "#0f766e"
+    GRADIENT_MID = "#2563eb"
+    GRADIENT_END = "#d97706"
 
     # ========== 特殊效果色 (Tkinter兼容) ==========
     NEON_CYAN = "#06b6d4"
     NEON_PINK = "#ec4899"
     NEON_GREEN = "#22c55e"
     SHIMMER_LIGHT = "#ffffff1a"  # rgba(255, 255, 255, 0.1)
-    GLOW_PURPLE = "#8b5cf64d"  # rgba(139, 92, 246, 0.3)
-    GLOW_BLUE = "#6366f14d"  # rgba(99, 102, 241, 0.3)
+    GLOW_PURPLE = "#7c3aed4d"  # rgba
+    GLOW_BLUE = "#2563eb4d"  # rgba
 
     # ========== 阴影 (CSS格式参考，Tkinter不直接支持) ==========
     SHADOW_SM = "0 1px 2px rgba(0, 0, 0, 0.05)"
